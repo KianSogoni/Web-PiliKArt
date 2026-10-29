@@ -126,4 +126,4 @@ INSERT INTO products (name, tagline, description, price, category, image, stock,
 ('SD Card (64GB)', 'Mabilis na imbakan', 'High-speed memory card.', 1799, 'apollo', 'https://placehold.co/400x400/eee/333?text=SD+Card', 25, 0, 'Tech, Storage, Memory Card'),
 ('Powerbank (10,000mAh)', 'Laging may karga', 'Fast-charging powerbank.', 2799, 'apollo', 'https://placehold.co/400x400/eee/333?text=Powerbank', 20, 0, 'Tech, Charging'),
 ('Wireless Mouse', 'Tahimik na click', 'Ergonomic wireless mouse.', 450, 'apollo', 'https://placehold.co/400x400/eee/333?text=Mouse', 40, 0, 'Tech, Computer, Mouse'),
-('Mechanical Keyboard', 'RGB at mabilis', 'RGB backlit mechanical keyboard.', 1250, 'apollo', 'https://placehold.co/400x400/eee/333?text=Keyboard', 18, 0, 'Tech, Computer, Keyboard');
+('Mechanical Keyboard', 'RGB at mabilis', 'RGB backlit mechanical keyboard.', 1250, 'apollo', 'https://placehold.co/400x400/eee/333?text=Keyboard', 18, 0, 'Tech, Computer, Keyboard'); 
