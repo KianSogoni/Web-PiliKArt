@@ -12,4 +12,4 @@ if ($u) {
 } else {
     echo "❌ User not found in database. You need to run the SQL INSERT.";
 }
-?>
+?> 
