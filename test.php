@@ -1,4 +1,4 @@
-<?php
+<?php // Testing the update branch
 require 'db.php';
 $stmt = $pdo->query("SELECT * FROM users WHERE email='admin@pilikart.ph'");
 $u = $stmt->fetch();
