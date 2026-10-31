@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PiliKart — Good finds. Galing Pinoy.</title>
+    <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito:wght@600;800&display=swap" rel="stylesheet">
+    <style>
+        :root{--bg:#fdf6ec;--surface:#fff;--ink:#35231b;--muted:#8a6f5f;--brand:#d95b33;--leaf:#3f7a45;--line:#f0e0cc;--shadow:0 12px 32px -12px rgba(90,52,26,.22)}
+        *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:"Nunito",sans-serif;line-height:1.5}
+        h1,h2,h3{font-family:"Baloo 2",sans-serif;margin:0 0 .5rem}a{color:inherit;text-decoration:none}img{max-width:100%;display:block}
+        .topbar{display:flex;justify-content:space-between;align-items:center;padding:1rem 1.5rem;background:var(--surface);box-shadow:var(--shadow);position:sticky;top:0;z-index:20}
+        .brand{font-family:"Baloo 2",sans-serif;font-size:26px;font-weight:800}.brand span{display:block;font-size:9px;color:var(--leaf);letter-spacing:.2em;text-transform:uppercase}
+        .btn{background:var(--brand);color:#fff;border:none;padding:.6rem 1.2rem;border-radius:999px;font-family:"Baloo 2",sans-serif;font-weight:800;cursor:pointer;transition:.2s}
+        .btn:hover{background:#b8461f;transform:translateY(-1px)}.btn-ghost{background:#eee;color:#333}
+        main{max-width:1180px;margin:0 auto;padding:1.5rem}
+        .card{background:var(--surface);border-radius:20px;padding:1.5rem;box-shadow:var(--shadow);margin-bottom:1.5rem}
+        .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:1rem}
+        .product{display:flex;flex-direction:column;padding:1rem}
+        .product img{aspect-ratio:1;object-fit:cover;border-radius:14px;background:#eee;margin-bottom:1rem;width:100%}
+        .product h3{font-size:17px;line-height:1.2;margin-bottom:.2rem}.product p{color:var(--muted);font-size:12px;flex:1;margin:0 0 1rem}
+        .product-foot{display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--line);padding-top:.8rem;margin-top:auto}
+        .price{font-family:"Baloo 2",sans-serif;font-size:20px;color:var(--brand);font-weight:800}
+        .form{display:flex;flex-direction:column;gap:.6rem;max-width:400px;margin:0 auto}
+        .form input,.form textarea,.form select{padding:.8rem;border:2px solid var(--line);border-radius:12px;font:inherit}
+        .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1rem;margin-bottom:2rem}
+        .stat{background:var(--surface);padding:1rem;border-radius:16px;box-shadow:var(--shadow)}.stat b{display:block;font-size:11px;color:var(--muted)}
+        .stat span{font-family:"Baloo 2",sans-serif;font-size:24px;font-weight:800}
+        .hidden{display:none!important}
+        /* Cart Drawer */
+        .drawer{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.5)}.drawer-panel{position:absolute;top:0;right:0;bottom:0;width:350px;background:var(--bg);padding:1.5rem;overflow-y:auto}
+        .cart-item{display:flex;justify-content:space-between;margin-bottom:.5rem;border-bottom:1px solid var(--line);padding-bottom:.5rem}
+        .search-bar{width:100%;padding:1rem;border-radius:999px;border:2px solid var(--line);margin-bottom:1rem;font:inherit}
+        .tabs{display:flex;gap:.5rem;margin-bottom:1rem;flex-wrap:wrap}
+        .tab{background:#fff;border:1px solid var(--line);padding:.5rem 1rem;border-radius:99px;cursor:pointer;font-weight:600}
+        .tab.active{background:var(--leaf);color:#fff}
+        /* Admin Table */
+        table{width:100%;border-collapse:collapse;background:#fff;border-radius:16px;overflow:hidden}
+        th,td{padding:.8rem;text-align:left;border-bottom:1px solid var(--line);font-size:14px}
+        th{background:#eee;font-size:11px;text-transform:uppercase}
+        .status-badge{padding:2px 8px;border-radius:99px;font-size:11px;font-weight:800;background:#eee}
+    </style>
+</head>
+<body>
+
+<!-- Header -->
+<header class="topbar">
+    <a href="#" class="brand">pilikart<span>pumili ka + cart</span></a>
+    <div style="display:flex;gap:1rem;align-items:center">
+        <button class="btn" onclick="toggleCart()">🧺 Cart <span id="cart-count" style="background:#fff;color:var(--brand);padding:0 6px;border-radius:99px">0</span></button>
+        <button id="auth-btn" class="btn btn-ghost" onclick="handleAuthClick()">Login</button>
+    </div>
+</header>
+
+<main>
+    <!-- Login View -->
+    <div id="view-login" class="card hidden" style="max-width:400px;margin:2rem auto">
+        <h2 style="text-align:center">Pasok na!</h2>
+        <form class="form" onsubmit="submitLogin(event)">
+            <input type="email" id="login-email" placeholder="Email" required>
+            <input type="password" id="login-pass" placeholder="Password" required>
+            <button type="submit" class="btn" style="width:100%">Sign In</button>
+            <p id="login-err" style="color:red;font-size:13px;text-align:center;margin:0"></p>
+            <p style="font-size:11px;text-align:center;color:var(--muted)">Demo: admin@pilikart.ph / admin</p>
+        </form>
+    </div>
+
+    <!-- Admin Dashboard -->
+    <div id="view-admin" class="hidden">
+        <h1>Owner Dashboard 👑</h1>
+        <div class="stats">
+            <div class="stat"><b>Total Sales</b><span id="stat-sales">₱0</span></div>
+            <div class="stat"><b>Orders</b><span id="stat-orders">0</span></div>
+        </div>
+        <div class="tabs">
+            <button class="tab active" onclick="switchAdminTab('orders', this)">📦 Orders</button>
+            <button class="tab" onclick="switchAdminTab('stock', this)">🛒 Stock & Menu</button>
+            <button class="tab" onclick="switchAdminTab('add', this)">➕ Add Item</button>
+        </div>
+        
+        <div id="admin-orders">
+            <table>
+                <!-- Notice this new header -->
+                <thead><tr><th>Order</th><th>Customer</th><th>Total</th><th>Status & Action</th></tr></thead>
+                <tbody id="admin-orders-body"></tbody>
+            </table>
+        </div>
+
+        <div id="admin-stock" class="hidden">
+            <table>
+                <thead><tr><th>Item</th><th>Price</th><th>Stock</th><th>Action</th></tr></thead>
+                <tbody id="admin-stock-body"></tbody>
+            </table>
+        </div>
+
+        <!-- ADD ITEM FORM -->
+        <div id="admin-add" class="card hidden">
+            <form onsubmit="submitNewProduct(event)" style="display:flex;flex-direction:column;gap:1rem">
+                <input type="text" id="add-name" placeholder="Item Name" required>
+                <input type="text" id="add-tagline" placeholder="Tagline (e.g. Masarap at malinamnam)">
+                <input type="text" id="add-desc" placeholder="Description">
+                
+                <div style="display:flex;gap:1rem;flex-wrap:wrap">
+                    <input type="number" id="add-price" placeholder="Price" style="flex:1" required>
+                    <input type="number" id="add-stock" placeholder="Stock" style="flex:1" value="10" required>
+                </div>
+
+                <select id="add-cat">
+                    <option value="paso">Paso</option>
+                    <option value="nipa">Nipa</option>
+                    <option value="habi">Habi</option>
+                    <option value="apollo">Apollo</option>
+                </select>
+
+                <input type="text" id="add-image" placeholder="Image URL (leave blank for placeholder)" value="https://placehold.co/400x400/eee/333?text=New+Item">
+                <input type="text" id="add-tags" placeholder="Tags (comma separated, e.g. Chicken, Manok, Ulam)">
+
+                <button type="submit" class="btn">Add to Menu</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Customer Dashboard -->
+    <div id="view-dash" class="hidden">
+        <h1>Mabuhay, <span id="dash-name"></span>!</h1>
+        <h3>My Orders 📦</h3>
+        <div id="dash-orders" style="display:flex;flex-direction:column;gap:1rem"></div>
+    </div>
+
+    <!-- Catalog -->
+    <div id="view-catalog">
+        <h2 style="text-align:center;margin-top:2rem">Four stores. One happy cart.</h2>
+        <input type="text" id="search-input" class="search-bar" placeholder="Hanapin: adobo, lipstick, towel...">
+        <div class="tabs">
+            <button class="tab active" onclick="filterCatalog('all', this)">All Finds</button>
+            <button class="tab" onclick="filterCatalog('paso', this)">Paso</button>
+            <button class="tab" onclick="filterCatalog('nipa', this)">Nipa</button>
+            <button class="tab" onclick="filterCatalog('habi', this)">Habi</button>
+            <button class="tab" onclick="filterCatalog('apollo', this)">Apollo</button>
+        </div>
+        <div class="grid" id="product-grid"></div>
+    </div>
+</main>
+
+<!-- Cart Drawer -->
+<div id="cart-drawer" class="drawer hidden">
+    <div class="drawer-panel">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+            <h2>🧺 Cart</h2>
+            <button class="btn btn-ghost" onclick="toggleCart()">✕</button>
+        </div>
+        <div id="cart-items"></div>
+        <form id="checkout-form" onsubmit="submitOrder(event)" style="margin-top:2rem;border-top:1px solid var(--line);padding-top:1rem">
+            <input type="text" id="co-name" placeholder="Full Name" required style="width:100%;margin-bottom:.5rem;padding:.5rem">
+            <input type="text" id="co-addr" placeholder="Address" required style="width:100%;margin-bottom:.5rem;padding:.5rem">
+            <p style="text-align:right;font-family:'Baloo 2';font-weight:800">Total: ₱<span id="cart-total">0</span></p>
+            <button type="submit" class="btn" style="width:100%">Place Order</button>
+        </form>
+    </div>
+</div>
+
+<script>
+    let appData = { user: null, products: [], orders: [], fee: 50 };
+    let currentTab = 'all';
+    let cart = JSON.parse(localStorage.getItem('pk_cart') || '[]');
+
+    async function loadData() {
+        try {
+            const res = await fetch('api.php?action=load');
+            appData = await res.json();
+            if (!appData.products) appData.products = [];
+            if (!appData.orders) appData.orders = [];
+        } catch (e) {
+            console.warn("Could not connect to api.php", e);
+        }
+        renderUI();
+    }
+
+    function getPlaceholder(name) {
+        const safeName = name || 'Product';
+        const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400"><rect width="400" height="400" fill="#f0e0cc"/><text x="50%" y="50%" font-family="sans-serif" font-size="24" font-weight="bold" fill="#8a6f5f" text-anchor="middle" dy=".3em">${safeName}</text></svg>`;
+        return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+    }
+
+    function renderUI() {
+        const authBtn = document.getElementById('auth-btn');
+        if (appData.user) {
+            authBtn.textContent = 'Logout (' + appData.user.name.split(' ')[0] + ')';
+            authBtn.className = 'btn btn-ghost';
+            document.getElementById('view-login').classList.add('hidden');
+            if(document.getElementById('co-name')) {
+                document.getElementById('co-name').value = appData.user.name;
+                document.getElementById('co-addr').value = appData.user.address || '';
+            }
+            
+            if (appData.user.role === 'admin') {
+                document.getElementById('view-admin').classList.remove('hidden');
+                document.getElementById('view-dash').classList.add('hidden');
+                renderAdmin();
+            } else {
+                document.getElementById('view-dash').classList.remove('hidden');
+                document.getElementById('view-admin').classList.add('hidden');
+                renderCustomer();
+            }
+        } else {
+            authBtn.textContent = 'Login';
+            authBtn.className = 'btn';
+            document.getElementById('view-login').classList.remove('hidden');
+            document.getElementById('view-admin').classList.add('hidden');
+            document.getElementById('view-dash').classList.add('hidden');
+        }
+        
+        renderCatalog();
+        renderCart();
+    }
+
+    async function submitLogin(e) {
+        e.preventDefault();
+        const email = document.getElementById('login-email').value;
+        const password = document.getElementById('login-pass').value;
+        const res = await fetch('api.php?action=login', {
+            method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ email, password })
+        });
+        if (res.ok) { loadData(); } else { document.getElementById('login-err').textContent = 'Invalid credentials'; }
+    }
+
+    async function handleAuthClick() {
+        if (appData.user) {
+            await fetch('api.php?action=logout');
+            appData.user = null;
+            loadData();
+        } else {
+            document.getElementById('view-login').scrollIntoView({behavior:'smooth'});
+        }
+    }
+
+    function renderCatalog() {
+        const grid = document.getElementById('product-grid');
+        if (!appData.products || appData.products.length === 0) {
+            grid.innerHTML = '<p style="text-align:center;grid-column:1/-1;color:var(--muted)">No products found.</p>';
+            return;
+        }
+
+        grid.innerHTML = appData.products.map(p => {
+            const out = p.sold_out == 1 || p.stock <= 0;
+            const safeTags = (p.tags || '').toLowerCase() + ' ' + (p.name || '').toLowerCase();
+            
+            return `
+            <article class="card product" data-cat="${p.category || ''}" data-tags="${safeTags}">
+                <img src="${p.image || ''}" alt="${p.name}" onerror="this.onerror=null; this.src='${getPlaceholder(p.name)}';">
+                <h3>${p.name}</h3>
+                <p>${p.description}</p>
+                <div class="product-foot">
+                    <span class="price">₱${p.price}</span>
+                    <button class="btn" onclick="addToCart(${p.id}, '${p.name}', ${p.price})" ${out ? 'disabled' : ''}>${out ? 'Out' : '+ Add'}</button>
+                </div>
+            </article>`;
+        }).join('');
+        
+        filterCatalog(currentTab, document.querySelector('.tab.active'));
+    }
+
+    function filterCatalog(cat, btn) {
+        currentTab = cat;
+        document.querySelectorAll('#view-catalog .tab').forEach(t => t.classList.remove('active'));
+        if(btn) btn.classList.add('active');
+        const q = document.getElementById('search-input').value.toLowerCase();
+        document.querySelectorAll('.product').forEach(card => {
+            const matchCat = cat === 'all' || card.dataset.cat === cat;
+            const matchQ = card.dataset.tags.includes(q) || q === '';
+            card.style.display = (matchCat && matchQ) ? 'flex' : 'none';
+        });
+    }
+    document.getElementById('search-input').addEventListener('input', () => filterCatalog(currentTab, document.querySelector('.tab.active')));
+
+    function addToCart(id, name, price) {
+        const item = cart.find(x => x.id === id);
+        if (item) item.qty++;
+        else cart.push({ id, name, price, qty: 1 });
+        saveCart();
+        toggleCart(true);
+    }
+    function saveCart() {
+        localStorage.setItem('pk_cart', JSON.stringify(cart));
+        renderCart();
+    }
+    function renderCart() {
+        const count = cart.reduce((s, x) => s + x.qty, 0);
+        document.getElementById('cart-count').textContent = count;
+        document.getElementById('cart-items').innerHTML = cart.map(c => `
+            <div class="cart-item">
+                <div><b>${c.name}</b><br><small>₱${c.price} × ${c.qty}</small></div>
+                <div>
+                    <button class="btn btn-ghost" onclick="updateQty(${c.id}, -1)">−</button>
+                    <button class="btn btn-ghost" onclick="updateQty(${c.id}, 1)">+</button>
+                </div>
+            </div>
+        `).join('') || '<p>Empty cart</p>';
+        const total = cart.reduce((s, x) => s + x.price * x.qty, 0) + (cart.length ? appData.fee : 0);
+        document.getElementById('cart-total').textContent = total;
+    }
+    function updateQty(id, delta) {
+        const item = cart.find(x => x.id === id);
+        if (item) {
+            item.qty += delta;
+            if (item.qty <= 0) cart = cart.filter(x => x.id !== id);
+            saveCart();
+        }
+    }
+    function toggleCart(forceOpen = false) {
+        const drawer = document.getElementById('cart-drawer');
+        if (forceOpen) drawer.classList.remove('hidden');
+        else drawer.classList.toggle('hidden');
+    }
+
+    async function submitOrder(e) {
+        e.preventDefault();
+        if (!cart.length) return alert('Cart is empty');
+        const name = document.getElementById('co-name').value;
+        const address = document.getElementById('co-addr').value;
+        
+        const res = await fetch('api.php?action=place-order', {
+            method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ items: cart, name, address, payment: 'cod' })
+        });
+        if (res.ok) {
+            alert('Order placed successfully!');
+            cart = [];
+            saveCart();
+            toggleCart();
+            loadData();
+        } else {
+            const j = await res.json();
+            alert(j.error || 'Failed to place order');
+        }
+    }
+
+    function switchAdminTab(tab, btn) {
+        document.querySelectorAll('#view-admin .tab').forEach(t => t.classList.remove('active'));
+        if(btn) btn.classList.add('active');
+        document.getElementById('admin-orders').classList.add('hidden');
+        document.getElementById('admin-stock').classList.add('hidden');
+        document.getElementById('admin-add').classList.add('hidden');
+        document.getElementById('admin-' + tab).classList.remove('hidden');
+    }
+
+    function renderAdmin() {
+        const sales = appData.orders.reduce((s, o) => s + parseInt(o.total), 0);
+        document.getElementById('stat-sales').textContent = '₱' + sales.toLocaleString();
+        document.getElementById('stat-orders').textContent = appData.orders.length;
+
+        // This is the updated code that creates the Delete button!
+        document.getElementById('admin-orders-body').innerHTML = appData.orders.map(o => `
+            <tr>
+                <td><b>#${o.id}</b></td>
+                <td>${o.customer_name}</td>
+                <td>₱${o.total}</td>
+                <td>
+                    <select onchange="updateOrderStatus(${o.id}, this.value)">
+                        <option ${o.status==='Pending'?'selected':''}>Pending</option>
+                        <option ${o.status==='Shipping'?'selected':''}>Shipping</option>
+                        <option ${o.status==='Delivered'?'selected':''}>Delivered</option>
+                    </select>
+                    <button class="btn btn-ghost" style="color:#b3341f; background:#fde8e4; font-weight:800; padding:.3rem .6rem; font-size:12px; margin-left:5px" onclick="deleteOrder(${o.id})">🗑 Delete</button>
+                </td>
+            </tr>
+        `).join('');
+
+        document.getElementById('admin-stock-body').innerHTML = appData.products.map(p => `
+            <tr>
+                <td>${p.name}</td>
+                <td><input type="number" id="price-${p.id}" value="${p.price}" style="width:70px"></td>
+                <td><input type="number" id="stock-${p.id}" value="${p.stock}" style="width:70px"></td>
+                <td>
+                    <button class="btn" onclick="updateProduct(${p.id})">Save</button>
+                    <button class="btn btn-ghost" style="color:#b3341f; background:#fde8e4; font-weight:800" onclick="deleteProduct(${p.id}, '${p.name.replace(/'/g, "\\'")}')">🗑 Delete</button>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    async function updateOrderStatus(orderId, status) {
+        await fetch('api.php?action=update-order', {
+            method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ order_id: orderId, status })
+        });
+        loadData();
+    }
+
+    async function deleteOrder(orderId) {
+        if (!confirm(`Permanently delete Order #${orderId}?\n\nThis will remove it from the database and cannot be undone.`)) return;
+
+        const res = await fetch('api.php?action=delete-order', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ order_id: orderId })
+        });
+
+        if (res.ok) {
+            loadData();
+        } else {
+            const j = await res.json().catch(() => ({}));
+            alert(j.error || 'Failed to delete order.');
+        }
+    }
+    
+    async function updateProduct(id) {
+        const price = document.getElementById('price-'+id).value;
+        const stock = document.getElementById('stock-'+id).value;
+        await fetch('api.php?action=update-product', {
+            method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ product_id: id, price, stock })
+        });
+        loadData();
+    }
+
+    async function deleteProduct(id, name) {
+        if (!confirm(`Permanently delete "${name}"?\n\nThis cannot be undone. Past orders will keep their item details.`)) return;
+
+        const res = await fetch('api.php?action=delete-product', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ product_id: id })
+        });
+
+        if (res.ok) {
+            loadData();
+        } else {
+            const j = await res.json().catch(() => ({}));
+            alert(j.error || 'Failed to delete product.');
+        }
+    }
+    
+    async function submitNewProduct(e) {
+        e.preventDefault();
+        await fetch('api.php?action=add-product', {
+            method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                name: document.getElementById('add-name').value,
+                tagline: document.getElementById('add-tagline').value,
+                description: document.getElementById('add-desc').value,
+                price: document.getElementById('add-price').value,
+                stock: document.getElementById('add-stock').value,
+                category: document.getElementById('add-cat').value,
+                image: document.getElementById('add-image').value,
+                tags: document.getElementById('add-tags').value
+            })
+        });
+        
+        e.target.reset();
+        document.getElementById('add-image').value = 'https://placehold.co/400x400/eee/333?text=New+Item';
+        document.getElementById('add-stock').value = '10';
+        
+        loadData();
+        switchAdminTab('orders', document.querySelectorAll('#view-admin .tab')[0]);
+    }
+
+    function renderCustomer() {
+        document.getElementById('dash-name').textContent = appData.user.name;
+        document.getElementById('dash-orders').innerHTML = appData.orders.map(o => `
+            <div class="card" style="margin:0">
+                <b>Order #${o.id}</b> - ₱${o.total} <span class="status-badge">${o.status}</span>
+                <p style="font-size:13px;color:var(--muted);margin-top:.5rem">${o.items.map(i => i.qty + 'x ' + i.name).join(', ')}</p>
+            </div>
+        `).join('') || '<p>Wala ka pang order.</p>';
+    }
+
+    loadData();
+</script>
+</body>
+</html>
