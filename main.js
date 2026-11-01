@@ -1,194 +1,422 @@
-const $ = id => document.getElementById(id);
-const FEE = window.DELIVERY_FEE || 50;
+const app = {
+    user: null,
+    cart: JSON.parse(localStorage.getItem('pk_cart') || '[]'),
+    budget: null,
+    products: [],
+    orders: [],
+    fee: 50,
+    isSignUp: false,
+    gcashBase64: '',
 
-/* ---------- CART (localStorage) ---------- */
-const getCart = () => { try { return JSON.parse(localStorage.getItem('pk_cart') || '[]'); } catch { return []; } };
-const setCart = c => { localStorage.setItem('pk_cart', JSON.stringify(c)); renderCart(); };
+    async init() {
+        // Show main content wrapper (it's hidden by default to prevent flashing)
+        document.getElementById('main-content').style.display = 'block';
 
-function addToCart(id, name, price) {
-  const c = getCart();
-  const f = c.find(x => x.id === id);
-  f ? f.qty++ : c.push({ id, name, price, qty: 1 });
-  setCart(c);
-}
+        try {
+            const res = await fetch('api.php?action=load');
+            const data = await res.json();
+            this.user = data.user;
+            this.products = data.products || [];
+            this.orders = data.orders || [];
+            this.fee = data.fee || 50;
+        } catch (e) {
+            console.warn('Backend not connected or error:', e);
+        }
 
-function renderCart() {
-  const c = getCart();
-  const count = c.reduce((s, x) => s + x.qty, 0);
-  if ($('cart-count')) $('cart-count').textContent = count;
-  const items = $('cart-items');
-  if (!items) return;
-  if (!c.length) { items.innerHTML = '<p class="muted">Walang laman ang cart.</p>'; }
-  else {
-    items.innerHTML = c.map(it => `
-      <div class="cart-item">
-        <div><b>${it.name}</b><br><small>₱${it.price} × ${it.qty}</small></div>
-        <div>
-          <button data-dec="${it.id}">−</button>
-          <button data-inc="${it.id}">+</button>
-        </div>
-      </div>`).join('');
-  }
-  const total = c.reduce((s, x) => s + x.price * x.qty, 0) + (c.length ? FEE : 0);
-  if ($('cart-total')) $('cart-total').textContent = '₱' + total.toLocaleString();
-}
+        if (this.user) {
+            document.getElementById('auth-btn').textContent = 'Logout';
+            if (this.user.role === 'admin') {
+                this.go('admin');
+                this.renderAdmin();
+            } else {
+                this.go('menu');
+            }
+        } else {
+            document.getElementById('auth-btn').textContent = 'Login';
+            this.go('landing'); // Defaults to landing page for guests
+        }
 
-document.addEventListener('click', e => {
-  const inc = e.target.closest('[data-inc]');
-  const dec = e.target.closest('[data-dec]');
-  if (inc) { const c = getCart(); const f = c.find(x => x.id === +inc.dataset.inc); if (f) { f.qty++; setCart(c); } }
-  if (dec) {
-    const c = getCart(); const f = c.find(x => x.id === +dec.dataset.dec);
-    if (f) { f.qty--; if (f.qty <= 0) c.splice(c.indexOf(f), 1); setCart(c); }
-  }
-});
+        this.renderMenu();
+        this.renderCart();
+        this.checkTheme();
+    },
 
-/* ---------- LOGIN ---------- */
-if ($('login-form')) {
-  $('login-form').addEventListener('submit', async e => {
-    e.preventDefault();
-    $('login-err').textContent = '';
-    const r = await fetch('api.php?action=login', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: $('email').value, password: $('password').value })
-    });
-    const j = await r.json();
-    if (r.ok) location.reload();
-    else $('login-err').textContent = j.error || 'Error';
-  });
-}
+    go(view) {
+        // Hide all views
+        document.querySelectorAll('main > div').forEach(d => d.classList.add('hidden'));
+        
+        // Show target view
+        const target = document.getElementById('view-' + view);
+        if (target) target.classList.remove('hidden');
 
-/* ---------- ADD TO CART ---------- */
-document.querySelectorAll('.add-btn').forEach(b => {
-  b.addEventListener('click', () => {
-    addToCart(+b.dataset.add, b.dataset.name, +b.dataset.price);
-    const orig = b.textContent;
-    b.textContent = '✓ Added'; b.disabled = true;
-    setTimeout(() => { b.textContent = orig; b.disabled = false; }, 900);
-  });
-});
+        const header = document.getElementById('global-header');
+        
+        // Handle landing page specific styles (hide main header, lock scroll)
+        if (view === 'landing') {
+            header.classList.add('hidden');
+            document.body.style.overflow = 'hidden'; // Lock background scroll
+        } else {
+            header.classList.remove('hidden');
+            document.body.style.overflow = 'auto';
+        }
 
-/* ---------- SEARCH + FILTER ---------- */
-let activeTab = 'all';
-const norm = s => (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        if (view === 'orders') this.renderOrders();
+        if (view === 'checkout') this.renderCheckoutSummary();
+        if (view === 'admin') this.renderAdmin();
+    },
 
-function applyFilter() {
-  const q = norm($('menu-search')?.value);
-  document.querySelectorAll('.product').forEach(card => {
-    const dept = card.dataset.department;
-    const hay = norm(card.textContent) + ' ' + norm(card.dataset.tags);
-    const matchTab = activeTab === 'all' || dept === activeTab;
-    const matchQ = !q || hay.includes(q);
-    card.style.display = (matchTab && matchQ) ? '' : 'none';
-  });
-}
+    showToast(msg) {
+        const t = document.getElementById('toast');
+        t.textContent = msg;
+        t.style.display = 'block';
+        setTimeout(() => t.style.display = 'none', 3000);
+    },
 
-document.querySelectorAll('.filter-tab').forEach(t => {
-  t.addEventListener('click', () => {
-    document.querySelectorAll('.filter-tab').forEach(x => x.classList.remove('active'));
-    t.classList.add('active');
-    activeTab = t.dataset.tab;
-    applyFilter();
-  });
-});
+    // --- AUTHENTICATION ---
+    handleAuth() {
+        if (this.user) {
+            fetch('api.php?action=logout').then(() => location.reload());
+        } else {
+            this.go('auth');
+        }
+    },
 
-$('menu-search')?.addEventListener('input', applyFilter);
+    toggleSignUp() {
+        this.isSignUp = !this.isSignUp;
+        document.getElementById('signup-toggle').textContent = this.isSignUp ? 'Switch to Login' : 'Switch to Sign Up';
+    },
 
-/* ---------- CART DRAWER ---------- */
-$('cart-btn')?.addEventListener('click', () => { $('cart-drawer').hidden = false; renderCart(); });
-$('cart-close')?.addEventListener('click', () => { $('cart-drawer').hidden = true; });
-document.querySelector('.drawer-bg')?.addEventListener('click', () => { $('cart-drawer').hidden = true; });
+    async submitAuth() {
+        const action = this.isSignUp ? 'signup' : 'login';
+        const payload = {
+            name: document.getElementById('auth-name').value,
+            email: document.getElementById('auth-email').value,
+            password: document.getElementById('auth-pass').value,
+            address: document.getElementById('auth-address').value
+        };
+        const res = await fetch(`api.php?action=${action}`, { method: 'POST', body: JSON.stringify(payload) });
+        const data = await res.json();
+        if (data.ok) {
+            location.reload();
+        } else {
+            this.showToast(data.error || 'Authentication failed');
+        }
+    },
 
-/* ---------- CHECKOUT ---------- */
-$('checkout-form')?.addEventListener('submit', async e => {
-  e.preventDefault();
-  $('order-err').textContent = '';
-  const cart = getCart();
-  if (!cart.length) { $('order-err').textContent = 'Walang laman ang cart.'; return; }
-  const fd = new FormData(e.target);
-  const r = await fetch('api.php?action=place-order', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      items: cart.map(c => ({ id: c.id, qty: c.qty })),
-      name: fd.get('name'), phone: fd.get('phone'),
-      address: fd.get('address'), payment: fd.get('payment')
-    })
-  });
-  const j = await r.json();
-  if (r.ok) {
-    localStorage.removeItem('pk_cart');
-    alert('Order placed! #' + (1023 + j.order_id));
-    location.reload();
-  } else $('order-err').textContent = j.error || 'Error';
-});
+    // --- MENU & SEARCH ---
+    renderMenu() {
+        const qInput = document.getElementById('search-input');
+        const bInput = document.getElementById('budget-input');
+        if (!qInput || !bInput) return;
 
-/* ---------- ADMIN TABS ---------- */
-document.querySelectorAll('.admin-tab').forEach(t => {
-  t.addEventListener('click', () => {
-    document.querySelectorAll('.admin-tab').forEach(x => x.classList.remove('active'));
-    t.classList.add('active');
-    document.querySelectorAll('.admin-panel').forEach(p => p.hidden = true);
-    $('panel-' + t.dataset.panel).hidden = false;
-  });
-});
+        const q = qInput.value.toLowerCase();
+        const budget = parseFloat(bInput.value) || Infinity;
+        
+        const html = this.products.filter(p => {
+            const matchQ = p.name.toLowerCase().includes(q) || (p.tags && p.tags.toLowerCase().includes(q));
+            const matchB = p.price <= budget;
+            return matchQ && matchB;
+        }).map(p => `
+            <div class="card product-card">
+                <span class="chip" style="position:absolute; top:10px; left:10px; background:var(--amber); color:#000;">${p.category}</span>
+                <img src="${p.image}" class="product-img" style="background:#fff;">
+                <div style="margin-top:10px; flex:1;">
+                    <h3 style="font-size:18px; line-height:1.2;">${p.name}</h3>
+                    <p style="font-size:12px; color:var(--muted); margin:5px 0;">${p.description}</p>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px; border-top:1px solid var(--line); padding-top:10px;">
+                    <h2 style="color:var(--brand);">₱${p.price}</h2>
+                    <button class="btn btn-brand" onclick="app.addToCart(${p.id})" ${p.stock <= 0 ? 'disabled' : ''}>${p.stock <= 0 ? 'Out' : '+ Add'}</button>
+                </div>
+                <div class="nutshell">
+                    <h3>${p.name}</h3>
+                    <p style="font-size:12px; margin:5px 0 10px;">${p.description}</p>
+                    <div style="display:flex; justify-content:space-between;">
+                        <span style="color:var(--leaf); font-size:12px; font-weight:bold;">🔥 ${p.stock} left</span>
+                        <button class="btn btn-brand" onclick="app.addToCart(${p.id})">Quick Add</button>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+        
+        document.getElementById('product-grid').innerHTML = html || '<p style="text-align:center; width:100%;">No products found.</p>';
+    },
 
-/* ---------- ADMIN: ORDER STATUS ---------- */
-document.querySelectorAll('.status-select').forEach(sel => {
-  sel.addEventListener('change', async () => {
-    await fetch('api.php?action=update-order', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ order_id: +sel.dataset.order, status: sel.value })
-    });
-    location.reload();
-  });
-});
+    // --- CART & CHECKOUT ---
+    addToCart(id) {
+        const p = this.products.find(x => x.id === id);
+        const item = this.cart.find(x => x.id === id);
+        if (item) {
+            item.qty++;
+        } else {
+            this.cart.push({ ...p, qty: 1 });
+        }
+        this.saveCart();
+        this.toggleCart(true);
+    },
 
-/* ---------- ADMIN: UPDATE / DELETE PRODUCT ---------- */
-document.querySelectorAll('.product-save').forEach(b => {
-  b.addEventListener('click', async () => {
-    const row = b.closest('tr');
-    await fetch('api.php?action=update-product', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        product_id: +b.dataset.pid,
-        stock: +row.querySelector('[name=stock]').value,
-        price: +row.querySelector('[name=price]').value
-      })
-    });
-    location.reload();
-  });
-});
+    saveCart() {
+        localStorage.setItem('pk_cart', JSON.stringify(this.cart));
+        this.renderCart();
+    },
 
-/* ===== CHANGED: true DELETE with confirmation + error feedback ===== */
-document.querySelectorAll('.product-del').forEach(b => {
-  b.addEventListener('click', async () => {
-    const name = b.dataset.name || 'this item';
-    if (!confirm(`Permanently delete "${name}"?\n\nThis cannot be undone. Past orders will keep their item details.`)) return;
+    renderCart() {
+        const badge = document.getElementById('cart-badge');
+        if (badge) badge.textContent = this.cart.reduce((s, x) => s + x.qty, 0);
+        
+        const itemsDiv = document.getElementById('cart-items');
+        if (itemsDiv) {
+            itemsDiv.innerHTML = this.cart.map(c => `
+                <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--line); padding:10px 0;">
+                    <div>
+                        <b>${c.name}</b><br>
+                        <small style="color:var(--brand);">₱${c.price} × ${c.qty}</small>
+                    </div>
+                    <div>
+                        <button class="btn btn-ghost" style="padding:2px 8px;" onclick="app.updateQty(${c.id}, -1)">−</button>
+                        <button class="btn btn-ghost" style="padding:2px 8px;" onclick="app.updateQty(${c.id}, 1)">+</button>
+                    </div>
+                </div>
+            `).join('') || '<p style="text-align:center; color:var(--muted);">Cart is empty.</p>';
+        }
 
-    const res = await fetch('api.php?action=delete-product', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ product_id: +b.dataset.pid })
-    });
+        const total = this.cart.reduce((s, x) => s + x.price * x.qty, 0) + (this.cart.length ? this.fee : 0);
+        const totalEl = document.getElementById('cart-total');
+        if (totalEl) totalEl.textContent = '₱' + total;
+    },
 
-    if (res.ok) {
-      location.reload();
-    } else {
-      const j = await res.json().catch(() => ({}));
-      alert(j.error || 'Failed to delete product.');
+    updateQty(id, d) {
+        const i = this.cart.find(x => x.id === id);
+        if (i) {
+            i.qty += d;
+            if (i.qty <= 0) this.cart = this.cart.filter(x => x.id !== id);
+            this.saveCart();
+        }
+    },
+
+    toggleCart(force = false) {
+        const d = document.getElementById('cart-drawer');
+        if (force) d.classList.remove('hidden');
+        else d.classList.toggle('hidden');
+    },
+
+    renderCheckoutSummary() {
+        let subtotal = this.cart.reduce((s, x) => s + x.price * x.qty, 0);
+        let html = this.cart.map(c => `<div style="display:flex; justify-content:space-between; margin-bottom:5px;"><span>${c.qty}x ${c.name}</span><span>₱${c.price * c.qty}</span></div>`).join('');
+        html += `<hr style="margin:10px 0;"><div style="display:flex; justify-content:space-between;"><span>Shipping</span><span>₱${this.fee}</span></div>`;
+        html += `<div style="display:flex; justify-content:space-between; font-size:20px; color:var(--brand); margin-top:10px;"><span>Total</span><span>₱${subtotal + this.fee}</span></div>`;
+        document.getElementById('checkout-summary').innerHTML = html;
+    },
+
+    handleImageUpload(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const scale = 800 / Math.max(img.width, img.height);
+                canvas.width = img.width * scale;
+                canvas.height = img.height * scale;
+                canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+                this.gcashBase64 = canvas.toDataURL('image/jpeg', 0.7);
+                
+                const prev = document.getElementById('gcash-preview');
+                prev.src = this.gcashBase64;
+                prev.style.display = 'block';
+            };
+            img.src = ev.target.result;
+        };
+        reader.readAsDataURL(file);
+    },
+
+    async submitOrder() {
+        if (!this.cart.length) return this.showToast('Cart is empty');
+        
+        const payment = document.getElementById('co-payment').value;
+        if (payment === 'gcash' && !this.gcashBase64) return this.showToast('Please upload GCash receipt');
+
+        const payload = {
+            items: this.cart.map(c => ({ id: c.id, qty: c.qty })),
+            name: document.getElementById('co-name').value,
+            phone: document.getElementById('co-phone').value,
+            address: document.getElementById('co-addr').value,
+            payment: payment,
+            proof: this.gcashBase64,
+            fee: this.fee
+        };
+
+        const res = await fetch('api.php?action=place-order', { method: 'POST', body: JSON.stringify(payload) });
+        const data = await res.json();
+        
+        if (data.ok) {
+            this.cart = [];
+            this.saveCart();
+            this.gcashBase64 = '';
+            this.go('orders');
+            this.showToast('Order placed successfully!');
+            this.init();
+        } else {
+            this.showToast(data.error || 'Failed to place order');
+        }
+    },
+
+    // --- CUSTOMER ORDERS ---
+    renderOrders() {
+        const list = document.getElementById('orders-list');
+        if (!this.user) {
+            list.innerHTML = '<p>Please login to view orders.</p>';
+            return;
+        }
+        list.innerHTML = this.orders.map(o => `
+            <div class="card">
+                <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                    <h3>Order #${o.id}</h3>
+                    <span class="chip" style="background:var(--leaf-soft); color:var(--leaf);">${o.status}</span>
+                </div>
+                <p style="font-size:13px; color:var(--muted); margin-bottom:10px;">${o.items.map(i => `${i.qty}x ${i.name}`).join(', ')}</p>
+                <h3 style="text-align:right; color:var(--brand);">₱${o.total}</h3>
+            </div>
+        `).join('') || '<p>No orders yet.</p>';
+    },
+
+    // --- ADMIN DASHBOARD ---
+    renderAdmin() {
+        if (!this.user || this.user.role !== 'admin') return;
+
+        let sales = this.orders.reduce((s, o) => s + parseInt(o.total), 0);
+        document.getElementById('stat-sales').textContent = '₱' + sales;
+        document.getElementById('stat-orders').textContent = this.orders.length;
+
+        document.getElementById('admin-orders-body').innerHTML = this.orders.map(o => `
+            <tr>
+                <td><b>#${o.id}</b></td>
+                <td>${o.customer_name}<br><small>${o.address}</small></td>
+                <td>₱${o.total}</td>
+                <td>${o.payment === 'gcash' && o.payment_proof ? `<button class="btn btn-ghost" style="padding:4px 8px; font-size:11px;" onclick="app.viewProof('${o.payment_proof}')">📸 View</button>` : 'COD'}</td>
+                <td>
+                    <select class="input" style="padding:5px; width:120px; margin-bottom:5px;" onchange="app.updateOrderStatus(${o.id}, this.value)">
+                        <option ${o.status === 'Pending' ? 'selected' : ''}>Pending</option>
+                        <option ${o.status === 'Shipping' ? 'selected' : ''}>Shipping</option>
+                        <option ${o.status === 'Delivered' ? 'selected' : ''}>Delivered</option>
+                    </select><br>
+                    <button class="btn btn-danger" style="padding:4px 8px; font-size:11px;" onclick="app.deleteOrder(${o.id})">🗑 Delete</button>
+                </td>
+            </tr>
+        `).join('');
+
+        document.getElementById('admin-stock-body').innerHTML = this.products.map(p => `
+            <tr>
+                <td>${p.name}</td>
+                <td><input type="number" id="p-price-${p.id}" class="input" style="padding:5px; width:80px;" value="${p.price}"></td>
+                <td><input type="number" id="p-stock-${p.id}" class="input" style="padding:5px; width:80px;" value="${p.stock}"></td>
+                <td>
+                    <button class="btn btn-leaf" style="padding:4px 8px; font-size:11px;" onclick="app.saveProduct(${p.id})">Save</button>
+                    <button class="btn btn-danger" style="padding:4px 8px; font-size:11px;" onclick="app.deleteProduct(${p.id})">🗑</button>
+                </td>
+            </tr>
+        `).join('');
+    },
+
+    switchAdminTab(tab, btn) {
+        document.querySelectorAll('#view-admin .btn-brand, #view-admin .btn-ghost').forEach(b => b.className = 'btn btn-ghost');
+        btn.className = 'btn btn-brand';
+        ['orders', 'stock', 'add'].forEach(t => document.getElementById('admin-' + t).classList.add('hidden'));
+        document.getElementById('admin-' + tab).classList.remove('hidden');
+    },
+
+    viewProof(src) {
+        document.getElementById('proof-img').src = src;
+        document.getElementById('proof-modal').classList.remove('hidden');
+    },
+
+    async updateOrderStatus(id, status) {
+        await fetch('api.php?action=admin-update-order', { method: 'POST', body: JSON.stringify({ order_id: id, status }) });
+        this.showToast('Status updated');
+        this.init();
+    },
+
+    async deleteOrder(id) {
+        if (!confirm('Delete this order permanently?')) return;
+        await fetch('api.php?action=admin-delete-order', { method: 'POST', body: JSON.stringify({ order_id: id }) });
+        this.init();
+    },
+
+    async saveProduct(id) {
+        const price = document.getElementById(`p-price-${id}`).value;
+        const stock = document.getElementById(`p-stock-${id}`).value;
+        await fetch('api.php?action=admin-update-product', { method: 'POST', body: JSON.stringify({ id, price, stock }) });
+        this.showToast('Product saved');
+        this.init();
+    },
+
+    async deleteProduct(id) {
+        if (!confirm('Delete this product?')) return;
+        await fetch('api.php?action=admin-delete-product', { method: 'POST', body: JSON.stringify({ id }) });
+        this.init();
+    },
+
+    async addProduct() {
+        const payload = {
+            name: document.getElementById('add-name').value,
+            price: document.getElementById('add-price').value,
+            stock: document.getElementById('add-stock').value,
+            category: document.getElementById('add-cat').value,
+            tagline: '',
+            description: 'New product',
+            image: 'https://placehold.co/400x400/eee/333?text=New',
+            tags: ''
+        };
+        await fetch('api.php?action=admin-add-product', { method: 'POST', body: JSON.stringify(payload) });
+        this.showToast('Product added');
+        this.init();
+    },
+
+    // --- EXTRAS (Theme & PiliBot) ---
+    toggleTheme() {
+        const html = document.documentElement;
+        const isSunset = html.getAttribute('data-theme') === 'sunset';
+        html.setAttribute('data-theme', isSunset ? 'day' : 'sunset');
+        document.getElementById('theme-btn').textContent = isSunset ? '🌙' : '☀️';
+        localStorage.setItem('pk_theme', isSunset ? 'day' : 'sunset');
+    },
+
+    checkTheme() {
+        if (localStorage.getItem('pk_theme') === 'sunset') {
+            document.documentElement.setAttribute('data-theme', 'sunset');
+            document.getElementById('theme-btn').textContent = '☀️';
+        }
+    },
+
+    toggleBot() {
+        document.getElementById('pilibot-window').classList.toggle('hidden');
+    },
+
+    sendBotMsg(e) {
+        e.preventDefault();
+        const input = document.getElementById('pb-text');
+        const chat = document.getElementById('pb-chat');
+        if (!input.value) return;
+        
+        chat.innerHTML += `<div class="pb-msg user">${input.value}</div>`;
+        const q = input.value.toLowerCase();
+        input.value = '';
+        chat.scrollTop = chat.scrollHeight;
+
+        setTimeout(() => {
+            let reply = "I'm not sure. Try asking about delivery, GCash, or budget mode!";
+            if (q.includes('deliver')) reply = `Our delivery fee is ₱${this.fee} within Calamba.`;
+            if (q.includes('gcash')) reply = "Yes! We accept GCash. Just upload your receipt at checkout.";
+            if (q.includes('budget')) reply = "Use Budget Mode at the top of the menu to hide expensive items!";
+            if (q.includes('order')) reply = "Go to 'My Orders' to track your food.";
+            
+            chat.innerHTML += `<div class="pb-msg">${reply}</div>`;
+            chat.scrollTop = chat.scrollHeight;
+        }, 600);
     }
-  });
-});
-/* ===== END CHANGED ===== */
+};
 
-/* ---------- ADMIN: ADD PRODUCT ---------- */
-$('add-form')?.addEventListener('submit', async e => {
-  e.preventDefault();
-  const fd = new FormData(e.target);
-  await fetch('api.php?action=add-product', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(Object.fromEntries(fd))
-  });
-  location.reload();
-});
-
-renderCart();
+// Start the app when the page loads
+window.app = app;
+document.addEventListener('DOMContentLoaded', () => app.init());

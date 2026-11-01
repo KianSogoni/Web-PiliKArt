@@ -1,472 +1,195 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="day">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PiliKart — Good finds. Galing Pinoy.</title>
     <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito:wght@600;800&display=swap" rel="stylesheet">
-    <style>
-        :root{--bg:#fdf6ec;--surface:#fff;--ink:#35231b;--muted:#8a6f5f;--brand:#d95b33;--leaf:#3f7a45;--line:#f0e0cc;--shadow:0 12px 32px -12px rgba(90,52,26,.22)}
-        *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:"Nunito",sans-serif;line-height:1.5}
-        h1,h2,h3{font-family:"Baloo 2",sans-serif;margin:0 0 .5rem}a{color:inherit;text-decoration:none}img{max-width:100%;display:block}
-        .topbar{display:flex;justify-content:space-between;align-items:center;padding:1rem 1.5rem;background:var(--surface);box-shadow:var(--shadow);position:sticky;top:0;z-index:20}
-        .brand{font-family:"Baloo 2",sans-serif;font-size:26px;font-weight:800}.brand span{display:block;font-size:9px;color:var(--leaf);letter-spacing:.2em;text-transform:uppercase}
-        .btn{background:var(--brand);color:#fff;border:none;padding:.6rem 1.2rem;border-radius:999px;font-family:"Baloo 2",sans-serif;font-weight:800;cursor:pointer;transition:.2s}
-        .btn:hover{background:#b8461f;transform:translateY(-1px)}.btn-ghost{background:#eee;color:#333}
-        main{max-width:1180px;margin:0 auto;padding:1.5rem}
-        .card{background:var(--surface);border-radius:20px;padding:1.5rem;box-shadow:var(--shadow);margin-bottom:1.5rem}
-        .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:1rem}
-        .product{display:flex;flex-direction:column;padding:1rem}
-        .product img{aspect-ratio:1;object-fit:cover;border-radius:14px;background:#eee;margin-bottom:1rem;width:100%}
-        .product h3{font-size:17px;line-height:1.2;margin-bottom:.2rem}.product p{color:var(--muted);font-size:12px;flex:1;margin:0 0 1rem}
-        .product-foot{display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--line);padding-top:.8rem;margin-top:auto}
-        .price{font-family:"Baloo 2",sans-serif;font-size:20px;color:var(--brand);font-weight:800}
-        .form{display:flex;flex-direction:column;gap:.6rem;max-width:400px;margin:0 auto}
-        .form input,.form textarea,.form select{padding:.8rem;border:2px solid var(--line);border-radius:12px;font:inherit}
-        .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1rem;margin-bottom:2rem}
-        .stat{background:var(--surface);padding:1rem;border-radius:16px;box-shadow:var(--shadow)}.stat b{display:block;font-size:11px;color:var(--muted)}
-        .stat span{font-family:"Baloo 2",sans-serif;font-size:24px;font-weight:800}
-        .hidden{display:none!important}
-        /* Cart Drawer */
-        .drawer{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.5)}.drawer-panel{position:absolute;top:0;right:0;bottom:0;width:350px;background:var(--bg);padding:1.5rem;overflow-y:auto}
-        .cart-item{display:flex;justify-content:space-between;margin-bottom:.5rem;border-bottom:1px solid var(--line);padding-bottom:.5rem}
-        .search-bar{width:100%;padding:1rem;border-radius:999px;border:2px solid var(--line);margin-bottom:1rem;font:inherit}
-        .tabs{display:flex;gap:.5rem;margin-bottom:1rem;flex-wrap:wrap}
-        .tab{background:#fff;border:1px solid var(--line);padding:.5rem 1rem;border-radius:99px;cursor:pointer;font-weight:600}
-        .tab.active{background:var(--leaf);color:#fff}
-        /* Admin Table */
-        table{width:100%;border-collapse:collapse;background:#fff;border-radius:16px;overflow:hidden}
-        th,td{padding:.8rem;text-align:left;border-bottom:1px solid var(--line);font-size:14px}
-        th{background:#eee;font-size:11px;text-transform:uppercase}
-        .status-badge{padding:2px 8px;border-radius:99px;font-size:11px;font-weight:800;background:#eee}
-    </style>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 
-<!-- Header -->
-<header class="topbar">
-    <a href="#" class="brand">pilikart<span>pumili ka + cart</span></a>
-    <div style="display:flex;gap:1rem;align-items:center">
-        <button class="btn" onclick="toggleCart()">🧺 Cart <span id="cart-count" style="background:#fff;color:var(--brand);padding:0 6px;border-radius:99px">0</span></button>
-        <button id="auth-btn" class="btn btn-ghost" onclick="handleAuthClick()">Login</button>
+<!-- Global Header (Hidden by default to prevent flash) -->
+<header id="global-header" class="hidden">
+    <div class="max-w nav-inner">
+        <div class="brand" onclick="app.go('menu')">pilikart<span>pumili ka + cart</span></div>
+        <div class="nav-actions">
+            <button class="icon-btn" onclick="app.toggleTheme()" id="theme-btn">🌙</button>
+            <button class="icon-btn" onclick="app.go('orders')" id="nav-orders">📦</button>
+            <button class="icon-btn" onclick="app.toggleCart()">
+                🧺 <span class="badge" id="cart-badge">0</span>
+            </button>
+            <button class="btn btn-brand" onclick="app.handleAuth()" id="auth-btn">Login</button>
+        </div>
     </div>
 </header>
 
-<main>
-    <!-- Login View -->
-    <div id="view-login" class="card hidden" style="max-width:400px;margin:2rem auto">
-        <h2 style="text-align:center">Pasok na!</h2>
-        <form class="form" onsubmit="submitLogin(event)">
-            <input type="email" id="login-email" placeholder="Email" required>
-            <input type="password" id="login-pass" placeholder="Password" required>
-            <button type="submit" class="btn" style="width:100%">Sign In</button>
-            <p id="login-err" style="color:red;font-size:13px;text-align:center;margin:0"></p>
-            <p style="font-size:11px;text-align:center;color:var(--muted)">Demo: admin@pilikart.ph / admin</p>
-        </form>
+<!-- Main Content (Hidden by default to prevent flash) -->
+<main id="main-content" style="display:none;">
+    
+   <!-- THE LANDING PAGE -->
+    <div id="view-landing" class="landing-screen hidden">
+        <div class="landing-header max-w">
+            <div class="brand light">pilikart<span>pumili ka + cart</span></div>
+            <div class="top-loc">ᜉᜎᜒ · CALAMBA, LAGUNA</div>
+        </div>
+
+        <div class="landing-content">
+            <div class="landing-badge">☀ MABUHAY, SUKI</div>
+            <h1 class="landing-title">Welcome to<br><span class="pk">PiliKArt!</span></h1>
+            <p class="landing-subtitle">Where you can choose to your hearts' desire</p>
+            <button class="btn btn-brand btn-large" onclick="app.go('menu')">PILI KA NA!</button>
+        </div>
+
+        <div class="marquee-container">
+            <div class="marquee-track">
+                <span>🌿 Lumingon. Suportahan. Umunlad. &nbsp;•&nbsp; 🤝 Keep the piso local &nbsp;•&nbsp; 🇵🇭 Gawa ng Pilipino, Para sa Pilipino &nbsp;•&nbsp; ✨ Yaman ng Lahi &nbsp;•&nbsp; ✨ ᜐᜒᜇᜒᜎᜒᜅ᜔ ᜀᜆᜒᜈ᜔ (Sariling Atin) &nbsp;•&nbsp; 🇵🇭 Make sure to support local businesses! &nbsp;•&nbsp; ✊ Pumili ng Tama, Para sa'yo, Para sa Pilipino &nbsp;•&nbsp;</span>
+                <span>🌿 Lumingon. Suportahan. Umunlad. &nbsp;•&nbsp; 🤝 Keep the piso local &nbsp;•&nbsp; 🇵🇭 Gawa ng Pilipino, Para sa Pilipino &nbsp;•&nbsp; ✨ Yaman ng Lahi &nbsp;•&nbsp; ✨ ᜐᜒᜇᜒᜎᜒᜅ᜔ ᜀᜆᜒᜈ᜔ (Sariling Atin) &nbsp;•&nbsp; 🇵🇭 Make sure to support local businesses! &nbsp;•&nbsp; ✊ Pumili ng Tama, Para sa'yo, Para sa Pilipino &nbsp;•&nbsp;</span>
+            </div>
+        </div>
+    </div>
+        <!-- Center Content -->
+        <div class="landing-content">
+            <div class="landing-badge">☀ MABUHAY, SUKI</div>
+            <h1 class="landing-title">Welcome to<br><span class="pk">PiliKArt!</span></h1>
+            <p class="landing-subtitle">Where you can choose to your hearts' desire</p>
+            <button class="btn btn-brand btn-large" onclick="app.go('menu')">PILI KA NA!</button>
+        </div>
+
+        <!-- Bottom Marquee -->
+        <div class="marquee-container">
+            <div class="marquee-track">
+                <span>🌿 Lumingon. Suportahan. Umunlad. &nbsp;•&nbsp; 🤝 Keep the piso local &nbsp;•&nbsp; 🇵🇭 Gawa ng Pilipino, Para sa Pilipino &nbsp;•&nbsp; ✨ Yaman ng Lahi &nbsp;•&nbsp; ✨ ᜐᜒᜇᜒᜎᜒᜅ᜔ ᜀᜆᜒᜈ᜔ (Sariling Atin) &nbsp;•&nbsp; 🇵🇭 Make sure to support local businesses! &nbsp;•&nbsp; ✊ Pumili ng Tama, Para sa'yo, Para sa Pilipino &nbsp;•&nbsp;</span>
+                <span>🌿 Lumingon. Suportahan. Umunlad. &nbsp;•&nbsp; 🤝 Keep the piso local &nbsp;•&nbsp; 🇵🇭 Gawa ng Pilipino, Para sa Pilipino &nbsp;•&nbsp; ✨ Yaman ng Lahi &nbsp;•&nbsp; ✨ ᜐᜒᜇᜒᜎᜒᜅ᜔ ᜀᜆᜒᜈ᜔ (Sariling Atin) &nbsp;•&nbsp; 🇵🇭 Make sure to support local businesses! &nbsp;•&nbsp; ✊ Pumili ng Tama, Para sa'yo, Para sa Pilipino &nbsp;•&nbsp;</span>
+            </div>
+        </div>
     </div>
 
-    <!-- Admin Dashboard -->
-    <div id="view-admin" class="hidden">
-        <h1>Owner Dashboard 👑</h1>
-        <div class="stats">
-            <div class="stat"><b>Total Sales</b><span id="stat-sales">₱0</span></div>
-            <div class="stat"><b>Orders</b><span id="stat-orders">0</span></div>
+    <!-- MENU VIEW -->
+    <div id="view-menu" class="hidden max-w" style="padding-top:20px; padding-bottom:80px;">
+        <div class="grid grid-2" style="margin-bottom: 20px;">
+            <input type="text" id="search-input" class="input" placeholder="Search: adobo, lipstick, towel..." oninput="app.renderMenu()">
+            <div style="display:flex; align-items:center; gap:10px;">
+                <label style="font-weight:800; color:var(--brand)">💸 Budget Mode (₱):</label>
+                <input type="number" id="budget-input" class="input" placeholder="Max Price" oninput="app.renderMenu()">
+            </div>
         </div>
-        <div class="tabs">
-            <button class="tab active" onclick="switchAdminTab('orders', this)">📦 Orders</button>
-            <button class="tab" onclick="switchAdminTab('stock', this)">🛒 Stock & Menu</button>
-            <button class="tab" onclick="switchAdminTab('add', this)">➕ Add Item</button>
+        <div class="grid grid-3" id="product-grid"></div>
+    </div>
+
+    <!-- AUTH VIEW -->
+    <div id="view-auth" class="hidden max-w" style="max-width:400px; margin: 40px auto;">
+        <div class="card">
+            <h2 style="text-align:center; margin-bottom: 20px;">Sign In / Sign Up</h2>
+            <input type="text" id="auth-name" class="input" placeholder="Full Name (Sign Up only)" style="margin-bottom:10px;">
+            <input type="email" id="auth-email" class="input" placeholder="Email" style="margin-bottom:10px;">
+            <input type="password" id="auth-pass" class="input" placeholder="Password" style="margin-bottom:10px;">
+            <input type="text" id="auth-address" class="input" placeholder="Address (Sign Up only)" style="margin-bottom:10px;">
+            <button class="btn btn-brand" style="width:100%; margin-bottom:10px;" onclick="app.submitAuth()">Login</button>
+            <button class="btn btn-ghost" style="width:100%;" onclick="app.toggleSignUp()" id="signup-toggle">Switch to Sign Up</button>
+            <p style="text-align:center; margin-top:15px; font-size:12px;">Demo: admin@pilikart.ph / admin</p>
+        </div>
+    </div>
+
+    <!-- CHECKOUT VIEW -->
+    <div id="view-checkout" class="hidden max-w grid grid-2" style="padding-top:20px;">
+        <div class="card">
+            <h2>Checkout</h2>
+            <input type="text" id="co-name" class="input" placeholder="Full Name" style="margin-bottom:10px;">
+            <input type="text" id="co-phone" class="input" placeholder="Phone" style="margin-bottom:10px;">
+            <textarea id="co-addr" class="input" placeholder="Address" style="margin-bottom:10px;"></textarea>
+            <select id="co-payment" class="input" onchange="document.getElementById('gcash-box').style.display = this.value === 'gcash' ? 'block' : 'none'" style="margin-bottom:10px;">
+                <option value="cod">Cash on Delivery</option>
+                <option value="gcash">GCash</option>
+            </select>
+            <div id="gcash-box" style="display:none; margin-bottom:15px; background:rgba(0,120,255,0.1); padding:15px; border-radius:10px;">
+                <p style="font-weight:800; color:#007dfe; margin-bottom:5px;">Upload GCash Receipt</p>
+                <input type="file" id="gcash-file" accept="image/*" onchange="app.handleImageUpload(event)">
+                <img id="gcash-preview" style="display:none; width:100px; margin-top:10px; border-radius:8px;">
+            </div>
+            <button class="btn btn-brand" style="width:100%; padding:15px;" onclick="app.submitOrder()">Place Order</button>
+        </div>
+        <div class="card">
+            <h2>Order Summary</h2>
+            <div id="checkout-summary" style="margin-top:15px; font-weight:bold;"></div>
+        </div>
+    </div>
+
+    <!-- ORDERS VIEW -->
+    <div id="view-orders" class="hidden max-w" style="padding-top:20px;">
+        <h2>My Orders</h2>
+        <div id="orders-list" style="margin-top:20px; display:flex; flex-direction:column; gap:15px;"></div>
+    </div>
+
+    <!-- ADMIN DASHBOARD -->
+    <div id="view-admin" class="hidden max-w" style="padding-top:20px;">
+        <h2>Owner Dashboard 👑</h2>
+        <div class="grid grid-3" style="margin:20px 0;">
+            <div class="card"><h3>Total Sales</h3><h1 id="stat-sales">₱0</h1></div>
+            <div class="card"><h3>Orders</h3><h1 id="stat-orders">0</h1></div>
+        </div>
+        <div style="display:flex; gap:10px; margin-bottom:20px;">
+            <button class="btn btn-brand" onclick="app.switchAdminTab('orders', this)">Orders</button>
+            <button class="btn btn-ghost" onclick="app.switchAdminTab('stock', this)">Inventory</button>
+            <button class="btn btn-ghost" onclick="app.switchAdminTab('add', this)">Add Item</button>
         </div>
         
-        <div id="admin-orders">
-            <table>
-                <!-- Notice this new header -->
-                <thead><tr><th>Order</th><th>Customer</th><th>Total</th><th>Status & Action</th></tr></thead>
-                <tbody id="admin-orders-body"></tbody>
-            </table>
+        <div id="admin-orders" class="card">
+            <table><thead><tr><th>Order</th><th>Customer</th><th>Total</th><th>Proof</th><th>Status & Actions</th></tr></thead><tbody id="admin-orders-body"></tbody></table>
+        </div>
+        
+        <div id="admin-stock" class="card hidden">
+            <table><thead><tr><th>Item</th><th>Price</th><th>Stock</th><th>Actions</th></tr></thead><tbody id="admin-stock-body"></tbody></table>
         </div>
 
-        <div id="admin-stock" class="hidden">
-            <table>
-                <thead><tr><th>Item</th><th>Price</th><th>Stock</th><th>Action</th></tr></thead>
-                <tbody id="admin-stock-body"></tbody>
-            </table>
+        <div id="admin-add" class="card hidden" style="max-width:400px;">
+            <input type="text" id="add-name" class="input" placeholder="Name" style="margin-bottom:10px;">
+            <input type="number" id="add-price" class="input" placeholder="Price" style="margin-bottom:10px;">
+            <input type="number" id="add-stock" class="input" placeholder="Stock" style="margin-bottom:10px;">
+            <select id="add-cat" class="input" style="margin-bottom:10px;"><option value="paso">Paso</option><option value="nipa">Nipa</option><option value="habi">Habi</option><option value="apollo">Apollo</option></select>
+            <button class="btn btn-brand" style="width:100%;" onclick="app.addProduct()">Add Product</button>
         </div>
-
-        <!-- ADD ITEM FORM -->
-        <div id="admin-add" class="card hidden">
-            <form onsubmit="submitNewProduct(event)" style="display:flex;flex-direction:column;gap:1rem">
-                <input type="text" id="add-name" placeholder="Item Name" required>
-                <input type="text" id="add-tagline" placeholder="Tagline (e.g. Masarap at malinamnam)">
-                <input type="text" id="add-desc" placeholder="Description">
-                
-                <div style="display:flex;gap:1rem;flex-wrap:wrap">
-                    <input type="number" id="add-price" placeholder="Price" style="flex:1" required>
-                    <input type="number" id="add-stock" placeholder="Stock" style="flex:1" value="10" required>
-                </div>
-
-                <select id="add-cat">
-                    <option value="paso">Paso</option>
-                    <option value="nipa">Nipa</option>
-                    <option value="habi">Habi</option>
-                    <option value="apollo">Apollo</option>
-                </select>
-
-                <input type="text" id="add-image" placeholder="Image URL (leave blank for placeholder)" value="https://placehold.co/400x400/eee/333?text=New+Item">
-                <input type="text" id="add-tags" placeholder="Tags (comma separated, e.g. Chicken, Manok, Ulam)">
-
-                <button type="submit" class="btn">Add to Menu</button>
-            </form>
-        </div>
-    </div>
-
-    <!-- Customer Dashboard -->
-    <div id="view-dash" class="hidden">
-        <h1>Mabuhay, <span id="dash-name"></span>!</h1>
-        <h3>My Orders 📦</h3>
-        <div id="dash-orders" style="display:flex;flex-direction:column;gap:1rem"></div>
-    </div>
-
-    <!-- Catalog -->
-    <div id="view-catalog">
-        <h2 style="text-align:center;margin-top:2rem">Four stores. One happy cart.</h2>
-        <input type="text" id="search-input" class="search-bar" placeholder="Hanapin: adobo, lipstick, towel...">
-        <div class="tabs">
-            <button class="tab active" onclick="filterCatalog('all', this)">All Finds</button>
-            <button class="tab" onclick="filterCatalog('paso', this)">Paso</button>
-            <button class="tab" onclick="filterCatalog('nipa', this)">Nipa</button>
-            <button class="tab" onclick="filterCatalog('habi', this)">Habi</button>
-            <button class="tab" onclick="filterCatalog('apollo', this)">Apollo</button>
-        </div>
-        <div class="grid" id="product-grid"></div>
     </div>
 </main>
 
 <!-- Cart Drawer -->
 <div id="cart-drawer" class="drawer hidden">
     <div class="drawer-panel">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
-            <h2>🧺 Cart</h2>
-            <button class="btn btn-ghost" onclick="toggleCart()">✕</button>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            <h2>🧺 Your Cart</h2>
+            <button class="btn btn-ghost" onclick="app.toggleCart()">✕</button>
         </div>
-        <div id="cart-items"></div>
-        <form id="checkout-form" onsubmit="submitOrder(event)" style="margin-top:2rem;border-top:1px solid var(--line);padding-top:1rem">
-            <input type="text" id="co-name" placeholder="Full Name" required style="width:100%;margin-bottom:.5rem;padding:.5rem">
-            <input type="text" id="co-addr" placeholder="Address" required style="width:100%;margin-bottom:.5rem;padding:.5rem">
-            <p style="text-align:right;font-family:'Baloo 2';font-weight:800">Total: ₱<span id="cart-total">0</span></p>
-            <button type="submit" class="btn" style="width:100%">Place Order</button>
-        </form>
+        <div id="cart-items" style="flex:1; overflow-y:auto;"></div>
+        <div style="border-top:2px solid var(--line); padding-top:15px; margin-top:15px;">
+            <h3 style="display:flex; justify-content:space-between;"><span>Total:</span> <span id="cart-total">₱0</span></h3>
+            <button class="btn btn-brand" style="width:100%; margin-top:15px;" onclick="app.go('checkout'); app.toggleCart();">Checkout</button>
+        </div>
     </div>
 </div>
 
-<script>
-    let appData = { user: null, products: [], orders: [], fee: 50 };
-    let currentTab = 'all';
-    let cart = JSON.parse(localStorage.getItem('pk_cart') || '[]');
+<!-- GCash Proof Modal (Admin) -->
+<div id="proof-modal" class="modal hidden">
+    <div class="modal-content" style="text-align:center;">
+        <h3 style="margin-bottom:15px; color:#007dfe;">GCash Receipt</h3>
+        <img id="proof-img" style="width:100%; border-radius:10px; margin-bottom:15px;">
+        <button class="btn btn-ghost" style="width:100%;" onclick="document.getElementById('proof-modal').classList.add('hidden')">Close</button>
+    </div>
+</div>
 
-    async function loadData() {
-        try {
-            const res = await fetch('api.php?action=load');
-            appData = await res.json();
-            if (!appData.products) appData.products = [];
-            if (!appData.orders) appData.orders = [];
-        } catch (e) {
-            console.warn("Could not connect to api.php", e);
-        }
-        renderUI();
-    }
+<!-- PiliBot -->
+<button id="pilibot-btn" onclick="app.toggleBot()">🌿</button>
+<div id="pilibot-window" class="hidden">
+    <div class="pb-head"><span>PiliBot 🤖</span><span style="cursor:pointer;" onclick="app.toggleBot()">✕</span></div>
+    <div class="pb-chat" id="pb-chat"><div class="pb-msg">Mabuhay! Ako si PiliBot. Ano ang maitutulong ko?</div></div>
+    <form class="pb-input" onsubmit="app.sendBotMsg(event)">
+        <input type="text" id="pb-text" class="input" placeholder="Ask me..." style="padding:8px; border-radius:8px;">
+        <button class="btn btn-leaf" style="padding:8px 15px;">↑</button>
+    </form>
+</div>
 
-    function getPlaceholder(name) {
-        const safeName = name || 'Product';
-        const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400"><rect width="400" height="400" fill="#f0e0cc"/><text x="50%" y="50%" font-family="sans-serif" font-size="24" font-weight="bold" fill="#8a6f5f" text-anchor="middle" dy=".3em">${safeName}</text></svg>`;
-        return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
-    }
+<!-- Toast -->
+<div id="toast"></div>
 
-    function renderUI() {
-        const authBtn = document.getElementById('auth-btn');
-        if (appData.user) {
-            authBtn.textContent = 'Logout (' + appData.user.name.split(' ')[0] + ')';
-            authBtn.className = 'btn btn-ghost';
-            document.getElementById('view-login').classList.add('hidden');
-            if(document.getElementById('co-name')) {
-                document.getElementById('co-name').value = appData.user.name;
-                document.getElementById('co-addr').value = appData.user.address || '';
-            }
-            
-            if (appData.user.role === 'admin') {
-                document.getElementById('view-admin').classList.remove('hidden');
-                document.getElementById('view-dash').classList.add('hidden');
-                renderAdmin();
-            } else {
-                document.getElementById('view-dash').classList.remove('hidden');
-                document.getElementById('view-admin').classList.add('hidden');
-                renderCustomer();
-            }
-        } else {
-            authBtn.textContent = 'Login';
-            authBtn.className = 'btn';
-            document.getElementById('view-login').classList.remove('hidden');
-            document.getElementById('view-admin').classList.add('hidden');
-            document.getElementById('view-dash').classList.add('hidden');
-        }
-        
-        renderCatalog();
-        renderCart();
-    }
-
-    async function submitLogin(e) {
-        e.preventDefault();
-        const email = document.getElementById('login-email').value;
-        const password = document.getElementById('login-pass').value;
-        const res = await fetch('api.php?action=login', {
-            method: 'POST', headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ email, password })
-        });
-        if (res.ok) { loadData(); } else { document.getElementById('login-err').textContent = 'Invalid credentials'; }
-    }
-
-    async function handleAuthClick() {
-        if (appData.user) {
-            await fetch('api.php?action=logout');
-            appData.user = null;
-            loadData();
-        } else {
-            document.getElementById('view-login').scrollIntoView({behavior:'smooth'});
-        }
-    }
-
-    function renderCatalog() {
-        const grid = document.getElementById('product-grid');
-        if (!appData.products || appData.products.length === 0) {
-            grid.innerHTML = '<p style="text-align:center;grid-column:1/-1;color:var(--muted)">No products found.</p>';
-            return;
-        }
-
-        grid.innerHTML = appData.products.map(p => {
-            const out = p.sold_out == 1 || p.stock <= 0;
-            const safeTags = (p.tags || '').toLowerCase() + ' ' + (p.name || '').toLowerCase();
-            
-            return `
-            <article class="card product" data-cat="${p.category || ''}" data-tags="${safeTags}">
-                <img src="${p.image || ''}" alt="${p.name}" onerror="this.onerror=null; this.src='${getPlaceholder(p.name)}';">
-                <h3>${p.name}</h3>
-                <p>${p.description}</p>
-                <div class="product-foot">
-                    <span class="price">₱${p.price}</span>
-                    <button class="btn" onclick="addToCart(${p.id}, '${p.name}', ${p.price})" ${out ? 'disabled' : ''}>${out ? 'Out' : '+ Add'}</button>
-                </div>
-            </article>`;
-        }).join('');
-        
-        filterCatalog(currentTab, document.querySelector('.tab.active'));
-    }
-
-    function filterCatalog(cat, btn) {
-        currentTab = cat;
-        document.querySelectorAll('#view-catalog .tab').forEach(t => t.classList.remove('active'));
-        if(btn) btn.classList.add('active');
-        const q = document.getElementById('search-input').value.toLowerCase();
-        document.querySelectorAll('.product').forEach(card => {
-            const matchCat = cat === 'all' || card.dataset.cat === cat;
-            const matchQ = card.dataset.tags.includes(q) || q === '';
-            card.style.display = (matchCat && matchQ) ? 'flex' : 'none';
-        });
-    }
-    document.getElementById('search-input').addEventListener('input', () => filterCatalog(currentTab, document.querySelector('.tab.active')));
-
-    function addToCart(id, name, price) {
-        const item = cart.find(x => x.id === id);
-        if (item) item.qty++;
-        else cart.push({ id, name, price, qty: 1 });
-        saveCart();
-        toggleCart(true);
-    }
-    function saveCart() {
-        localStorage.setItem('pk_cart', JSON.stringify(cart));
-        renderCart();
-    }
-    function renderCart() {
-        const count = cart.reduce((s, x) => s + x.qty, 0);
-        document.getElementById('cart-count').textContent = count;
-        document.getElementById('cart-items').innerHTML = cart.map(c => `
-            <div class="cart-item">
-                <div><b>${c.name}</b><br><small>₱${c.price} × ${c.qty}</small></div>
-                <div>
-                    <button class="btn btn-ghost" onclick="updateQty(${c.id}, -1)">−</button>
-                    <button class="btn btn-ghost" onclick="updateQty(${c.id}, 1)">+</button>
-                </div>
-            </div>
-        `).join('') || '<p>Empty cart</p>';
-        const total = cart.reduce((s, x) => s + x.price * x.qty, 0) + (cart.length ? appData.fee : 0);
-        document.getElementById('cart-total').textContent = total;
-    }
-    function updateQty(id, delta) {
-        const item = cart.find(x => x.id === id);
-        if (item) {
-            item.qty += delta;
-            if (item.qty <= 0) cart = cart.filter(x => x.id !== id);
-            saveCart();
-        }
-    }
-    function toggleCart(forceOpen = false) {
-        const drawer = document.getElementById('cart-drawer');
-        if (forceOpen) drawer.classList.remove('hidden');
-        else drawer.classList.toggle('hidden');
-    }
-
-    async function submitOrder(e) {
-        e.preventDefault();
-        if (!cart.length) return alert('Cart is empty');
-        const name = document.getElementById('co-name').value;
-        const address = document.getElementById('co-addr').value;
-        
-        const res = await fetch('api.php?action=place-order', {
-            method: 'POST', headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ items: cart, name, address, payment: 'cod' })
-        });
-        if (res.ok) {
-            alert('Order placed successfully!');
-            cart = [];
-            saveCart();
-            toggleCart();
-            loadData();
-        } else {
-            const j = await res.json();
-            alert(j.error || 'Failed to place order');
-        }
-    }
-
-    function switchAdminTab(tab, btn) {
-        document.querySelectorAll('#view-admin .tab').forEach(t => t.classList.remove('active'));
-        if(btn) btn.classList.add('active');
-        document.getElementById('admin-orders').classList.add('hidden');
-        document.getElementById('admin-stock').classList.add('hidden');
-        document.getElementById('admin-add').classList.add('hidden');
-        document.getElementById('admin-' + tab).classList.remove('hidden');
-    }
-
-    function renderAdmin() {
-        const sales = appData.orders.reduce((s, o) => s + parseInt(o.total), 0);
-        document.getElementById('stat-sales').textContent = '₱' + sales.toLocaleString();
-        document.getElementById('stat-orders').textContent = appData.orders.length;
-
-        // This is the updated code that creates the Delete button!
-        document.getElementById('admin-orders-body').innerHTML = appData.orders.map(o => `
-            <tr>
-                <td><b>#${o.id}</b></td>
-                <td>${o.customer_name}</td>
-                <td>₱${o.total}</td>
-                <td>
-                    <select onchange="updateOrderStatus(${o.id}, this.value)">
-                        <option ${o.status==='Pending'?'selected':''}>Pending</option>
-                        <option ${o.status==='Shipping'?'selected':''}>Shipping</option>
-                        <option ${o.status==='Delivered'?'selected':''}>Delivered</option>
-                    </select>
-                    <button class="btn btn-ghost" style="color:#b3341f; background:#fde8e4; font-weight:800; padding:.3rem .6rem; font-size:12px; margin-left:5px" onclick="deleteOrder(${o.id})">🗑 Delete</button>
-                </td>
-            </tr>
-        `).join('');
-
-        document.getElementById('admin-stock-body').innerHTML = appData.products.map(p => `
-            <tr>
-                <td>${p.name}</td>
-                <td><input type="number" id="price-${p.id}" value="${p.price}" style="width:70px"></td>
-                <td><input type="number" id="stock-${p.id}" value="${p.stock}" style="width:70px"></td>
-                <td>
-                    <button class="btn" onclick="updateProduct(${p.id})">Save</button>
-                    <button class="btn btn-ghost" style="color:#b3341f; background:#fde8e4; font-weight:800" onclick="deleteProduct(${p.id}, '${p.name.replace(/'/g, "\\'")}')">🗑 Delete</button>
-                </td>
-            </tr>
-        `).join('');
-    }
-
-    async function updateOrderStatus(orderId, status) {
-        await fetch('api.php?action=update-order', {
-            method: 'POST', headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ order_id: orderId, status })
-        });
-        loadData();
-    }
-
-    async function deleteOrder(orderId) {
-        if (!confirm(`Permanently delete Order #${orderId}?\n\nThis will remove it from the database and cannot be undone.`)) return;
-
-        const res = await fetch('api.php?action=delete-order', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ order_id: orderId })
-        });
-
-        if (res.ok) {
-            loadData();
-        } else {
-            const j = await res.json().catch(() => ({}));
-            alert(j.error || 'Failed to delete order.');
-        }
-    }
-    
-    async function updateProduct(id) {
-        const price = document.getElementById('price-'+id).value;
-        const stock = document.getElementById('stock-'+id).value;
-        await fetch('api.php?action=update-product', {
-            method: 'POST', headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ product_id: id, price, stock })
-        });
-        loadData();
-    }
-
-    async function deleteProduct(id, name) {
-        if (!confirm(`Permanently delete "${name}"?\n\nThis cannot be undone. Past orders will keep their item details.`)) return;
-
-        const res = await fetch('api.php?action=delete-product', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ product_id: id })
-        });
-
-        if (res.ok) {
-            loadData();
-        } else {
-            const j = await res.json().catch(() => ({}));
-            alert(j.error || 'Failed to delete product.');
-        }
-    }
-    
-    async function submitNewProduct(e) {
-        e.preventDefault();
-        await fetch('api.php?action=add-product', {
-            method: 'POST', headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({
-                name: document.getElementById('add-name').value,
-                tagline: document.getElementById('add-tagline').value,
-                description: document.getElementById('add-desc').value,
-                price: document.getElementById('add-price').value,
-                stock: document.getElementById('add-stock').value,
-                category: document.getElementById('add-cat').value,
-                image: document.getElementById('add-image').value,
-                tags: document.getElementById('add-tags').value
-            })
-        });
-        
-        e.target.reset();
-        document.getElementById('add-image').value = 'https://placehold.co/400x400/eee/333?text=New+Item';
-        document.getElementById('add-stock').value = '10';
-        
-        loadData();
-        switchAdminTab('orders', document.querySelectorAll('#view-admin .tab')[0]);
-    }
-
-    function renderCustomer() {
-        document.getElementById('dash-name').textContent = appData.user.name;
-        document.getElementById('dash-orders').innerHTML = appData.orders.map(o => `
-            <div class="card" style="margin:0">
-                <b>Order #${o.id}</b> - ₱${o.total} <span class="status-badge">${o.status}</span>
-                <p style="font-size:13px;color:var(--muted);margin-top:.5rem">${o.items.map(i => i.qty + 'x ' + i.name).join(', ')}</p>
-            </div>
-        `).join('') || '<p>Wala ka pang order.</p>';
-    }
-
-    loadData();
-</script>
+<script src="main.js"></script>
 </body>
 </html>
