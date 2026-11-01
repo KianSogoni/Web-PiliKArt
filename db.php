@@ -1,8 +1,8 @@
 <?php
 $host = '127.0.0.1';
 $db   = 'pilikart';
-$user = 'root'; // Change 'pilikart_admin' to 'root' for default XAMPP setups
-$pass = '';     // Leave empty for default XAMPP installations
+$user = 'root';
+$pass = ''; 
 
 try {
     $pdo = new PDO("mysql:host=$host;dbname=$db;charset=utf8mb4", $user, $pass, [
@@ -12,3 +12,4 @@ try {
 } catch (PDOException $e) {
     die("Database connection failed: " . $e->getMessage());
 }
+?>
