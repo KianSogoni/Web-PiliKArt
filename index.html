@@ -8,39 +8,47 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-
-<!-- Global Header (Hidden by default to prevent flash) -->
+ 
+<!-- Global Header -->
 <header id="global-header" class="hidden">
     <div class="max-w nav-inner">
         <div class="brand" onclick="app.go('menu')">pilikart<span>pumili ka + cart</span></div>
         <div class="nav-actions">
-            <button class="icon-btn" onclick="app.toggleTheme()" id="theme-btn">🌙</button>
-            <button class="icon-btn" onclick="app.go('orders')" id="nav-orders">📦</button>
-            <button class="icon-btn" onclick="app.toggleCart()">
-                🧺 <span class="badge" id="cart-badge">0</span>
+            <button class="nav-btn" onclick="app.toggleTheme()" id="theme-btn" title="Toggle Theme">
+                <svg class="nav-icon sun-icon" viewBox="0 0 24 24"><path fill="currentColor" d="M12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6zm0-14c-4.41 0-8 3.59-8 8s3.59 8 8 8 8-3.59 8-8-3.59-8-8-8zM11 1h2v3h-2V1zm0 19h2v3h-2v-3zM3.51 4.93l2.12 2.12 1.41-1.41L4.92 3.52 3.51 4.93zm11.96 11.96l2.12 2.12 1.41-1.41-2.12-2.12-1.41 1.41zM1 11h3v2H1v-2zm19 0h3v2h-3v-2zM4.92 20.48l1.41-1.41 2.12 2.12-1.41 1.41-2.12-2.12zm11.96-11.96l1.41-1.41 2.12 2.12-1.41 1.41-2.12-2.12z"/></svg>
+                <span class="nav-label">Theme</span>
+            </button>
+            <button class="nav-btn" onclick="app.go('orders')" id="nav-orders" title="My Orders">
+                <svg class="nav-icon" viewBox="0 0 24 24"><path fill="currentColor" d="M21 16.5c0 .38-.21.71-.53.88l-7.9 4.44c-.16.09-.34.14-.57.14s-.41-.05-.57-.14l-7.9-4.44c-.32-.17-.53-.5-.53-.88v-9c0-.38.21-.71.53-.88l7.9-4.44c.16-.09.34-.14.57-.14s.41.05.57.14l7.9 4.44c.32.17.53.5.53.88v9zM12 4.15L6.04 7.5 12 10.85 17.96 7.5 12 4.15zM5 15.86l6 3.37v-6.72L5 9.14v6.72zm14 0v-6.72l-6 3.37v6.72l6-3.37z"/></svg>
+                <span class="nav-label">Orders</span>
+            </button>
+            <button class="nav-btn" onclick="app.toggleCart()" title="View Cart">
+                <svg class="nav-icon" viewBox="0 0 24 24"><path fill="currentColor" d="M19 6h-2c0-2.76-2.24-5-5-5S7 3.24 7 6H5c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-7-3c1.66 0 3 1.34 3 3H9c0-1.66 1.34-3 3-3zm7 17H5V8h2v2c0 .55.45 1 1 1s1-.45 1-1V8h6v2c0 .55.45 1 1 1s1-.45 1-1V8h2v12z"/></svg>
+                <span class="nav-label">Cart</span>
+                <span class="badge" id="cart-badge">0</span>
             </button>
             <button class="btn btn-brand" onclick="app.handleAuth()" id="auth-btn">Login</button>
         </div>
     </div>
 </header>
-
-<!-- Main Content (Hidden by default to prevent flash) -->
+ 
+<!-- Main Content -->
 <main id="main-content" style="display:none;">
     
-   <!-- THE LANDING PAGE -->
+    <!-- LANDING PAGE -->
     <div id="view-landing" class="landing-screen hidden">
         <div class="landing-header max-w">
             <div class="brand light">pilikart<span>pumili ka + cart</span></div>
             <div class="top-loc">ᜉᜎᜒ · CALAMBA, LAGUNA</div>
         </div>
-
+ 
         <div class="landing-content">
             <div class="landing-badge">☀ MABUHAY, SUKI</div>
             <h1 class="landing-title">Welcome to<br><span class="pk">PiliKArt!</span></h1>
             <p class="landing-subtitle">Where you can choose to your hearts' desire</p>
-            <button class="btn btn-brand btn-large" onclick="app.go('menu')">PILI KA NA!</button>
+            <button class="btn btn-brand btn-large" onclick="app.go('auth')">PILI KA NA!</button>
         </div>
-
+ 
         <div class="marquee-container">
             <div class="marquee-track">
                 <span>🌿 Lumingon. Suportahan. Umunlad. &nbsp;•&nbsp; 🤝 Keep the piso local &nbsp;•&nbsp; 🇵🇭 Gawa ng Pilipino, Para sa Pilipino &nbsp;•&nbsp; ✨ Yaman ng Lahi &nbsp;•&nbsp; ✨ ᜐᜒᜇᜒᜎᜒᜅ᜔ ᜀᜆᜒᜈ᜔ (Sariling Atin) &nbsp;•&nbsp; 🇵🇭 Make sure to support local businesses! &nbsp;•&nbsp; ✊ Pumili ng Tama, Para sa'yo, Para sa Pilipino &nbsp;•&nbsp;</span>
@@ -48,23 +56,7 @@
             </div>
         </div>
     </div>
-        <!-- Center Content -->
-        <div class="landing-content">
-            <div class="landing-badge">☀ MABUHAY, SUKI</div>
-            <h1 class="landing-title">Welcome to<br><span class="pk">PiliKArt!</span></h1>
-            <p class="landing-subtitle">Where you can choose to your hearts' desire</p>
-            <button class="btn btn-brand btn-large" onclick="app.go('menu')">PILI KA NA!</button>
-        </div>
-
-        <!-- Bottom Marquee -->
-        <div class="marquee-container">
-            <div class="marquee-track">
-                <span>🌿 Lumingon. Suportahan. Umunlad. &nbsp;•&nbsp; 🤝 Keep the piso local &nbsp;•&nbsp; 🇵🇭 Gawa ng Pilipino, Para sa Pilipino &nbsp;•&nbsp; ✨ Yaman ng Lahi &nbsp;•&nbsp; ✨ ᜐᜒᜇᜒᜎᜒᜅ᜔ ᜀᜆᜒᜈ᜔ (Sariling Atin) &nbsp;•&nbsp; 🇵🇭 Make sure to support local businesses! &nbsp;•&nbsp; ✊ Pumili ng Tama, Para sa'yo, Para sa Pilipino &nbsp;•&nbsp;</span>
-                <span>🌿 Lumingon. Suportahan. Umunlad. &nbsp;•&nbsp; 🤝 Keep the piso local &nbsp;•&nbsp; 🇵🇭 Gawa ng Pilipino, Para sa Pilipino &nbsp;•&nbsp; ✨ Yaman ng Lahi &nbsp;•&nbsp; ✨ ᜐᜒᜇᜒᜎᜒᜅ᜔ ᜀᜆᜒᜈ᜔ (Sariling Atin) &nbsp;•&nbsp; 🇵🇭 Make sure to support local businesses! &nbsp;•&nbsp; ✊ Pumili ng Tama, Para sa'yo, Para sa Pilipino &nbsp;•&nbsp;</span>
-            </div>
-        </div>
-    </div>
-
+ 
     <!-- MENU VIEW -->
     <div id="view-menu" class="hidden max-w" style="padding-top:20px; padding-bottom:80px;">
         <div class="grid grid-2" style="margin-bottom: 20px;">
@@ -76,21 +68,54 @@
         </div>
         <div class="grid grid-3" id="product-grid"></div>
     </div>
-
+ 
     <!-- AUTH VIEW -->
-    <div id="view-auth" class="hidden max-w" style="max-width:400px; margin: 40px auto;">
-        <div class="card">
-            <h2 style="text-align:center; margin-bottom: 20px;">Sign In / Sign Up</h2>
-            <input type="text" id="auth-name" class="input" placeholder="Full Name (Sign Up only)" style="margin-bottom:10px;">
-            <input type="email" id="auth-email" class="input" placeholder="Email" style="margin-bottom:10px;">
-            <input type="password" id="auth-pass" class="input" placeholder="Password" style="margin-bottom:10px;">
-            <input type="text" id="auth-address" class="input" placeholder="Address (Sign Up only)" style="margin-bottom:10px;">
-            <button class="btn btn-brand" style="width:100%; margin-bottom:10px;" onclick="app.submitAuth()">Login</button>
-            <button class="btn btn-ghost" style="width:100%;" onclick="app.toggleSignUp()" id="signup-toggle">Switch to Sign Up</button>
-            <p style="text-align:center; margin-top:15px; font-size:12px;">Demo: admin@pilikart.ph / admin</p>
+    <div id="view-auth" class="auth-screen hidden">
+        <div class="auth-wrap">
+            <button type="button" class="auth-back" onclick="app.go('landing')"><span class="auth-back-arrow">&larr;</span> Balik sa entrance</button>
+ 
+            <div class="auth-card" id="auth-card">
+                <div class="auth-logo-area">
+                    <h2>pilikart</h2>
+                    <p>Ready to choose?</p>
+                </div>
+ 
+                <!-- Sliding Sign In / Sign Up toggle with smooth background pill -->
+                <div class="auth-toggle-slider" id="auth-toggle" role="tablist">
+                    <div class="auth-slider-bg"></div>
+                    <button type="button" id="btn-tab-signin" class="auth-toggle-btn active" role="tab" aria-selected="true" onclick="app.setAuthMode('signin')">Sign In</button>
+                    <button type="button" id="btn-tab-signup" class="auth-toggle-btn" role="tab" aria-selected="false" onclick="app.setAuthMode('signup')">Sign Up</button>
+                </div>
+ 
+                <form id="auth-form" novalidate onsubmit="app.submitAuth(event)">
+                    <!-- Full name: only visible on Sign Up -->
+                    <div class="auth-collapse auth-extra"><div class="in">
+                        <input type="text" id="auth-name" class="auth-input" placeholder="Buong pangalan" autocomplete="name">
+                    </div></div>
+ 
+                    <input type="email" id="auth-email" class="auth-input" placeholder="Email" autocomplete="email">
+ 
+                    <div class="auth-pass-wrap">
+                        <input type="password" id="auth-pass" class="auth-input" placeholder="Password" autocomplete="current-password">
+                        <button type="button" class="auth-eye" id="auth-eye" aria-label="Ipakita ang password" aria-pressed="false" onclick="app.togglePassword()">&#128065;</button>
+                    </div>
+ 
+                    <div id="auth-error" class="auth-error" role="alert"></div>
+ 
+                    <button type="submit" id="auth-submit" class="auth-submit-btn">
+                        <span class="auth-label" id="auth-submit-label">Pasok na!</span>
+                        <span class="auth-spinner" aria-hidden="true"></span>
+                    </button>
+                </form>
+ 
+                <div class="auth-divider">o kaya</div>
+ 
+                <button type="button" class="btn-guest-outline" onclick="app.continueAsGuest()">Continue as Guest</button>
+                <p class="auth-guest-subtitle">Browse freely &mdash; sa checkout, log in o ilagay ang address mo.</p>
+            </div>
         </div>
     </div>
-
+ 
     <!-- CHECKOUT VIEW -->
     <div id="view-checkout" class="hidden max-w grid grid-2" style="padding-top:20px;">
         <div class="card">
@@ -114,13 +139,13 @@
             <div id="checkout-summary" style="margin-top:15px; font-weight:bold;"></div>
         </div>
     </div>
-
+ 
     <!-- ORDERS VIEW -->
     <div id="view-orders" class="hidden max-w" style="padding-top:20px;">
         <h2>My Orders</h2>
         <div id="orders-list" style="margin-top:20px; display:flex; flex-direction:column; gap:15px;"></div>
     </div>
-
+ 
     <!-- ADMIN DASHBOARD -->
     <div id="view-admin" class="hidden max-w" style="padding-top:20px;">
         <h2>Owner Dashboard 👑</h2>
@@ -141,7 +166,7 @@
         <div id="admin-stock" class="card hidden">
             <table><thead><tr><th>Item</th><th>Price</th><th>Stock</th><th>Actions</th></tr></thead><tbody id="admin-stock-body"></tbody></table>
         </div>
-
+ 
         <div id="admin-add" class="card hidden" style="max-width:400px;">
             <input type="text" id="add-name" class="input" placeholder="Name" style="margin-bottom:10px;">
             <input type="number" id="add-price" class="input" placeholder="Price" style="margin-bottom:10px;">
@@ -151,12 +176,12 @@
         </div>
     </div>
 </main>
-
+ 
 <!-- Cart Drawer -->
 <div id="cart-drawer" class="drawer hidden">
     <div class="drawer-panel">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-            <h2>🧺 Your Cart</h2>
+            <h2>Your Cart</h2>
             <button class="btn btn-ghost" onclick="app.toggleCart()">✕</button>
         </div>
         <div id="cart-items" style="flex:1; overflow-y:auto;"></div>
@@ -166,7 +191,7 @@
         </div>
     </div>
 </div>
-
+ 
 <!-- GCash Proof Modal (Admin) -->
 <div id="proof-modal" class="modal hidden">
     <div class="modal-content" style="text-align:center;">
@@ -175,21 +200,31 @@
         <button class="btn btn-ghost" style="width:100%;" onclick="document.getElementById('proof-modal').classList.add('hidden')">Close</button>
     </div>
 </div>
-
+ 
 <!-- PiliBot -->
-<button id="pilibot-btn" onclick="app.toggleBot()">🌿</button>
+<button id="pilibot-btn" onclick="app.toggleBot()">
+    <svg class="pilibot-btn-icon" viewBox="0 0 24 24"><path fill="currentColor" d="M17.04 4.09c-.43-.13-1.11-.27-1.95-.35-2.09-.19-4.88.22-6.85 2.19-2.93 2.93-3.08 7.4-1.28 10.58l-2.07 2.07 1.41 1.41 2.07-2.07c3.18 1.8 7.65 1.65 10.58-1.28 1.97-1.97 2.38-4.76 2.19-6.85-.08-.84-.22-1.52-.35-1.95-.38-1.25-1.14-2.31-2.09-3.26-.95-.95-2.01-1.71-3.26-2.09zM12 15c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3z"/></svg>
+    <span>PiliBot</span>
+</button>
+
 <div id="pilibot-window" class="hidden">
-    <div class="pb-head"><span>PiliBot 🤖</span><span style="cursor:pointer;" onclick="app.toggleBot()">✕</span></div>
+    <div class="pb-head">
+        <div style="display:flex; align-items:center; gap:6px;">
+            <svg style="width:18px; height:18px;" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1H2a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2M7.5 13a1.5 1.5 0 0 0-1.5 1.5A1.5 1.5 0 0 0 7.5 16a1.5 1.5 0 0 0 1.5-1.5A1.5 1.5 0 0 0 7.5 13m9 0a1.5 1.5 0 0 0-1.5 1.5a1.5 1.5 0 0 0 1.5 1.5a1.5 1.5 0 0 0 1.5-1.5a1.5 1.5 0 0 0-1.5-1.5m-4.5 2c-1.5 0-3 .67-3 2h6c0-1.33-1.5-2-3-2z"/></svg>
+            <span>PiliBot Assistant</span>
+        </div>
+        <span style="cursor:pointer; font-size:16px;" onclick="app.toggleBot()">✕</span>
+    </div>
     <div class="pb-chat" id="pb-chat"><div class="pb-msg">Mabuhay! Ako si PiliBot. Ano ang maitutulong ko?</div></div>
     <form class="pb-input" onsubmit="app.sendBotMsg(event)">
         <input type="text" id="pb-text" class="input" placeholder="Ask me..." style="padding:8px; border-radius:8px;">
         <button class="btn btn-leaf" style="padding:8px 15px;">↑</button>
     </form>
 </div>
-
+ 
 <!-- Toast -->
 <div id="toast"></div>
-
+ 
 <script src="main.js"></script>
 </body>
 </html>
