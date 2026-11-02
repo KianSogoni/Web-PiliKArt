@@ -8,36 +8,36 @@ const app = {
     isSignUp: false,
     authBusy: false,
     gcashBase64: '',
+    selectedCategory: 'all',
     
-    // Department Carousel Data
     carouselIndex: 0,
     departments: [
         {
             name: "PASO",
-            desc: "Department for food essentials & local delicacies.",
+            desc: "Nourishing meals crafted with love. Discover our local delicacies and comfort food, bringing the warmth of home-cooked Filipino cuisine straight to your table.",
             featured: "Chicken Adobo with Rice",
-            image: "https://placehold.co/400x400/eee/333?text=Adobo+Rice"
+            image: "https://placehold.co/400x400/eee/333?text=Paso+Food"
         },
         {
             name: "NIPA",
-            desc: "Made for home essentials & daily conveniences.",
-            featured: "Tabo & Household Essentials",
-            image: "https://placehold.co/400x400/eee/333?text=Tabo+Essentials"
+            desc: "Kalinga sa Tahanan. Curated essentials to keep your home clean, organized, and welcoming. Quality finds for your everyday household needs.",
+            featured: "Tabo & Home Essentials",
+            image: "https://placehold.co/400x400/eee/333?text=Nipa+Home"
         },
         {
             name: "HABI",
-            desc: "Clothing and fashion related stuff from local weavers.",
+            desc: "Ganda ng Pilipino. Celebrate our rich cultural heritage with beautifully crafted clothing and local beauty products made by skilled Filipino artisans.",
             featured: "Barong Tagalog",
-            image: "https://placehold.co/400x400/eee/333?text=Barong+Tagalog"
+            image: "https://placehold.co/400x400/eee/333?text=Habi+Fashion"
         },
         {
             name: "APOLLO",
-            desc: "Technology needs & portable gadgets.",
+            desc: "Galing at Teknolohiya. Empowering your daily life with practical tech gadgets and smart innovations designed for the modern Filipino.",
             featured: "Mini Karaoke Machine",
-            image: "https://placehold.co/400x400/eee/333?text=Karaoke+Machine"
+            image: "https://placehold.co/400x400/eee/333?text=Apollo+Tech"
         }
     ],
- 
+
     async init() {
         document.getElementById('main-content').style.display = 'block';
  
@@ -57,7 +57,7 @@ const app = {
                 this.go('admin');
                 this.renderAdmin();
             } else {
-                this.go('home'); // Post-login default is Home
+                this.go('home'); 
             }
         } else {
             this.go('landing');
@@ -69,7 +69,6 @@ const app = {
         this.checkTheme();
         this.updateNavDrawerAuthUI();
         
-        // Auto-rotate carousel every 5 seconds
         setInterval(() => {
             if (!document.getElementById('view-home').classList.contains('hidden')) {
                 this.carouselIndex = (this.carouselIndex + 1) % this.departments.length;
@@ -80,11 +79,8 @@ const app = {
  
     go(view) {
         document.querySelectorAll('main > div').forEach(d => d.classList.add('hidden'));
-        
         const target = document.getElementById('view-' + view);
-        if (target) {
-            target.classList.remove('hidden');
-        }
+        if (target) target.classList.remove('hidden');
  
         const header = document.getElementById('global-header');
         if (view === 'landing' || view === 'auth') {
@@ -99,10 +95,18 @@ const app = {
         if (view === 'checkout') { this.renderCheckoutSummary(); this.prefillCheckout(); }
         if (view === 'auth') this.clearAuthError();
         if (view === 'admin') this.renderAdmin();
-        if (view === 'home') this.renderCarousel();
     },
 
-    // --- NAVIGATION DRAWER (Slide in from right) ---
+    scrollToMenu() {
+        const menuSec = document.getElementById('home-menu-section');
+        if (document.getElementById('view-home').classList.contains('hidden')) {
+            this.go('home');
+            setTimeout(() => { if (menuSec) menuSec.scrollIntoView({ behavior: 'smooth' }); }, 100);
+        } else if (menuSec) {
+            menuSec.scrollIntoView({ behavior: 'smooth' });
+        }
+    },
+
     toggleNavDrawer() {
         const drawer = document.getElementById('nav-drawer');
         const backdrop = document.getElementById('nav-drawer-backdrop');
@@ -118,10 +122,9 @@ const app = {
     navToAccount() {
         this.toggleNavDrawer();
         if (this.user) {
-            this.go('orders'); // Or profile view if available, orders acts as account summary
+            this.go('orders');
             this.showToast(`Logged in as ${this.user.name}`);
         } else {
-            // Guest -> goes to sign up page
             this.go('auth');
             this.setAuthMode('signup', false);
         }
@@ -151,7 +154,6 @@ const app = {
         setTimeout(() => t.style.display = 'none', 3000);
     },
  
-    // --- AUTHENTICATION ---
     handleAuth() {
         if (this.user) {
             fetch('api.php?action=logout').then(() => location.reload());
@@ -257,24 +259,27 @@ const app = {
         set('co-name', this.user.name); set('co-phone', this.user.phone); set('co-addr', this.user.address);
     },
 
-    // --- CAROUSEL RENDERER ---
     renderCarousel() {
         const container = document.getElementById('carousel-card-container');
         if (!container) return;
-        const dept = this.departments[this.carouselIndex];
-        
-        container.innerHTML = `
-            <img src="${dept.image}" class="carousel-img" alt="${dept.name}">
-            <div class="carousel-cat-tag">Department: ${dept.name}</div>
-            <h3 class="carousel-title">${dept.name}</h3>
-            <p class="carousel-desc">${dept.desc}</p>
-            <div class="carousel-featured">Featured: ${dept.featured}</div>
-        `;
+        if (!container.querySelector('.carousel-flip-inner')) container.innerHTML = `<div class="carousel-flip-inner"></div>`;
+        const inner = container.querySelector('.carousel-flip-inner');
 
-        const dots = document.querySelectorAll('.dot');
-        dots.forEach((dot, idx) => {
-            dot.classList.toggle('active', idx === this.carouselIndex);
-        });
+        container.classList.add('flip-out');
+        container.classList.remove('flip-in');
+
+        setTimeout(() => {
+            const dept = this.departments[this.carouselIndex];
+            inner.innerHTML = `
+                <img src="${dept.image}" class="carousel-img" alt="${dept.name}">
+                <div class="carousel-cat-tag">Department: ${dept.name}</div>
+                <h3 class="carousel-title">${dept.featured}</h3>
+                <p class="carousel-desc">${dept.desc}</p>
+            `;
+            document.querySelectorAll('.dot').forEach((dot, idx) => dot.classList.toggle('active', idx === this.carouselIndex));
+            container.classList.remove('flip-out');
+            container.classList.add('flip-in');
+        }, 400);
     },
 
     setCarouselSlide(idx) {
@@ -282,7 +287,13 @@ const app = {
         this.renderCarousel();
     },
  
-    // --- MENU & SEARCH ---
+    filterDepartment(category, btn) {
+        this.selectedCategory = category;
+        document.querySelectorAll('.dept-pill').forEach(p => p.classList.remove('active'));
+        btn.classList.add('active');
+        this.renderMenu();
+    },
+
     renderMenu() {
         const qInput = document.getElementById('search-input');
         const bInput = document.getElementById('budget-input');
@@ -291,37 +302,60 @@ const app = {
         const q = qInput.value.toLowerCase();
         const budget = parseFloat(bInput.value) || Infinity;
         
+        // Map category to exact sub-label and icon style shown in user reference
+        const categoryMeta = {
+            paso: { label: 'PAGKAIN', icon: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 8h1a4 4 0 0 1 0 8h-1"></path><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"></path><line x1="6" y1="1" x2="6" y2="4"></line><line x1="10" y1="1" x2="10" y2="4"></line><line x1="14" y1="1" x2="14" y2="4"></line></svg>' },
+            nipa: { label: 'TAHANAN', icon: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>' },
+            habi: { label: 'DAMIT', icon: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20.38 3.46 16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H5v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V10h1.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23z"></path></svg>' },
+            apollo: { label: 'TEKNOLOHIYA', icon: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>' }
+        };
+
         const html = this.products.filter(p => {
+            const cat = p.category ? p.category.toLowerCase() : '';
+            const matchCat = this.selectedCategory === 'all' || cat === this.selectedCategory.toLowerCase();
             const matchQ = p.name.toLowerCase().includes(q) || (p.tags && p.tags.toLowerCase().includes(q));
             const matchB = p.price <= budget;
-            return matchQ && matchB;
-        }).map(p => `
-            <div class="card product-card">
-                <span class="chip" style="position:absolute; top:10px; left:10px; background:var(--amber); color:#000;">${p.category}</span>
-                <img src="${p.image}" class="product-img" style="background:#fff;">
-                <div style="margin-top:10px; flex:1;">
-                    <h3 style="font-size:18px; line-height:1.2;">${p.name}</h3>
-                    <p style="font-size:12px; color:var(--muted); margin:5px 0;">${p.description}</p>
-                </div>
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px; border-top:1px solid var(--line); padding-top:10px;">
-                    <h2 style="color:var(--brand);">₱${p.price}</h2>
-                    <button class="btn btn-brand" onclick="app.addToCart(${p.id})" ${p.stock <= 0 ? 'disabled' : ''}>${p.stock <= 0 ? 'Out' : '+ Add'}</button>
-                </div>
-                <div class="nutshell">
-                    <h3>${p.name}</h3>
-                    <p style="font-size:12px; margin:5px 0 10px;">${p.description}</p>
-                    <div style="display:flex; justify-content:space-between;">
-                        <span style="color:var(--leaf); font-size:12px; font-weight:bold;">🔥 ${p.stock} left</span>
-                        <button class="btn btn-brand" onclick="app.addToCart(${p.id})">Quick Add</button>
+            return matchCat && matchQ && matchB;
+        }).map(p => {
+            const catKey = (p.category || 'paso').toLowerCase();
+            const meta = categoryMeta[catKey] || { label: catKey.toUpperCase(), icon: '' };
+            const formattedPrice = Number(p.price).toLocaleString('en-US', { minimumFractionDigits: p.price % 1 !== 0 ? 2 : 0 });
+
+            return `
+                <div class="card product-card">
+                    <div class="prod-card-header">
+                        <span class="dept-badge ${catKey}">${meta.icon} ${catKey}</span>
+                        <span class="prod-type-label">${meta.label}</span>
+                    </div>
+                    <div class="prod-img-wrap">
+                        <img src="${p.image}" class="product-img" alt="${p.name}">
+                    </div>
+                    <div class="prod-info">
+                        <h3 class="prod-title">${p.name}</h3>
+                        <p class="prod-desc">${p.description}</p>
+                    </div>
+                    <div class="prod-footer">
+                        <div>
+                            <span class="prod-price-label">Presyo</span>
+                            <span class="prod-price-val">₱${formattedPrice}</span>
+                        </div>
+                        <button class="btn btn-brand" onclick="app.addToCart(${p.id})" ${p.stock <= 0 ? 'disabled' : ''}>${p.stock <= 0 ? 'Out' : '+ Add'}</button>
+                    </div>
+                    <div class="nutshell">
+                        <h3>${p.name}</h3>
+                        <p style="font-size:12px; margin:5px 0 10px;">${p.description}</p>
+                        <div style="display:flex; justify-content:space-between;">
+                            <span style="color:var(--leaf); font-size:12px; font-weight:bold;">${p.stock} left</span>
+                            <button class="btn btn-brand" onclick="app.addToCart(${p.id})">Quick Add</button>
+                        </div>
                     </div>
                 </div>
-            </div>
-        `).join('');
+            `;
+        }).join('');
         
-        document.getElementById('product-grid').innerHTML = html || '<p style="text-align:center; width:100%;">No products found.</p>';
+        document.getElementById('product-grid').innerHTML = html || '<p style="text-align:center; width:100%; grid-column: 1 / -1; padding: 40px; color:var(--muted);">Walang nakitang produkto sa kategoryang ito.</p>';
     },
  
-    // --- CART & CHECKOUT ---
     addToCart(id) {
         const p = this.products.find(x => x.id === id);
         const item = this.cart.find(x => x.id === id);
@@ -357,7 +391,7 @@ const app = {
  
         const total = this.cart.reduce((s, x) => s + x.price * x.qty, 0) + (this.cart.length ? this.fee : 0);
         const totalEl = document.getElementById('cart-total');
-        if (totalEl) totalEl.textContent = '₱' + total;
+        if (totalEl) totalEl.textContent = '₱' + total.toLocaleString();
     },
  
     updateQty(id, d) {
@@ -459,12 +493,11 @@ const app = {
         `).join('') || '<p>No orders yet.</p>';
     },
  
-    // --- ADMIN DASHBOARD ---
     renderAdmin() {
         if (!this.user || this.user.role !== 'admin') return;
  
         let sales = this.orders.reduce((s, o) => s + parseInt(o.total), 0);
-        document.getElementById('stat-sales').textContent = '₱' + sales;
+        document.getElementById('stat-sales').textContent = '₱' + sales.toLocaleString();
         document.getElementById('stat-orders').textContent = this.orders.length;
  
         document.getElementById('admin-orders-body').innerHTML = this.orders.map(o => `
@@ -472,14 +505,14 @@ const app = {
                 <td><b>#${o.id}</b></td>
                 <td>${o.customer_name}<br><small>${o.address}</small></td>
                 <td>₱${o.total}</td>
-                <td>${o.payment === 'gcash' && o.payment_proof ? `<button class="btn btn-ghost" style="padding:4px 8px; font-size:11px;" onclick="app.viewProof('${o.payment_proof}')">📸 View</button>` : 'COD'}</td>
+                <td>${o.payment === 'gcash' && o.payment_proof ? `<button class="btn btn-ghost" style="padding:4px 8px; font-size:11px;" onclick="app.viewProof('${o.payment_proof}')">View</button>` : 'COD'}</td>
                 <td>
                     <select class="input" style="padding:5px; width:120px; margin-bottom:5px;" onchange="app.updateOrderStatus(${o.id}, this.value)">
                         <option ${o.status === 'Pending' ? 'selected' : ''}>Pending</option>
                         <option ${o.status === 'Shipping' ? 'selected' : ''}>Shipping</option>
                         <option ${o.status === 'Delivered' ? 'selected' : ''}>Delivered</option>
                     </select><br>
-                    <button class="btn btn-danger" style="padding:4px 8px; font-size:11px;" onclick="app.deleteOrder(${o.id})">🗑 Delete</button>
+                    <button class="btn btn-danger" style="padding:4px 8px; font-size:11px;" onclick="app.deleteOrder(${o.id})">Delete</button>
                 </td>
             </tr>
         `).join('');
@@ -491,7 +524,7 @@ const app = {
                 <td><input type="number" id="p-stock-${p.id}" class="input" style="padding:5px; width:80px;" value="${p.stock}"></td>
                 <td>
                     <button class="btn btn-leaf" style="padding:4px 8px; font-size:11px;" onclick="app.saveProduct(${p.id})">Save</button>
-                    <button class="btn btn-danger" style="padding:4px 8px; font-size:11px;" onclick="app.deleteProduct(${p.id})">🗑</button>
+                    <button class="btn btn-danger" style="padding:4px 8px; font-size:11px;" onclick="app.deleteProduct(${p.id})">Delete</button>
                 </td>
             </tr>
         `).join('');
@@ -564,7 +597,6 @@ const app = {
         this.init();
     },
  
-    // --- THEME & PILIBOT ---
     toggleTheme() {
         const html = document.documentElement;
         const isSunset = html.getAttribute('data-theme') === 'sunset';
@@ -573,18 +605,14 @@ const app = {
         localStorage.setItem('pk_theme', nextTheme);
 
         const pillWrap = document.getElementById('nd-theme-pill').parentElement;
-        if (pillWrap) {
-            pillWrap.classList.toggle('is-sunset', !isSunset);
-        }
+        if (pillWrap) pillWrap.classList.toggle('is-sunset', !isSunset);
     },
  
     checkTheme() {
         const saved = localStorage.getItem('pk_theme') || 'day';
         document.documentElement.setAttribute('data-theme', saved);
         const pillWrap = document.getElementById('nd-theme-pill').parentElement;
-        if (pillWrap) {
-            pillWrap.classList.toggle('is-sunset', saved === 'sunset');
-        }
+        if (pillWrap) pillWrap.classList.toggle('is-sunset', saved === 'sunset');
     },
  
     toggleBot() {

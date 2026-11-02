@@ -9,11 +9,10 @@
 </head>
 <body>
  
-<!-- Global Header with Wooden Menu Button & Cart -->
+<!-- Global Header -->
 <header id="global-header" class="hidden">
     <div class="max-w nav-inner">
         <div style="display:flex; align-items:center; gap:16px;">
-            <!-- Wooden Menu Button with 3 lines -->
             <button class="menu-burger-btn" onclick="app.toggleNavDrawer()" title="Open Menu">
                 <span class="burger-line"></span>
                 <span class="burger-line"></span>
@@ -31,18 +30,17 @@
     </div>
 </header>
  
-<!-- Main Content Area -->
 <main id="main-content" style="display:none;">
     
-    <!-- LANDING PAGE (Guest Entrance) -->
+    <!-- LANDING PAGE -->
     <div id="view-landing" class="landing-screen hidden">
         <div class="landing-header max-w">
             <div class="brand light">pilikart<span>pumili ka + cart</span></div>
-            <div class="top-loc">ᜉᜎᜒ · CALAMBA, LAGUNA</div>
+            <div class="top-loc">CALAMBA, LAGUNA</div>
         </div>
  
         <div class="landing-content">
-            <div class="landing-badge">☀ MABUHAY, SUKI</div>
+            <div class="landing-badge">MABUHAY, SUKI</div>
             <h1 class="landing-title">Welcome to<br><span class="pk">PiliKArt!</span></h1>
             <p class="landing-subtitle">Where you can choose to your hearts' desire</p>
             <button class="btn btn-brand btn-large" onclick="app.go('auth')">PILI KA NA!</button>
@@ -50,21 +48,22 @@
  
         <div class="marquee-container">
             <div class="marquee-track">
-                <span>🌿 Lumingon. Suportahan. Umunlad. &nbsp;•&nbsp; 🤝 Keep the piso local &nbsp;•&nbsp; 🇵🇭 Gawa ng Pilipino, Para sa Pilipino &nbsp;•&nbsp; ✨ Yaman ng Lahi &nbsp;•&nbsp; ✨ ᜐᜒᜇᜒᜎᜒᜅ᜔ ᜀᜆᜒᜈ᜔ (Sariling Atin) &nbsp;•&nbsp; 🇵🇭 Make sure to support local businesses! &nbsp;•&nbsp; ✊ Pumili ng Tama, Para sa'yo, Para sa Pilipino &nbsp;•&nbsp;</span>
-                <span>🌿 Lumingon. Suportahan. Umunlad. &nbsp;•&nbsp; 🤝 Keep the piso local &nbsp;•&nbsp; 🇵🇭 Gawa ng Pilipino, Para sa Pilipino &nbsp;•&nbsp; ✨ Yaman ng Lahi &nbsp;•&nbsp; ✨ ᜐᜒᜇᜒᜎᜒᜅ᜔ ᜀᜆᜒᜈ᜔ (Sariling Atin) &nbsp;•&nbsp; 🇵🇭 Make sure to support local businesses! &nbsp;•&nbsp; ✊ Pumili ng Tama, Para sa'yo, Para sa Pilipino &nbsp;•&nbsp;</span>
+                <span>Lumingon. Suportahan. Umunlad. &nbsp;•&nbsp; Keep the piso local &nbsp;•&nbsp; Gawa ng Pilipino, Para sa Pilipino &nbsp;•&nbsp; Yaman ng Lahi &nbsp;•&nbsp; Sariling Atin &nbsp;•&nbsp; Pumili ng Tama, Para sa'yo, Para sa Pilipino &nbsp;•&nbsp;</span>
+                <span>Lumingon. Suportahan. Umunlad. &nbsp;•&nbsp; Keep the piso local &nbsp;•&nbsp; Gawa ng Pilipino, Para sa Pilipino &nbsp;•&nbsp; Yaman ng Lahi &nbsp;•&nbsp; Sariling Atin &nbsp;•&nbsp; Pumili ng Tama, Para sa'yo, Para sa Pilipino &nbsp;•&nbsp;</span>
             </div>
         </div>
     </div>
  
-    <!-- HOME PAGE (Post-Login / Main Hub with Carousel & Buttons) -->
+    <!-- HOME PAGE -->
     <div id="view-home" class="hidden home-screen">
-        <div class="max-w home-inner-wrap">
+        <!-- 1. HERO SECTION -->
+        <div class="home-inner-wrap">
             <div class="home-text-col">
-                <div class="landing-badge" style="display:inline-flex; width:fit-content;">MABUHAY, KABABAYAN!</div>
-                <h1 class="home-hero-title">Good Finds.<br><span class="pk">Galing Pinoy.</span></h1>
+                <div class="landing-badge warm-badge">MABUHAY, KABABAYAN!</div>
+                <h1 class="home-hero-title">Good Finds.<br><span class="pk-italic">Galing Pinoy.</span></h1>
                 <p class="home-hero-sub">Welcome to PiliKart, where you can choose to your hearts' desires! Happy shopping!</p>
                 <div class="home-btn-group">
-                    <button class="btn btn-brand btn-large" onclick="app.go('menu')">Go to Menu</button>
+                    <button class="btn btn-brand btn-large" onclick="app.scrollToMenu()">Go to Menu</button>
                     <button class="btn btn-ghost btn-large" onclick="app.go('about')">About Us</button>
                 </div>
             </div>
@@ -83,26 +82,85 @@
             </div>
         </div>
 
-        <!-- Bottom Marquee & Suki Tagline -->
-        <div class="marquee-container" style="margin-top:auto;">
+        <!-- 2. MARQUEE DIVIDER -->
+        <div class="marquee-container">
             <div class="marquee-track">
-                <span>🌿 Lumingon. Suportahan. Umunlad. &nbsp;•&nbsp; 🤝 Keep the piso local &nbsp;•&nbsp; 🇵🇭 Gawa ng Pilipino, Para sa Pilipino &nbsp;•&nbsp; ✨ Yaman ng Lahi &nbsp;•&nbsp; ✨ Sariling Atin &nbsp;•&nbsp; ✊ Pumili ng Tama, Para sa'yo, Para sa Pilipino &nbsp;•&nbsp;</span>
-                <span>🌿 Lumingon. Suportahan. Umunlad. &nbsp;•&nbsp; 🤝 Keep the piso local &nbsp;•&nbsp; 🇵🇭 Gawa ng Pilipino, Para sa Pilipino &nbsp;•&nbsp; ✨ Yaman ng Lahi &nbsp;•&nbsp; ✨ Sariling Atin &nbsp;•&nbsp; ✊ Pumili ng Tama, Para sa'yo, Para sa Pilipino &nbsp;•&nbsp;</span>
+                <span>Lumingon. Suportahan. Umunlad. &nbsp;•&nbsp; Keep the piso local &nbsp;•&nbsp; Gawa ng Pilipino, Para sa Pilipino &nbsp;•&nbsp; Yaman ng Lahi &nbsp;•&nbsp; Sariling Atin &nbsp;•&nbsp; Pumili ng Tama, Para sa'yo, Para sa Pilipino &nbsp;•&nbsp;</span>
+                <span>Lumingon. Suportahan. Umunlad. &nbsp;•&nbsp; Keep the piso local &nbsp;•&nbsp; Gawa ng Pilipino, Para sa Pilipino &nbsp;•&nbsp; Yaman ng Lahi &nbsp;•&nbsp; Sariling Atin &nbsp;•&nbsp; Pumili ng Tama, Para sa'yo, Para sa Pilipino &nbsp;•&nbsp;</span>
             </div>
         </div>
-        <div class="suki-footer-tag">SUKI STORES' BEST SELLERS</div>
-    </div>
- 
-    <!-- MENU VIEW -->
-    <div id="view-menu" class="hidden max-w" style="padding-top:20px; padding-bottom:80px;">
-        <div class="grid grid-2" style="margin-bottom: 20px;">
-            <input type="text" id="search-input" class="input" placeholder="Search: adobo, lipstick, towel..." oninput="app.renderMenu()">
-            <div style="display:flex; align-items:center; gap:10px;">
-                <label style="font-weight:800; color:var(--brand)">💸 Budget Mode (₱):</label>
-                <input type="number" id="budget-input" class="input" placeholder="Max Price" oninput="app.renderMenu()">
+
+        <!-- 3. MENU SECTION -->
+        <div id="home-menu-section" class="home-menu-section">
+            <div class="home-menu-header">
+                <h2 style="display:flex; align-items:center; justify-content:center; gap:10px;">
+                    Ano ang gusto mo today?
+                    <svg viewBox="0 0 24 24" width="32" height="32" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" style="color:var(--brand)"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
+                </h2>
+                <p>I-hover ang card para sa "nutshell" &mdash; detalye, stock, quick add.</p>
             </div>
+
+            <!-- Department Filtering Pill Bar -->
+            <div class="dept-filter-bar" id="dept-filter-bar">
+                <button class="dept-pill active" onclick="app.filterDepartment('all', this)">All Finds</button>
+                <button class="dept-pill" onclick="app.filterDepartment('paso', this)">Paso</button>
+                <button class="dept-pill" onclick="app.filterDepartment('habi', this)">Habi</button>
+                <button class="dept-pill" onclick="app.filterDepartment('nipa', this)">Nipa</button>
+                <button class="dept-pill" onclick="app.filterDepartment('apollo', this)">Apollo</button>
+            </div>
+            
+            <!-- Refined Search & Budget Inputs -->
+            <div class="grid grid-2" style="margin-bottom: 25px; max-width: 800px; margin-left: auto; margin-right: auto;">
+                <div>
+                    <label style="display:block; font-size:12px; font-weight:800; color:var(--muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.5px;">Hanapin sa Menu</label>
+                    <input type="text" id="search-input" class="input" placeholder="Adobo, lipstick, towel, karaoke..." oninput="app.renderMenu()">
+                </div>
+                <div>
+                    <label style="display:block; font-size:12px; font-weight:800; color:var(--muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.5px;">Budget Mode (Max Price ₱)</label>
+                    <input type="number" id="budget-input" class="input" placeholder="Hal. 500" oninput="app.renderMenu()">
+                </div>
+            </div>
+
+            <div class="grid grid-3" id="product-grid"></div>
         </div>
-        <div class="grid grid-3" id="product-grid"></div>
+
+        <!-- 4. WOODEN FOOTER -->
+        <footer class="pilikart-footer">
+            <div class="footer-inner">
+                <div>
+                    <h2 style="font-size:26px; font-family:'Baloo 2'; line-height:1;">pilikart</h2>
+                    <p style="font-size:11px; color:#85b56d; letter-spacing:1px; margin-bottom:15px; text-transform:uppercase;">pumili ka + cart</p>
+                    <ul style="list-style:none; display:flex; flex-direction:column; gap:6px; font-size:14px;">
+                        <li><a href="#" onclick="app.scrollToMenu()">Menu</a></li>
+                        <li><a href="#" onclick="app.go('orders')">My Orders</a></li>
+                        <li><a href="#" onclick="app.go('recipes')">Recipe Box</a></li>
+                        <li><a href="#" onclick="app.go('faq')">FAQ</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 style="color:#f2b354; margin-bottom:10px; font-size:16px;">About Us</h3>
+                    <p style="font-size:13px; line-height:1.6; color:#e2cca8;">
+                        A digital love letter to Filipino heritage. PiliKArt combines Filipino heritage with Filipino ingenuity to uplift communities and bring the warmth of home to your online shopping.
+                    </p>
+                </div>
+                <div>
+                    <h3 style="color:#f2b354; margin-bottom:10px; font-size:16px; display:flex; align-items:center; gap:6px;">
+                        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"></path><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"></path></svg>
+                        Apat na Tindahan
+                    </h3>
+                    <ul style="list-style:none; display:flex; flex-direction:column; gap:6px; font-size:13px;">
+                        <li><strong>PASO</strong> &mdash; pagkain &mdash; food essentials</li>
+                        <li><strong>HABI</strong> &mdash; damit &mdash; clothing & fashion</li>
+                        <li><strong>NIPA</strong> &mdash; tahanan &mdash; home essentials</li>
+                        <li><strong>APOLLO</strong> &mdash; teknolohiya &mdash; technology</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom-bar">
+                <span>Copyright &copy; 2026 PiliKArt. All rights reserved.</span>
+                <span>Gawa nang may malasakit &mdash; Calamba, Laguna</span>
+            </div>
+        </footer>
     </div>
  
     <!-- ABOUT US VIEW -->
@@ -113,11 +171,8 @@
             <p style="font-size:16px; line-height:1.8; margin-bottom:20px; color:var(--ink);">
                 Ang <strong>PiliKart</strong> (hango sa mga salitang <em>"Pumili Ka"</em> at <em>"Cart"</em>) ay isang makabagong e-commerce platform na naglalayong itaguyod at palakasin ang mga lokal na negosyante, manggagawa, at katutubong produkto mula sa Calamba, Laguna at sa buong Pilipinas.
             </p>
-            <p style="font-size:16px; line-height:1.8; margin-bottom:20px; color:var(--ink);">
-                Naniniwala kami sa prinsipyong <em>"Keep the piso local"</em> — na sa bawat pagpili at pagbili ng gawang Pinoy, tinutulungan nating umunlad ang ating mga komunidad at pinapanatili nating buhay ang ating yamang lahi at kultura.
-            </p>
             <div style="display:flex; gap:15px; margin-top:30px;">
-                <button class="btn btn-brand" onclick="app.go('menu')">Galugarin ang Menu</button>
+                <button class="btn btn-brand" onclick="app.scrollToMenu()">Galugarin ang Menu</button>
                 <button class="btn btn-ghost" onclick="app.go('home')">Bumalik sa Home</button>
             </div>
         </div>
@@ -131,16 +186,6 @@
             <p style="font-size:16px; line-height:1.8; margin-bottom:20px; color:var(--ink);">
                 Tumuklas ng mga masasarap at tradisyunal na lutuing Pilipino na madali mong maihahanda sa inyong tahanan gamit ang mga sangkap mula sa PiliKart!
             </p>
-            <div class="grid grid-2" style="margin-top:20px;">
-                <div class="card" style="background:var(--surface2);">
-                    <h3>Classic Chicken Adobo</h3>
-                    <p style="font-size:13px; color:var(--muted); margin-top:8px;">Tender chicken simmered in rich garlic, soy sauce, and vinegar reduction.</p>
-                </div>
-                <div class="card" style="background:var(--surface2);">
-                    <h3>Sizzling Pork Sisig</h3>
-                    <p style="font-size:13px; color:var(--muted); margin-top:8px;">Savory chopped pork ears and belly seasoned with calamansi, onions, and chili.</p>
-                </div>
-            </div>
         </div>
     </div>
 
@@ -149,20 +194,6 @@
         <div class="card" style="max-width: 800px; margin: 0 auto; padding: 40px;">
             <div class="landing-badge" style="display:inline-flex; width:fit-content; margin-bottom:15px;">Mga Tanong</div>
             <h1 style="font-size:36px; margin-bottom:20px; color:var(--brand);">Frequently Asked Questions</h1>
-            <div style="display:flex; flex-direction:column; gap:20px; margin-top:20px;">
-                <div>
-                    <h3 style="color:var(--brand);">Paano umorder sa PiliKart?</h3>
-                    <p style="font-size:14px; color:var(--muted);">Mag-browse lamang sa menu, i-click ang '+ Add' sa iyong napiling produkto, at pumunta sa checkout.</p>
-                </div>
-                <div>
-                    <h3 style="color:var(--brand);">Magkano ang delivery fee?</h3>
-                    <p style="font-size:14px; color:var(--muted);">Ang standard delivery fee ay ₱50 sa loob ng Calamba, Laguna.</p>
-                </div>
-                <div>
-                    <h3 style="color:var(--brand);">Anong mga payment methods ang tinatanggap?</h3>
-                    <p style="font-size:14px; color:var(--muted);">Tinatanggap namin ang Cash on Delivery (COD) at GCash (na may resibo upload).</p>
-                </div>
-            </div>
         </div>
     </div>
  
@@ -243,7 +274,7 @@
  
     <!-- ADMIN DASHBOARD -->
     <div id="view-admin" class="hidden max-w" style="padding-top:20px;">
-        <h2>Owner Dashboard 👑</h2>
+        <h2>Owner Dashboard</h2>
         <div class="grid grid-3" style="margin:20px 0;">
             <div class="card"><h3>Total Sales</h3><h1 id="stat-sales">₱0</h1></div>
             <div class="card"><h3>Orders</h3><h1 id="stat-orders">0</h1></div>
@@ -287,8 +318,8 @@
     </div>
 </div>
  
-<!-- RIGHT-SIDE NAVIGATION DRAWER (Pop-up Menu with Animation) -->
-<div id="nav-drawer-backdrop" class="nav-drawer-backdrop hidden" onclick="app.toggleNavDrawer()"></div>
+<!-- RIGHT-SIDE NAVIGATION DRAWER -->
+<div id="nav-drawer-backdrop" class="nav-drawer-backdrop" onclick="app.toggleNavDrawer()"></div>
 <div id="nav-drawer" class="nav-drawer">
     <div class="nav-drawer-header">
         <div class="brand" onclick="app.toggleNavDrawer(); app.go('home')">
@@ -299,7 +330,7 @@
     </div>
 
     <div class="nav-drawer-links">
-        <a href="#" onclick="app.navTo('menu')">
+        <a href="#" onclick="app.scrollToMenu(); app.toggleNavDrawer();">
             <svg class="nd-icon" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H7c0-2.76 2.24-5 5-5s5 2.24 5 5c0 1.03-.42 1.98-1.03 2.75z"/></svg>
             <div>
                 <strong>Menu</strong>
@@ -343,9 +374,7 @@
         </a>
     </div>
 
-    <!-- Bottom Actions in Drawer -->
     <div class="nav-drawer-footer">
-        <!-- Day / Sunset Mode Toggle with Sliding Animation -->
         <div class="nd-toggle-wrap" onclick="app.toggleTheme()">
             <div class="nd-toggle-pill" id="nd-theme-pill"></div>
             <div class="nd-toggle-option" id="nd-opt-day">
@@ -358,13 +387,10 @@
             </div>
         </div>
 
-        <!-- Auth / Logout or Sign Up button -->
         <button class="btn btn-brand" style="width:100%; justify-content:center;" id="nd-auth-btn" onclick="app.handleAuthFromDrawer()">
             <svg style="width:16px;height:16px;" viewBox="0 0 24 24"><path fill="currentColor" d="M10 17l5-5-5-5v3H3v4h7v3zM19 3H5c-1.1 0-2 .9-2 2v4h2V5h14v14H5v-4H3v4c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z"/></svg>
             <span id="nd-auth-label">Sign In / Sign Up</span>
         </button>
-
-        <p class="nd-footer-quote">Mula sa kalan at banga ng Calamba &mdash; dala na.</p>
     </div>
 </div>
  
