@@ -9,6 +9,7 @@ const app = {
     authBusy: false,
     gcashBase64: '',
     selectedCategory: 'all',
+    hoverTimeout: null, // For the hover delay
     
     carouselIndex: 0,
     departments: [
@@ -16,7 +17,7 @@ const app = {
             name: "PASO",
             desc: "Nourishing meals crafted with love. Discover our local delicacies and comfort food, bringing the warmth of home-cooked Filipino cuisine straight to your table.",
             featured: "Chicken Adobo with Rice",
-            image: "https://placehold.co/400x400/eee/333?text=Paso+Food"
+            image: "assets/paso/Chicken Adobo with Rice.png"
         },
         {
             name: "NIPA",
@@ -294,6 +295,20 @@ const app = {
         this.renderMenu();
     },
 
+    // Handle hover state for expanding cards
+    handleCardHover(event, isEntering) {
+        const card = event.currentTarget;
+        if (isEntering) {
+            // 500ms delay. Change to 3000 for 3 seconds
+            this.hoverTimeout = setTimeout(() => {
+                card.classList.add('card-expanded');
+            }, 500); 
+        } else {
+            clearTimeout(this.hoverTimeout);
+            card.classList.remove('card-expanded');
+        }
+    },
+
     renderMenu() {
         const qInput = document.getElementById('search-input');
         const bInput = document.getElementById('budget-input');
@@ -302,7 +317,6 @@ const app = {
         const q = qInput.value.toLowerCase();
         const budget = parseFloat(bInput.value) || Infinity;
         
-        // Map category to exact sub-label and icon style shown in user reference
         const categoryMeta = {
             paso: { label: 'PAGKAIN', icon: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 8h1a4 4 0 0 1 0 8h-1"></path><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"></path><line x1="6" y1="1" x2="6" y2="4"></line><line x1="10" y1="1" x2="10" y2="4"></line><line x1="14" y1="1" x2="14" y2="4"></line></svg>' },
             nipa: { label: 'TAHANAN', icon: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>' },
@@ -320,34 +334,43 @@ const app = {
             const catKey = (p.category || 'paso').toLowerCase();
             const meta = categoryMeta[catKey] || { label: catKey.toUpperCase(), icon: '' };
             const formattedPrice = Number(p.price).toLocaleString('en-US', { minimumFractionDigits: p.price % 1 !== 0 ? 2 : 0 });
+            
+            // Format tags to look nice
+            const tags = p.tags ? p.tags.split(',').map(t => t.trim()).join(' • ') : '';
 
             return `
-                <div class="card product-card">
-                    <div class="prod-card-header">
-                        <span class="dept-badge ${catKey}">${meta.icon} ${catKey}</span>
-                        <span class="prod-type-label">${meta.label}</span>
-                    </div>
+                <div class="card product-card" onmouseenter="app.handleCardHover(event, true)" onmouseleave="app.handleCardHover(event, false)">
+                    
                     <div class="prod-img-wrap">
                         <img src="${p.image}" class="product-img" alt="${p.name}">
                     </div>
+                    
                     <div class="prod-info">
+                        <div class="prod-card-header">
+                            <span class="dept-badge ${catKey}">${meta.icon} ${catKey}</span>
+                            <span class="prod-type-label">${meta.label}</span>
+                        </div>
+                        
                         <h3 class="prod-title">${p.name}</h3>
-                        <p class="prod-desc">${p.description}</p>
+                        <p class="prod-tagline">${p.tagline || 'Quality finds from PiliKart'}</p>
+                        
+                        <!-- Expanded Details -->
+                        <div class="prod-expanded-details">
+                            <p class="prod-desc">${p.description}</p>
+                            <div class="prod-divider"></div>
+                            <div class="prod-meta">
+                                <span class="meta-chip stock"><strong>${p.stock}</strong> in stock</span>
+                                <span class="meta-chip tags">${tags || 'Local Find'}</span>
+                            </div>
+                        </div>
                     </div>
+                    
                     <div class="prod-footer">
                         <div>
                             <span class="prod-price-label">Presyo</span>
                             <span class="prod-price-val">₱${formattedPrice}</span>
                         </div>
                         <button class="btn btn-brand" onclick="app.addToCart(${p.id})" ${p.stock <= 0 ? 'disabled' : ''}>${p.stock <= 0 ? 'Out' : '+ Add'}</button>
-                    </div>
-                    <div class="nutshell">
-                        <h3>${p.name}</h3>
-                        <p style="font-size:12px; margin:5px 0 10px;">${p.description}</p>
-                        <div style="display:flex; justify-content:space-between;">
-                            <span style="color:var(--leaf); font-size:12px; font-weight:bold;">${p.stock} left</span>
-                            <button class="btn btn-brand" onclick="app.addToCart(${p.id})">Quick Add</button>
-                        </div>
                     </div>
                 </div>
             `;

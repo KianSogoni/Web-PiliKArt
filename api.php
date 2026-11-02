@@ -25,7 +25,31 @@ switch ($action) {
             $stmt->execute([$_SESSION['user_id']]);
             $user = $stmt->fetch();
         }
+        
         $products = $pdo->query("SELECT * FROM products WHERE is_archived=0 ORDER BY category, id")->fetchAll();
+        
+        // Map database product names to the actual filenames in assets/paso/
+        $imageMap = [
+            'Chicken Adobo with Rice' => 'assets/paso/Chicken Adobo with Rice.png',
+            'Chicken Inasal with Rice' => 'assets/paso/Chicken Inasal with Rice.png',
+            'Pork Sisig with Rice' => 'assets/paso/Pork Sisig with Rice.jpg',
+            'Leche Flan Cup' => 'assets/paso/Leche Plan Cup.jpg',
+            'Turon (2 Pieces)' => 'assets/paso/Turon (2 pcs) .jpg',
+            'Lumpiang Shanghai (5 Pieces)' => 'assets/paso/Lumpiang Shanghai (5 pcs) .jpg',
+            'Buko Pandan' => 'assets/paso/Buko Pandan.jpg',
+            'Cheese Sticks (8 pcs)' => 'assets/paso/Cheese Sticks (8 pcs) .jpg',
+            'Chicken Curry with Rice' => 'assets/paso/Chicken Curry with Rice.png',
+            'Crispy Porkchop with Rice' => 'assets/paso/Crispy Porkchop with Rice.jpg'
+        ];
+
+        // Apply the new image paths
+        foreach ($products as &$p) {
+            if (isset($imageMap[$p['name']])) {
+                $p['image'] = $imageMap[$p['name']];
+            }
+        }
+        unset($p);
+
         $fee = (int)$pdo->query("SELECT `value` FROM settings WHERE `key`='delivery_fee'")->fetchColumn();
         
         $orders = [];
@@ -44,7 +68,6 @@ switch ($action) {
                 $o['items'] = $stmt->fetchAll();
             }
             
-            // SAFE CHECK: Wrapped in try-catch so it won't crash if table is missing
             try {
                 $stmt = $pdo->prepare('SELECT * FROM notifications WHERE user_id=? AND is_read=0');
                 $stmt->execute([$user['id']]);
@@ -55,7 +78,7 @@ switch ($action) {
         }
         out(['user' => $user, 'products' => $products, 'orders' => $orders, 'fee' => $fee, 'notifications' => $notifs]);
  
-            case 'login':
+    case 'login':
         $email = trim(strtolower($in['email'] ?? ''));
         $pw = (string)($in['password'] ?? '');
         
