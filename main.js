@@ -1,14 +1,42 @@
 const app = {
     user: null,
-    cart: JSON.parse(localStorage.getItem('pk_cart') || '[]'),
+    cart: (() => { try { return JSON.parse(localStorage.getItem('pk_cart') || '[]'); } catch(e) { return []; } })(),
     budget: null,
     products: [],
     orders: [],
     fee: 50,
     isSignUp: false,
-    authRole: 'customer',
     authBusy: false,
     gcashBase64: '',
+    
+    // Department Carousel Data
+    carouselIndex: 0,
+    departments: [
+        {
+            name: "PASO",
+            desc: "Department for food essentials & local delicacies.",
+            featured: "Chicken Adobo with Rice",
+            image: "https://placehold.co/400x400/eee/333?text=Adobo+Rice"
+        },
+        {
+            name: "NIPA",
+            desc: "Made for home essentials & daily conveniences.",
+            featured: "Tabo & Household Essentials",
+            image: "https://placehold.co/400x400/eee/333?text=Tabo+Essentials"
+        },
+        {
+            name: "HABI",
+            desc: "Clothing and fashion related stuff from local weavers.",
+            featured: "Barong Tagalog",
+            image: "https://placehold.co/400x400/eee/333?text=Barong+Tagalog"
+        },
+        {
+            name: "APOLLO",
+            desc: "Technology needs & portable gadgets.",
+            featured: "Mini Karaoke Machine",
+            image: "https://placehold.co/400x400/eee/333?text=Karaoke+Machine"
+        }
+    ],
  
     async init() {
         document.getElementById('main-content').style.display = 'block';
@@ -25,22 +53,29 @@ const app = {
         }
  
         if (this.user) {
-            document.getElementById('auth-btn').textContent = 'Logout';
             if (this.user.role === 'admin') {
                 this.go('admin');
                 this.renderAdmin();
             } else {
-                this.go('menu');
+                this.go('home'); // Post-login default is Home
             }
         } else {
-            document.getElementById('auth-btn').textContent = 'Login';
-            // Start guests on the landing page
             this.go('landing');
         }
  
+        this.renderCarousel();
         this.renderMenu();
         this.renderCart();
         this.checkTheme();
+        this.updateNavDrawerAuthUI();
+        
+        // Auto-rotate carousel every 5 seconds
+        setInterval(() => {
+            if (!document.getElementById('view-home').classList.contains('hidden')) {
+                this.carouselIndex = (this.carouselIndex + 1) % this.departments.length;
+                this.renderCarousel();
+            }
+        }, 5000);
     },
  
     go(view) {
@@ -64,6 +99,49 @@ const app = {
         if (view === 'checkout') { this.renderCheckoutSummary(); this.prefillCheckout(); }
         if (view === 'auth') this.clearAuthError();
         if (view === 'admin') this.renderAdmin();
+        if (view === 'home') this.renderCarousel();
+    },
+
+    // --- NAVIGATION DRAWER (Slide in from right) ---
+    toggleNavDrawer() {
+        const drawer = document.getElementById('nav-drawer');
+        const backdrop = document.getElementById('nav-drawer-backdrop');
+        const isOpen = drawer.classList.toggle('open');
+        backdrop.classList.toggle('show', isOpen);
+    },
+
+    navTo(view) {
+        this.toggleNavDrawer();
+        this.go(view);
+    },
+
+    navToAccount() {
+        this.toggleNavDrawer();
+        if (this.user) {
+            this.go('orders'); // Or profile view if available, orders acts as account summary
+            this.showToast(`Logged in as ${this.user.name}`);
+        } else {
+            // Guest -> goes to sign up page
+            this.go('auth');
+            this.setAuthMode('signup', false);
+        }
+    },
+
+    updateNavDrawerAuthUI() {
+        const btnLabel = document.getElementById('nd-auth-label');
+        const accountSub = document.getElementById('nav-account-sub');
+        if (this.user) {
+            btnLabel.textContent = 'Logout';
+            accountSub.textContent = this.user.name;
+        } else {
+            btnLabel.textContent = 'Sign In / Sign Up';
+            accountSub.textContent = 'Profile & Settings';
+        }
+    },
+
+    handleAuthFromDrawer() {
+        this.toggleNavDrawer();
+        this.handleAuth();
     },
  
     showToast(msg) {
@@ -73,7 +151,7 @@ const app = {
         setTimeout(() => t.style.display = 'none', 3000);
     },
  
-    // --- AUTHENTICATION (sliding toggle, roles, validation, loading states) ---
+    // --- AUTHENTICATION ---
     handleAuth() {
         if (this.user) {
             fetch('api.php?action=logout').then(() => location.reload());
@@ -100,28 +178,10 @@ const app = {
         $('auth-pass').setAttribute('autocomplete', next ? 'new-password' : 'current-password');
         this.clearAuthError();
  
-        if (animate) {                       // small "pop" so the whole card reacts
+        if (animate) {
             card.classList.remove('bump'); void card.offsetWidth; card.classList.add('bump');
             setTimeout(() => (next ? $('auth-name') : $('auth-email')).focus(), 380);
         }
-    },
- 
-    setDemoRole(role) {
-        this.authRole = role;
-        const c = document.getElementById('role-customer'), o = document.getElementById('role-owner');
-        c.classList.toggle('selected', role === 'customer'); c.setAttribute('aria-pressed', String(role === 'customer'));
-        o.classList.toggle('selected', role === 'owner');    o.setAttribute('aria-pressed', String(role === 'owner'));
-        document.getElementById('auth-hint').textContent = role === 'owner'
-            ? 'Demo owner: admin@pilikart.ph / admin'
-            : 'Demo: maria@example.com / maria';
-        this.clearAuthError();
-    },
- 
-    fillOwnerDemo(e) {
-        if (e) e.preventDefault();
-        this.setAuthMode('signin', false);
-        this.setDemoRole('owner');
-        document.getElementById('auth-email').focus();
     },
  
     togglePassword() {
@@ -134,7 +194,7 @@ const app = {
     },
  
     continueAsGuest() {
-        this.go('menu');
+        this.go('home');
         this.showToast('Nagba-browse ka bilang guest');
     },
  
@@ -149,17 +209,6 @@ const app = {
         err.textContent = msg; err.classList.add('show');
         const f = fieldId && document.getElementById(fieldId);
         if (f) { f.classList.remove('invalid'); void f.offsetWidth; f.classList.add('invalid'); f.focus(); }
-        else {                                // no specific field: shake the whole card
-            const card = document.getElementById('auth-card');
-            card.style.animation = 'none'; void card.offsetWidth; card.style.animation = 'authShake .4s';
-        }
-    },
- 
-    setAuthBusy(busy) {
-        this.authBusy = busy;
-        const btn = document.getElementById('auth-submit');
-        btn.disabled = busy;
-        btn.classList.toggle('loading', busy);
     },
  
     async submitAuth(e) {
@@ -178,43 +227,59 @@ const app = {
         if (this.isSignUp && password.length < 6) return this.authFail('Password: hindi bababa sa 6 characters.', 'auth-pass');
  
         const payload = { email, password };
-        if (this.isSignUp) payload.name = name; else payload.role = this.authRole;
+        if (this.isSignUp) payload.name = name; else payload.role = 'customer';
  
-        this.setAuthBusy(true);
+        this.authBusy = true;
         try {
             const res = await fetch(`api.php?action=${this.isSignUp ? 'signup' : 'login'}`, {
                 method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
             });
             const data = await res.json().catch(() => ({}));
             if (!res.ok || !data.ok) {
-                this.setAuthBusy(false);
-                return this.authFail(data.error || 'Hindi makapasok. Subukan ulit.', this.isSignUp ? null : 'auth-pass');
+                this.authBusy = false;
+                return this.authFail(data.error || 'Hindi makapasok. Subukan ulit.');
             }
  
-            // success: green button pop, then load the app
-            const btn = el('auth-submit');
-            btn.classList.remove('loading'); btn.classList.add('success');
-            el('auth-submit-label').textContent = 'Tagumpay! ✓';
-            await new Promise(r => setTimeout(r, 550));
- 
+            await new Promise(r => setTimeout(r, 400));
             el('auth-form').reset();
             this.showToast(this.isSignUp ? 'Maligayang pagdating sa PiliKart!' : 'Welcome back!');
             await this.init();
- 
-            btn.classList.remove('success');
-            el('auth-submit-label').textContent = this.isSignUp ? 'Gawa na!' : 'Pasok na!';
-            this.setAuthBusy(false);
+            this.authBusy = false;
         } catch (err) {
-            this.setAuthBusy(false);
-            this.authFail('Walang koneksyon sa server. Naka-ON ba ang Apache at MySQL?');
+            this.authBusy = false;
+            this.authFail('Walang koneksyon sa server.');
         }
     },
- 
-    // Fill checkout details from the logged-in account (never overwrites what the user typed)
+
     prefillCheckout() {
         if (!this.user) return;
         const set = (id, v) => { const f = document.getElementById(id); if (f && !f.value && v) f.value = v; };
         set('co-name', this.user.name); set('co-phone', this.user.phone); set('co-addr', this.user.address);
+    },
+
+    // --- CAROUSEL RENDERER ---
+    renderCarousel() {
+        const container = document.getElementById('carousel-card-container');
+        if (!container) return;
+        const dept = this.departments[this.carouselIndex];
+        
+        container.innerHTML = `
+            <img src="${dept.image}" class="carousel-img" alt="${dept.name}">
+            <div class="carousel-cat-tag">Department: ${dept.name}</div>
+            <h3 class="carousel-title">${dept.name}</h3>
+            <p class="carousel-desc">${dept.desc}</p>
+            <div class="carousel-featured">Featured: ${dept.featured}</div>
+        `;
+
+        const dots = document.querySelectorAll('.dot');
+        dots.forEach((dot, idx) => {
+            dot.classList.toggle('active', idx === this.carouselIndex);
+        });
+    },
+
+    setCarouselSlide(idx) {
+        this.carouselIndex = idx;
+        this.renderCarousel();
     },
  
     // --- MENU & SEARCH ---
@@ -260,11 +325,7 @@ const app = {
     addToCart(id) {
         const p = this.products.find(x => x.id === id);
         const item = this.cart.find(x => x.id === id);
-        if (item) {
-            item.qty++;
-        } else {
-            this.cart.push({ ...p, qty: 1 });
-        }
+        if (item) { item.qty++; } else { this.cart.push({ ...p, qty: 1 }); }
         this.saveCart();
         this.toggleCart(true);
     },
@@ -380,7 +441,6 @@ const app = {
         }
     },
  
-    // --- CUSTOMER ORDERS ---
     renderOrders() {
         const list = document.getElementById('orders-list');
         if (!this.user) {
@@ -451,8 +511,7 @@ const app = {
  
     async updateOrderStatus(id, status) {
         await fetch('api.php?action=admin-update-order', { 
-            method: 'POST', 
-            headers: {'Content-Type': 'application/json'},
+            method: 'POST', headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({ order_id: id, status }) 
         });
         this.showToast('Status updated');
@@ -462,8 +521,7 @@ const app = {
     async deleteOrder(id) {
         if (!confirm('Delete this order permanently?')) return;
         await fetch('api.php?action=admin-delete-order', { 
-            method: 'POST', 
-            headers: {'Content-Type': 'application/json'},
+            method: 'POST', headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({ order_id: id }) 
         });
         this.init();
@@ -473,8 +531,7 @@ const app = {
         const price = document.getElementById(`p-price-${id}`).value;
         const stock = document.getElementById(`p-stock-${id}`).value;
         await fetch('api.php?action=admin-update-product', { 
-            method: 'POST', 
-            headers: {'Content-Type': 'application/json'},
+            method: 'POST', headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({ id, price, stock }) 
         });
         this.showToast('Product saved');
@@ -484,8 +541,7 @@ const app = {
     async deleteProduct(id) {
         if (!confirm('Delete this product?')) return;
         await fetch('api.php?action=admin-delete-product', { 
-            method: 'POST', 
-            headers: {'Content-Type': 'application/json'},
+            method: 'POST', headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({ id }) 
         });
         this.init();
@@ -497,33 +553,37 @@ const app = {
             price: document.getElementById('add-price').value,
             stock: document.getElementById('add-stock').value,
             category: document.getElementById('add-cat').value,
-            tagline: '',
-            description: 'New product',
-            image: 'https://placehold.co/400x400/eee/333?text=New',
-            tags: ''
+            tagline: '', description: 'New product',
+            image: 'https://placehold.co/400x400/eee/333?text=New', tags: ''
         };
         await fetch('api.php?action=admin-add-product', { 
-            method: 'POST', 
-            headers: {'Content-Type': 'application/json'},
+            method: 'POST', headers: {'Content-Type': 'application/json'},
             body: JSON.stringify(payload) 
         });
         this.showToast('Product added');
         this.init();
     },
  
-    // --- EXTRAS (Theme & PiliBot) ---
+    // --- THEME & PILIBOT ---
     toggleTheme() {
         const html = document.documentElement;
         const isSunset = html.getAttribute('data-theme') === 'sunset';
-        html.setAttribute('data-theme', isSunset ? 'day' : 'sunset');
-        document.getElementById('theme-btn').textContent = isSunset ? '🌙' : '☀️';
-        localStorage.setItem('pk_theme', isSunset ? 'day' : 'sunset');
+        const nextTheme = isSunset ? 'day' : 'sunset';
+        html.setAttribute('data-theme', nextTheme);
+        localStorage.setItem('pk_theme', nextTheme);
+
+        const pillWrap = document.getElementById('nd-theme-pill').parentElement;
+        if (pillWrap) {
+            pillWrap.classList.toggle('is-sunset', !isSunset);
+        }
     },
  
     checkTheme() {
-        if (localStorage.getItem('pk_theme') === 'sunset') {
-            document.documentElement.setAttribute('data-theme', 'sunset');
-            document.getElementById('theme-btn').textContent = '☀️';
+        const saved = localStorage.getItem('pk_theme') || 'day';
+        document.documentElement.setAttribute('data-theme', saved);
+        const pillWrap = document.getElementById('nd-theme-pill').parentElement;
+        if (pillWrap) {
+            pillWrap.classList.toggle('is-sunset', saved === 'sunset');
         }
     },
  
