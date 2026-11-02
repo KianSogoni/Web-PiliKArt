@@ -183,7 +183,7 @@ INSERT INTO products (name, tagline, description, price, category, image, stock,
 $host = '127.0.0.1';
 $db   = 'pilikart';
 $user = 'root';
-$pass = ''; // Update this if your local MySQL root has a password (e.g., 'browny000')
+$pass = ''; // Update this if your local MySQL root has a password 
 ```
 
 ### Step 4: Run the Application
