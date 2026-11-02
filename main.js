@@ -8,36 +8,37 @@ const app = {
     isSignUp: false,
     authBusy: false,
     gcashBase64: '',
+    selectedCategory: 'all',
     
     // Department Carousel Data
     carouselIndex: 0,
     departments: [
         {
             name: "PASO",
-            desc: "Department for food essentials & local delicacies.",
+            desc: "Nourishing meals crafted with love. Discover our local delicacies and comfort food, bringing the warmth of home-cooked Filipino cuisine straight to your table.",
             featured: "Chicken Adobo with Rice",
-            image: "https://placehold.co/400x400/eee/333?text=Adobo+Rice"
+            image: "https://placehold.co/400x400/eee/333?text=Paso+Food"
         },
         {
             name: "NIPA",
-            desc: "Made for home essentials & daily conveniences.",
-            featured: "Tabo & Household Essentials",
-            image: "https://placehold.co/400x400/eee/333?text=Tabo+Essentials"
+            desc: "Kalinga sa Tahanan. Curated essentials to keep your home clean, organized, and welcoming. Quality finds for your everyday household needs.",
+            featured: "Tabo & Home Essentials",
+            image: "https://placehold.co/400x400/eee/333?text=Nipa+Home"
         },
         {
             name: "HABI",
-            desc: "Clothing and fashion related stuff from local weavers.",
+            desc: "Ganda ng Pilipino. Celebrate our rich cultural heritage with beautifully crafted clothing and local beauty products made by skilled Filipino artisans.",
             featured: "Barong Tagalog",
-            image: "https://placehold.co/400x400/eee/333?text=Barong+Tagalog"
+            image: "https://placehold.co/400x400/eee/333?text=Habi+Fashion"
         },
         {
             name: "APOLLO",
-            desc: "Technology needs & portable gadgets.",
+            desc: "Galing at Teknolohiya. Empowering your daily life with practical tech gadgets and smart innovations designed for the modern Filipino.",
             featured: "Mini Karaoke Machine",
-            image: "https://placehold.co/400x400/eee/333?text=Karaoke+Machine"
+            image: "https://placehold.co/400x400/eee/333?text=Apollo+Tech"
         }
     ],
- 
+
     async init() {
         document.getElementById('main-content').style.display = 'block';
  
@@ -57,7 +58,7 @@ const app = {
                 this.go('admin');
                 this.renderAdmin();
             } else {
-                this.go('home'); // Post-login default is Home
+                this.go('home'); 
             }
         } else {
             this.go('landing');
@@ -99,10 +100,22 @@ const app = {
         if (view === 'checkout') { this.renderCheckoutSummary(); this.prefillCheckout(); }
         if (view === 'auth') this.clearAuthError();
         if (view === 'admin') this.renderAdmin();
-        if (view === 'home') this.renderCarousel();
     },
 
-    // --- NAVIGATION DRAWER (Slide in from right) ---
+    scrollToMenu() {
+        if (document.getElementById('view-home').classList.contains('hidden')) {
+            this.go('home');
+            setTimeout(() => {
+                const menuSec = document.getElementById('home-menu-section');
+                if (menuSec) menuSec.scrollIntoView({ behavior: 'smooth' });
+            }, 100);
+        } else {
+            const menuSec = document.getElementById('home-menu-section');
+            if (menuSec) menuSec.scrollIntoView({ behavior: 'smooth' });
+        }
+    },
+
+    // --- NAVIGATION DRAWER ---
     toggleNavDrawer() {
         const drawer = document.getElementById('nav-drawer');
         const backdrop = document.getElementById('nav-drawer-backdrop');
@@ -118,10 +131,9 @@ const app = {
     navToAccount() {
         this.toggleNavDrawer();
         if (this.user) {
-            this.go('orders'); // Or profile view if available, orders acts as account summary
+            this.go('orders');
             this.showToast(`Logged in as ${this.user.name}`);
         } else {
-            // Guest -> goes to sign up page
             this.go('auth');
             this.setAuthMode('signup', false);
         }
@@ -257,24 +269,40 @@ const app = {
         set('co-name', this.user.name); set('co-phone', this.user.phone); set('co-addr', this.user.address);
     },
 
-    // --- CAROUSEL RENDERER ---
+    // --- CAROUSEL RENDERER (3D FLIP) ---
     renderCarousel() {
         const container = document.getElementById('carousel-card-container');
         if (!container) return;
-        const dept = this.departments[this.carouselIndex];
         
-        container.innerHTML = `
-            <img src="${dept.image}" class="carousel-img" alt="${dept.name}">
-            <div class="carousel-cat-tag">Department: ${dept.name}</div>
-            <h3 class="carousel-title">${dept.name}</h3>
-            <p class="carousel-desc">${dept.desc}</p>
-            <div class="carousel-featured">Featured: ${dept.featured}</div>
-        `;
+        if (!container.querySelector('.carousel-flip-inner')) {
+            container.innerHTML = `<div class="carousel-flip-inner"></div>`;
+        }
+        
+        const inner = container.querySelector('.carousel-flip-inner');
 
-        const dots = document.querySelectorAll('.dot');
-        dots.forEach((dot, idx) => {
-            dot.classList.toggle('active', idx === this.carouselIndex);
-        });
+        // Trigger flip out
+        container.classList.add('flip-out');
+        container.classList.remove('flip-in');
+
+        setTimeout(() => {
+            const dept = this.departments[this.carouselIndex];
+            
+            inner.innerHTML = `
+                <img src="${dept.image}" class="carousel-img" alt="${dept.name}">
+                <div class="carousel-cat-tag">Department: ${dept.name}</div>
+                <h3 class="carousel-title">${dept.featured}</h3>
+                <p class="carousel-desc">${dept.desc}</p>
+            `;
+
+            const dots = document.querySelectorAll('.dot');
+            dots.forEach((dot, idx) => {
+                dot.classList.toggle('active', idx === this.carouselIndex);
+            });
+
+            // Trigger flip in
+            container.classList.remove('flip-out');
+            container.classList.add('flip-in');
+        }, 400);
     },
 
     setCarouselSlide(idx) {
@@ -282,7 +310,14 @@ const app = {
         this.renderCarousel();
     },
  
-    // --- MENU & SEARCH ---
+    // --- MENU, SEARCH & DEPARTMENT FILTERING ---
+    filterDepartment(category, btn) {
+        this.selectedCategory = category;
+        document.querySelectorAll('.dept-pill').forEach(p => p.classList.remove('active'));
+        btn.classList.add('active');
+        this.renderMenu();
+    },
+
     renderMenu() {
         const qInput = document.getElementById('search-input');
         const bInput = document.getElementById('budget-input');
@@ -292,33 +327,34 @@ const app = {
         const budget = parseFloat(bInput.value) || Infinity;
         
         const html = this.products.filter(p => {
+            const matchCat = this.selectedCategory === 'all' || p.category.toLowerCase() === this.selectedCategory.toLowerCase();
             const matchQ = p.name.toLowerCase().includes(q) || (p.tags && p.tags.toLowerCase().includes(q));
             const matchB = p.price <= budget;
-            return matchQ && matchB;
+            return matchCat && matchQ && matchB;
         }).map(p => `
             <div class="card product-card">
                 <span class="chip" style="position:absolute; top:10px; left:10px; background:var(--amber); color:#000;">${p.category}</span>
-                <img src="${p.image}" class="product-img" style="background:#fff;">
+                <img src="${p.image}" class="product-img">
                 <div style="margin-top:10px; flex:1;">
                     <h3 style="font-size:18px; line-height:1.2;">${p.name}</h3>
                     <p style="font-size:12px; color:var(--muted); margin:5px 0;">${p.description}</p>
                 </div>
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px; border-top:1px solid var(--line); padding-top:10px;">
-                    <h2 style="color:var(--brand);">₱${p.price}</h2>
+                    <h2 style="color:var(--brand);">₱${p.price.toLocaleString()}</h2>
                     <button class="btn btn-brand" onclick="app.addToCart(${p.id})" ${p.stock <= 0 ? 'disabled' : ''}>${p.stock <= 0 ? 'Out' : '+ Add'}</button>
                 </div>
                 <div class="nutshell">
                     <h3>${p.name}</h3>
                     <p style="font-size:12px; margin:5px 0 10px;">${p.description}</p>
                     <div style="display:flex; justify-content:space-between;">
-                        <span style="color:var(--leaf); font-size:12px; font-weight:bold;">🔥 ${p.stock} left</span>
+                        <span style="color:var(--leaf); font-size:12px; font-weight:bold;">${p.stock} left</span>
                         <button class="btn btn-brand" onclick="app.addToCart(${p.id})">Quick Add</button>
                     </div>
                 </div>
             </div>
         `).join('');
         
-        document.getElementById('product-grid').innerHTML = html || '<p style="text-align:center; width:100%;">No products found.</p>';
+        document.getElementById('product-grid').innerHTML = html || '<p style="text-align:center; width:100%; grid-column: 1 / -1; padding: 40px; color:var(--muted);">Walang nakitang produkto sa kategoryang ito.</p>';
     },
  
     // --- CART & CHECKOUT ---
@@ -357,7 +393,7 @@ const app = {
  
         const total = this.cart.reduce((s, x) => s + x.price * x.qty, 0) + (this.cart.length ? this.fee : 0);
         const totalEl = document.getElementById('cart-total');
-        if (totalEl) totalEl.textContent = '₱' + total;
+        if (totalEl) totalEl.textContent = '₱' + total.toLocaleString();
     },
  
     updateQty(id, d) {
@@ -464,7 +500,7 @@ const app = {
         if (!this.user || this.user.role !== 'admin') return;
  
         let sales = this.orders.reduce((s, o) => s + parseInt(o.total), 0);
-        document.getElementById('stat-sales').textContent = '₱' + sales;
+        document.getElementById('stat-sales').textContent = '₱' + sales.toLocaleString();
         document.getElementById('stat-orders').textContent = this.orders.length;
  
         document.getElementById('admin-orders-body').innerHTML = this.orders.map(o => `
@@ -472,14 +508,14 @@ const app = {
                 <td><b>#${o.id}</b></td>
                 <td>${o.customer_name}<br><small>${o.address}</small></td>
                 <td>₱${o.total}</td>
-                <td>${o.payment === 'gcash' && o.payment_proof ? `<button class="btn btn-ghost" style="padding:4px 8px; font-size:11px;" onclick="app.viewProof('${o.payment_proof}')">📸 View</button>` : 'COD'}</td>
+                <td>${o.payment === 'gcash' && o.payment_proof ? `<button class="btn btn-ghost" style="padding:4px 8px; font-size:11px;" onclick="app.viewProof('${o.payment_proof}')">View</button>` : 'COD'}</td>
                 <td>
                     <select class="input" style="padding:5px; width:120px; margin-bottom:5px;" onchange="app.updateOrderStatus(${o.id}, this.value)">
                         <option ${o.status === 'Pending' ? 'selected' : ''}>Pending</option>
                         <option ${o.status === 'Shipping' ? 'selected' : ''}>Shipping</option>
                         <option ${o.status === 'Delivered' ? 'selected' : ''}>Delivered</option>
                     </select><br>
-                    <button class="btn btn-danger" style="padding:4px 8px; font-size:11px;" onclick="app.deleteOrder(${o.id})">🗑 Delete</button>
+                    <button class="btn btn-danger" style="padding:4px 8px; font-size:11px;" onclick="app.deleteOrder(${o.id})">Delete</button>
                 </td>
             </tr>
         `).join('');
@@ -491,7 +527,7 @@ const app = {
                 <td><input type="number" id="p-stock-${p.id}" class="input" style="padding:5px; width:80px;" value="${p.stock}"></td>
                 <td>
                     <button class="btn btn-leaf" style="padding:4px 8px; font-size:11px;" onclick="app.saveProduct(${p.id})">Save</button>
-                    <button class="btn btn-danger" style="padding:4px 8px; font-size:11px;" onclick="app.deleteProduct(${p.id})">🗑</button>
+                    <button class="btn btn-danger" style="padding:4px 8px; font-size:11px;" onclick="app.deleteProduct(${p.id})">Delete</button>
                 </td>
             </tr>
         `).join('');
