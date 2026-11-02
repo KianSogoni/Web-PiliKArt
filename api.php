@@ -55,37 +55,27 @@ switch ($action) {
         }
         out(['user' => $user, 'products' => $products, 'orders' => $orders, 'fee' => $fee, 'notifications' => $notifs]);
  
-    case 'login':
+            case 'login':
         $email = trim(strtolower($in['email'] ?? ''));
         $pw = (string)($in['password'] ?? '');
+        
         $stmt = $pdo->prepare('SELECT * FROM users WHERE email=? AND is_archived=0');
         $stmt->execute([$email]);
         $u = $stmt->fetch();
         
-        if (!$u || !(password_verify($pw, $u['password_hash']) || hash_equals($u['password_hash'], $pw))) {
-            out(['error' => 'Mali ang email o password.'], 401);
+        if (!$u) {
+            out(['error' => 'DB Error: User not found - ' . $email], 401);
         }
         
-        // Auto-route based on database role (ignoring what the frontend selected)
-        session_regenerate_id(true);
-        $_SESSION = ['user_id' => $u['id'], 'role' => $u['role'], 'name' => $u['name']];
-        out(['ok' => true, 'role' => $u['role']]);
- 
-    case 'signup':
-        $name = trim($in['name'] ?? '');
-        $email = trim(strtolower($in['email'] ?? ''));
-        $pw = (string)($in['password'] ?? '');
-        if ($name === '') out(['error' => 'Ilagay ang buong pangalan.'], 400);
-        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) out(['error' => 'Mali ang email format.'], 400);
-        if (strlen($pw) < 6) out(['error' => 'Password: hindi bababa sa 6 characters.'], 400);
-        $stmt = $pdo->prepare('SELECT id FROM users WHERE email=?');
-        $stmt->execute([$email]);
-        if ($stmt->fetch()) out(['error' => 'May account na ang email na ito.'], 400);
-        $stmt = $pdo->prepare('INSERT INTO users (name,email,password_hash,phone,address) VALUES (?,?,?,?,?)');
-        $stmt->execute([$name, $email, password_hash($pw, PASSWORD_DEFAULT), $in['phone'] ?? '', $in['address'] ?? '']);
-        session_regenerate_id(true);
-        $_SESSION = ['user_id' => $pdo->lastInsertId(), 'role' => 'customer', 'name' => $name];
-        out(['ok' => true]);
+        $db_pass = $u['password_hash'];
+        
+        if ($db_pass === $pw || password_verify($pw, $db_pass)) {
+            session_regenerate_id(true);
+            $_SESSION = ['user_id' => $u['id'], 'role' => $u['role'], 'name' => $u['name']];
+            out(['ok' => true, 'role' => $u['role']]);
+        } else {
+            out(['error' => 'DB Error: Password mismatch. DB has: "' . $db_pass . '" vs Typed: "' . $pw . '"'], 401);
+        }
  
     case 'logout':
         session_destroy();
