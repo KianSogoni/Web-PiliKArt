@@ -70,8 +70,11 @@
 
             <!-- Department Carousel Column -->
             <div class="home-carousel-col">
-                <div class="carousel-card-wrap" id="carousel-card-container">
-                    <!-- Populated dynamically via JS -->
+                <div class="featured-label">Featured Items</div>
+                <div class="carousel-3d-container">
+                    <div class="carousel-stage" id="carousel-card-container">
+                        <!-- Populated dynamically via JS -->
+                    </div>
                 </div>
                 <div class="carousel-dots" id="carousel-dots">
                     <span class="dot active" onclick="app.setCarouselSlide(0)"></span>
@@ -164,16 +167,99 @@
     </div>
  
     <!-- ABOUT US VIEW -->
-    <div id="view-about" class="hidden max-w" style="padding-top:40px; padding-bottom:80px;">
-        <div class="card" style="max-width: 800px; margin: 0 auto; padding: 40px;">
-            <div class="landing-badge" style="display:inline-flex; width:fit-content; margin-bottom:15px;">Tungkol sa Amin</div>
-            <h1 style="font-size:36px; margin-bottom:20px; color:var(--brand);">Ano ang PiliKart?</h1>
-            <p style="font-size:16px; line-height:1.8; margin-bottom:20px; color:var(--ink);">
-                Ang <strong>PiliKart</strong> (hango sa mga salitang <em>"Pumili Ka"</em> at <em>"Cart"</em>) ay isang makabagong e-commerce platform na naglalayong itaguyod at palakasin ang mga lokal na negosyante, manggagawa, at katutubong produkto mula sa Calamba, Laguna at sa buong Pilipinas.
-            </p>
-            <div style="display:flex; gap:15px; margin-top:30px;">
-                <button class="btn btn-brand" onclick="app.scrollToMenu()">Galugarin ang Menu</button>
-                <button class="btn btn-ghost" onclick="app.go('home')">Bumalik sa Home</button>
+    <div id="view-about" class="hidden about-screen" style="padding-bottom: 80px;">
+        
+        <div class="about-hero">
+            <div class="landing-badge warm-badge">Ang Kwento ng PiliKart</div>
+            <h1 class="about-title">"Pumili Ka + Cart."</h1>
+            <p class="about-subtitle">Where every click is a step closer to home.</p>
+        </div>
+
+        <div class="about-content">
+            <div class="about-card">
+                <p style="font-size:18px; line-height:1.8; color:var(--ink); margin-bottom:20px; font-weight:600;">
+                    We didn't just build an e-commerce platform; we built a digital love letter to the Filipino heritage. In a world that is constantly rushing forward, PiliKart is our way of looking back—honoring the <em>kalan</em> and <em>banga</em> of our ancestors, while embracing the limitless possibilities of our future.
+                </p>
+                <p style="font-size:18px; line-height:1.8; color:var(--ink); font-weight:800; color:var(--brand);">
+                    Here, you don't just shop. You experience the warmth of a Filipino <em>tahanan</em>.
+                </p>
+            </div>
+
+            <div class="about-section-title">
+                <h2>Apat na Tindahan, Isang Pusong Pinoy</h2>
+                <p>To truly understand who we are, you must meet our four pillars. Each one is named after a piece of our history, a testament to the ingenuity and resilience of the Filipino people.</p>
+            </div>
+
+            <div class="about-departments">
+                <!-- PASO -->
+                <div class="about-dept-card">
+                    <div class="about-dept-icon paso">
+                        <svg viewBox="0 0 24 24" width="28" height="28" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10h16v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8z"/><path d="M2 10h20"/><path d="M8 6c0-2 1-3 2-3s2 1 2 3"/><path d="M14 6c0-2 1-3 2-3s2 1 2 3"/></svg>
+                    </div>
+                    <h3>PASO <span>(Food Essentials)</span></h3>
+                    <p>Named after the <em>banga</em> (clay pot) that represents our beloved Calamba, Laguna. PASO is the heart of the kitchen—bringing you the comfort of lutong-bahay and the flavors that remind you of home.</p>
+                </div>
+
+                <!-- NIPA -->
+                <div class="about-dept-card">
+                    <div class="about-dept-icon nipa">
+                        <svg viewBox="0 0 24 24" width="28" height="28" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                    </div>
+                    <h3>NIPA <span>(Home Appliances)</span></h3>
+                    <p>Derived from the <em>Bahay Kubo</em>, NIPA is built on the belief that a house is not a home without the warmth of family. We offer the essentials that turn your space into a sanctuary, no matter how simple.</p>
+                </div>
+
+                <!-- HABI -->
+                <div class="about-dept-card">
+                    <div class="about-dept-icon habi">
+                        <svg viewBox="0 0 24 24" width="28" height="28" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M20.38 3.46 16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H5v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V10h1.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23z"/></svg>
+                    </div>
+                    <h3>HABI <span>(Fashion)</span></h3>
+                    <p>In Tagalog, <em>habi</em> means to weave. Just as our ancestors wove the fabric of our culture thread by thread, HABI brings you clothing and fashion that reflect our vibrant identity—where tradition meets modern confidence.</p>
+                </div>
+
+                <!-- APOLLO -->
+                <div class="about-dept-card">
+                    <div class="about-dept-icon apollo">
+                        <svg viewBox="0 0 24 24" width="28" height="28" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg>
+                    </div>
+                    <h3>APOLLO <span>(Technologies)</span></h3>
+                    <p>Did you know that the Lunar Roving Vehicle used by Apollo missions was allegedly designed by Eduardo San Juan, a Filipino NASA engineer? APOLLO celebrates this boundless Filipino ingenuity, bringing you tech essentials that prove we can reach for the stars while remaining rooted in our soil.</p>
+                </div>
+            </div>
+
+            <div class="about-features-grid">
+                <!-- Malasakit -->
+                <div class="about-feature-card">
+                    <h3 style="display:flex; align-items:center; gap:8px;">
+                        <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" style="color:var(--brand)"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
+                        Ang Malasakit sa Bawat Transaksyon
+                    </h3>
+                    <p>We know that genuine care means looking out for everyone. In PiliKart, inclusivity isn't an afterthought—it is the foundation. That is why we built in layered discounts, offering special rates for our Senior Citizens and Persons with Disabilities (PWDs).</p>
+                    <p>We also understand the modern Filipino's journey. Whether you are an OFW sending love back home, a foreign friend exploring our culture, or a local supporting local, PiliKart speaks your language. With our integrated multi-currency system (PHP, USD, EUR, JPY), shopping for the things you love has never been more accessible.</p>
+                </div>
+
+                <!-- Kahera -->
+                <div class="about-feature-card">
+                    <h3 style="display:flex; align-items:center; gap:8px;">
+                        <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" style="color:var(--leaf)"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></svg>
+                        Ang PILI Kahera: Ang Iyong Digital Na Bulsa
+                    </h3>
+                    <p>Shopping shouldn't be complicated. That is why we created PILI Kahera, your virtual ATM and wallet all in one.</p>
+                    <p>We wanted to make financial management as simple and pleasant as possible. Need to check your balance? Top up your wallet for a big purchase? Or maybe you need to withdraw funds? PILI Kahera handles it all securely, ensuring your digital wallet is always ready to serve you. It’s not just about money; it’s about giving you peace of mind so you can focus on what matters—finding joy in your purchases.</p>
+                </div>
+            </div>
+
+            <div class="about-conclusion">
+                <h2>Bakit PiliKart?</h2>
+                <h3>Because the future is local.</h3>
+                <p>Every time you choose PiliKart, you aren't just adding to a cart. You are supporting local businesses. You are keeping the piso circulating within our communities. You are empowering Filipino farmers, artisans, and entrepreneurs.</p>
+                <p style="margin-top: 20px; font-style: italic; color: var(--muted);">Will your journey begin at the comforting embrace of HABI, or will you take flight with APOLLO?</p>
+                
+                <div style="margin-top: 30px; display:flex; gap:15px; justify-content:center;">
+                    <button class="btn btn-brand btn-large" onclick="app.scrollToMenu()">Unearth the Treasures</button>
+                    <button class="btn btn-ghost btn-large" onclick="app.go('home')">Bumalik sa Home</button>
+                </div>
             </div>
         </div>
     </div>
@@ -331,77 +417,42 @@
 
     <div class="nav-drawer-links">
         <a href="#" onclick="app.scrollToMenu(); app.toggleNavDrawer();">
-            <!-- Cute Leaf Icon -->
-            <svg class="nd-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/>
-                <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/>
-            </svg>
+            <svg class="nd-icon" viewBox="0 0 24 24"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></svg>
             <div>
                 <strong>Menu</strong>
                 <small>Ang Lutuan</small>
             </div>
         </a>
         <a href="#" onclick="app.navTo('about')">
-            <!-- Cute Watering Can / Heart Icon -->
-            <svg class="nd-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M4 14.5A4.5 4.5 0 0 1 8.5 10h7a4.5 4.5 0 0 1 4.5 4.5V19a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-4.5Z"/>
-                <path d="M15 10V6a3 3 0 0 0-3-3H9a3 3 0 0 0-3 3v4"/>
-                <path d="M8 21v-3"/>
-                <path d="M16 21v-3"/>
-                <path d="M2 14h2"/>
-                <path d="M20 14h2"/>
-            </svg>
+            <svg class="nd-icon" viewBox="0 0 24 24"><path d="M4 14.5A4.5 4.5 0 0 1 8.5 10h7a4.5 4.5 0 0 1 4.5 4.5V19a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-4.5Z"/><path d="M15 10V6a3 3 0 0 0-3-3H9a3 3 0 0 0-3 3v4"/><path d="M8 21v-3"/><path d="M16 21v-3"/><path d="M2 14h2"/><path d="M20 14h2"/></svg>
             <div>
                 <strong>About Us</strong>
                 <small>Tungkol sa PiliKart</small>
             </div>
         </a>
         <a href="#" onclick="app.navTo('recipes')">
-            <!-- Cute Steaming Bowl Icon -->
-            <svg class="nd-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M4 10h16v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8z"/>
-                <path d="M2 10h20"/>
-                <path d="M8 6c0-2 1-3 2-3s2 1 2 3"/>
-                <path d="M14 6c0-2 1-3 2-3s2 1 2 3"/>
-            </svg>
+            <svg class="nd-icon" viewBox="0 0 24 24"><path d="M4 10h16v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8z"/><path d="M2 10h20"/><path d="M8 6c0-2 1-3 2-3s2 1 2 3"/><path d="M14 6c0-2 1-3 2-3s2 1 2 3"/></svg>
             <div>
                 <strong>Recipe Box</strong>
                 <small>Mga Resipi</small>
             </div>
         </a>
         <a href="#" onclick="app.navTo('faq')">
-            <!-- Cute Flower Icon -->
-            <svg class="nd-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="12" r="3"/>
-                <path d="M12 9a3 3 0 1 1 0-6 3 3 0 0 1 0 6z"/>
-                <path d="M12 15a3 3 0 1 1 0 6 3 3 0 0 1 0-6z"/>
-                <path d="M9 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0z"/>
-                <path d="M15 12a3 3 0 1 1 6 0 3 3 0 0 1-6 0z"/>
-            </svg>
+            <svg class="nd-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 9a3 3 0 1 1 0-6 3 3 0 0 1 0 6z"/><path d="M12 15a3 3 0 1 1 0 6 3 3 0 0 1 0-6z"/><path d="M9 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0z"/><path d="M15 12a3 3 0 1 1 6 0 3 3 0 0 1-6 0z"/></svg>
             <div>
                 <strong>FAQ</strong>
                 <small>Mga Tanong</small>
             </div>
         </a>
         <a href="#" onclick="app.navToAccount()">
-            <!-- Cute User with Leaf Icon -->
-            <svg class="nd-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                <circle cx="12" cy="7" r="4"/>
-                <path d="M17 5a2 2 0 0 0-2-2"/>
-            </svg>
+            <svg class="nd-icon" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/><path d="M17 5a2 2 0 0 0-2-2"/></svg>
             <div>
                 <strong>My Account</strong>
                 <small id="nav-account-sub">Profile & Settings</small>
             </div>
         </a>
         <a href="#" onclick="app.navTo('orders')">
-            <!-- Cute Wooden Crate Icon -->
-            <svg class="nd-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
-                <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
-                <line x1="12" y1="22.08" x2="12" y2="12"/>
-            </svg>
+            <svg class="nd-icon" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
             <div>
                 <strong>My Orders</strong>
                 <small>Kasaysayan ng Order</small>

@@ -9,33 +9,33 @@ const app = {
     authBusy: false,
     gcashBase64: '',
     selectedCategory: 'all',
-    hoverTimeout: null, // For the hover delay
+    hoverTimeout: null,
     
     carouselIndex: 0,
     departments: [
         {
             name: "PASO",
-            desc: "Nourishing meals crafted with love. Discover our local delicacies and comfort food, bringing the warmth of home-cooked Filipino cuisine straight to your table.",
+            desc: "Taste the warmth of Lola's kitchen. Every bite is a memory of home, crafted with the love only a Filipino family knows.",
             featured: "Chicken Adobo with Rice",
             image: "assets/paso/Chicken Adobo with Rice.png"
         },
         {
             name: "NIPA",
-            desc: "Kalinga sa Tahanan. Curated essentials to keep your home clean, organized, and welcoming. Quality finds for your everyday household needs.",
-            featured: "Tabo & Home Essentials",
-            image: "https://placehold.co/400x400/eee/333?text=Nipa+Home"
+            desc: "More than just a house, it's where the heart is. Find the simple comforts that turn your space into a warm, welcoming Filipino home.",
+            featured: "Broom and Dustpan Set",
+            image: "https://placehold.co/600x338/1a2b1c/85b56d?text=Nipa+Essentials"
         },
         {
             name: "HABI",
-            desc: "Ganda ng Pilipino. Celebrate our rich cultural heritage with beautifully crafted clothing and local beauty products made by skilled Filipino artisans.",
-            featured: "Barong Tagalog",
-            image: "https://placehold.co/400x400/eee/333?text=Habi+Fashion"
+            desc: "Woven with the threads of our ancestors. Wear your heritage proudly, as each piece tells a story of Filipino resilience and beauty.",
+            featured: "Velvet Matte Lipstick",
+            image: "https://placehold.co/600x338/1a2b1c/85b56d?text=Habi+Fashion"
         },
         {
             name: "APOLLO",
-            desc: "Galing at Teknolohiya. Empowering your daily life with practical tech gadgets and smart innovations designed for the modern Filipino.",
-            featured: "Mini Karaoke Machine",
-            image: "https://placehold.co/400x400/eee/333?text=Apollo+Tech"
+            desc: "Reach for the stars while keeping your feet on the ground. Discover innovations made for the modern Pinoy, with a heart for home.",
+            featured: "Powerbank (10,000mAh)",
+            image: "https://placehold.co/600x338/1a2b1c/85b56d?text=Apollo+Tech"
         }
     ],
 
@@ -263,24 +263,41 @@ const app = {
     renderCarousel() {
         const container = document.getElementById('carousel-card-container');
         if (!container) return;
-        if (!container.querySelector('.carousel-flip-inner')) container.innerHTML = `<div class="carousel-flip-inner"></div>`;
-        const inner = container.querySelector('.carousel-flip-inner');
 
-        container.classList.add('flip-out');
-        container.classList.remove('flip-in');
+        if (container.children.length === 0) {
+            container.innerHTML = this.departments.map((dept, index) => {
+                return `
+                    <div class="carousel-card" id="carousel-card-${index}">
+                        <img src="${dept.image}" class="carousel-img" alt="${dept.name}">
+                        <div class="carousel-glass-panel">
+                            <span class="carousel-badge">${dept.name}</span>
+                            <h3 class="carousel-title">${dept.featured}</h3>
+                            <p class="carousel-desc">${dept.desc}</p>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
 
-        setTimeout(() => {
-            const dept = this.departments[this.carouselIndex];
-            inner.innerHTML = `
-                <img src="${dept.image}" class="carousel-img" alt="${dept.name}">
-                <div class="carousel-cat-tag">Department: ${dept.name}</div>
-                <h3 class="carousel-title">${dept.featured}</h3>
-                <p class="carousel-desc">${dept.desc}</p>
-            `;
-            document.querySelectorAll('.dot').forEach((dot, idx) => dot.classList.toggle('active', idx === this.carouselIndex));
-            container.classList.remove('flip-out');
-            container.classList.add('flip-in');
-        }, 400);
+        this.departments.forEach((_, index) => {
+            const card = document.getElementById(`carousel-card-${index}`);
+            if (!card) return;
+
+            card.classList.remove('active', 'prev', 'next', 'hidden');
+            
+            const len = this.departments.length;
+            if (index === this.carouselIndex) {
+                card.classList.add('active');
+            } else if (index === (this.carouselIndex - 1 + len) % len) {
+                card.classList.add('prev');
+            } else if (index === (this.carouselIndex + 1) % len) {
+                card.classList.add('next');
+            } else {
+                card.classList.add('hidden');
+            }
+        });
+
+        document.querySelectorAll('.dot').forEach((dot, idx) => dot.classList.toggle('active', idx === this.carouselIndex));
     },
 
     setCarouselSlide(idx) {
@@ -295,11 +312,9 @@ const app = {
         this.renderMenu();
     },
 
-    // Handle hover state for expanding cards
     handleCardHover(event, isEntering) {
         const card = event.currentTarget;
         if (isEntering) {
-            // 500ms delay. Change to 3000 for 3 seconds
             this.hoverTimeout = setTimeout(() => {
                 card.classList.add('card-expanded');
             }, 500); 
@@ -335,7 +350,6 @@ const app = {
             const meta = categoryMeta[catKey] || { label: catKey.toUpperCase(), icon: '' };
             const formattedPrice = Number(p.price).toLocaleString('en-US', { minimumFractionDigits: p.price % 1 !== 0 ? 2 : 0 });
             
-            // Format tags to look nice
             const tags = p.tags ? p.tags.split(',').map(t => t.trim()).join(' • ') : '';
 
             return `
@@ -354,7 +368,6 @@ const app = {
                         <h3 class="prod-title">${p.name}</h3>
                         <p class="prod-tagline">${p.tagline || 'Quality finds from PiliKart'}</p>
                         
-                        <!-- Expanded Details -->
                         <div class="prod-expanded-details">
                             <p class="prod-desc">${p.description}</p>
                             <div class="prod-divider"></div>
