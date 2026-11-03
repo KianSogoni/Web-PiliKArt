@@ -12,7 +12,6 @@ function out($data, $code = 200) {
     exit;
 }
  
-// Every admin-* action requires an admin session
 if (strpos($action, 'admin-') === 0 && ($_SESSION['role'] ?? '') !== 'admin') {
     out(['error' => 'Admins only'], 403);
 }
@@ -28,7 +27,6 @@ switch ($action) {
         
         $products = $pdo->query("SELECT * FROM products WHERE is_archived=0 ORDER BY category, id")->fetchAll();
         
-        // Map database product names to the actual filenames in assets/paso/
         $imageMap = [
             'Chicken Adobo with Rice' => 'assets/paso/Chicken Adobo with Rice.png',
             'Chicken Inasal with Rice' => 'assets/paso/Chicken Inasal with Rice.png',
@@ -36,13 +34,12 @@ switch ($action) {
             'Leche Flan Cup' => 'assets/paso/Leche Plan Cup.jpg',
             'Turon (2 Pieces)' => 'assets/paso/Turon (2 pcs) .jpg',
             'Lumpiang Shanghai (5 Pieces)' => 'assets/paso/Lumpiang Shanghai (5 pcs) .jpg',
-            'Buko Pandan' => 'assets/paso/Buko Pandan.jpg',
-            'Cheese Sticks (8 pcs)' => 'assets/paso/Cheese Sticks (8 pcs) .jpg',
+            'Buko Pandan Cup' => 'assets/paso/Buko Pandan.jpg',
+            'Cheese Sticks (8 Pieces)' => 'assets/paso/Cheese Sticks (8 pcs) .jpg',
             'Chicken Curry with Rice' => 'assets/paso/Chicken Curry with Rice.png',
             'Crispy Porkchop with Rice' => 'assets/paso/Crispy Porkchop with Rice.jpg'
         ];
 
-        // Apply the new image paths
         foreach ($products as &$p) {
             if (isset($imageMap[$p['name']])) {
                 $p['image'] = $imageMap[$p['name']];
@@ -78,6 +75,28 @@ switch ($action) {
         }
         out(['user' => $user, 'products' => $products, 'orders' => $orders, 'fee' => $fee, 'notifications' => $notifs]);
  
+    case 'signup':
+        $name  = trim($in['name'] ?? '');
+        $email = trim(strtolower($in['email'] ?? ''));
+        $pw    = (string)($in['password'] ?? '');
+
+        if ($name === '') out(['error' => 'Ilagay ang buong pangalan mo.'], 400);
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) out(['error' => 'Mali ang email format.'], 400);
+        if (strlen($pw) < 6) out(['error' => 'Password: hindi bababa sa 6 characters.'], 400);
+
+        $stmt = $pdo->prepare('SELECT id FROM users WHERE email=?');
+        $stmt->execute([$email]);
+        if ($stmt->fetch()) out(['error' => 'Ginagamit na ang email na ito. Mag-sign in na lang.'], 409);
+
+        $hash = password_hash($pw, PASSWORD_DEFAULT);
+        $stmt = $pdo->prepare('INSERT INTO users (name, email, phone, address, password_hash, role) VALUES (?,?,?,?,?,?)');
+        $stmt->execute([$name, $email, '', '', $hash, 'customer']);
+        $uid = (int)$pdo->lastInsertId();
+
+        session_regenerate_id(true);
+        $_SESSION = ['user_id' => $uid, 'role' => 'customer', 'name' => $name];
+        out(['ok' => true, 'role' => 'customer']);
+
     case 'login':
         $email = trim(strtolower($in['email'] ?? ''));
         $pw = (string)($in['password'] ?? '');
@@ -86,18 +105,17 @@ switch ($action) {
         $stmt->execute([$email]);
         $u = $stmt->fetch();
         
-        if (!$u) {
-            out(['error' => 'DB Error: User not found - ' . $email], 401);
-        }
+        if (!$u) out(['error' => 'Walang account na naka-register sa email na ito.'], 401);
         
         $db_pass = $u['password_hash'];
         
+        // Supports both plain-text (legacy seed data) and hashed passwords
         if ($db_pass === $pw || password_verify($pw, $db_pass)) {
             session_regenerate_id(true);
             $_SESSION = ['user_id' => $u['id'], 'role' => $u['role'], 'name' => $u['name']];
             out(['ok' => true, 'role' => $u['role']]);
         } else {
-            out(['error' => 'DB Error: Password mismatch. DB has: "' . $db_pass . '" vs Typed: "' . $pw . '"'], 401);
+            out(['error' => 'Mali ang password. Subukan ulit.'], 401);
         }
  
     case 'logout':
