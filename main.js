@@ -88,6 +88,28 @@ const app = {
         }, 7000);
     },
 
+    toggleAcc(el) {
+        if (el.classList.contains('faq-recipe-item')) {
+            const body = el.querySelector('.faq-recipe-body');
+            if (!body) return;
+            
+            // If clicking the active one, close it. Otherwise, close others and open this.
+            const isActive = el.classList.contains('active');
+            
+            // Optional: Close all others (accordion style)
+            document.querySelectorAll('.faq-recipe-item').forEach(item => {
+                item.classList.remove('active');
+                const b = item.querySelector('.faq-recipe-body');
+                if (b) b.style.maxHeight = null;
+            });
+
+            if (!isActive) {
+                el.classList.add('active');
+                body.style.maxHeight = body.scrollHeight + 'px';
+            }
+        }
+    },
+
     sizeHeroVideo() {
         const wrap = document.querySelector('.home-hero-video');
         const iframe = wrap?.querySelector('iframe');
@@ -132,6 +154,22 @@ const app = {
         if (view === 'admin') this.renderAdmin();
         if (view === 'account') this.renderAccount();
         if (view === 'home') { this.updateGreeting(); setTimeout(() => this.sizeHeroVideo(), 50); this.maybeWelcome(); }
+        
+        if (view === 'faq' || view === 'recipes') {
+            // Reset accordions when navigating to them
+            document.querySelectorAll('.faq-recipe-item').forEach((item, index) => {
+                item.classList.remove('active');
+                const body = item.querySelector('.faq-recipe-body');
+                if (body) body.style.maxHeight = null;
+            });
+            // Auto-open the first item for visual appeal
+            const firstItem = document.querySelector('.faq-recipe-item');
+            if (firstItem) {
+                firstItem.classList.add('active');
+                const b = firstItem.querySelector('.faq-recipe-body');
+                if (b) setTimeout(() => b.style.maxHeight = b.scrollHeight + 'px', 50);
+            }
+        }
     },
 
     esc(v) { return String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); },
@@ -549,7 +587,7 @@ const app = {
         
         const badge = document.getElementById('cart-badge');
         if (badge) { badge.classList.remove('bump'); void badge.offsetWidth; badge.classList.add('bump'); }
-        this.showToast(`${p.name} (${this.pendingQty}x) — nasa basket mo na! 🧺`);
+        this.showToast(`${p.name} (${this.pendingQty}x) — nasa basket mo na!`);
     },
 
     closeAddModal() {
@@ -739,7 +777,7 @@ const app = {
 
     async submitOrder() {
         if (this.orderBusy) return;
-        if (!this.cart.length) return this.showToast('Ay, bakante pa ang cart mo! 🧺');
+        if (!this.cart.length) return this.showToast('Ay, bakante pa ang cart mo!');
 
         const val = id => document.getElementById(id).value.trim();
         const payment = val('co-payment') === 'gcash' ? 'gcash' : 'cod';
@@ -1229,7 +1267,7 @@ const app = {
             if (!data.ok) return this.showToast(data.error || 'Hindi na-save ang produkto.');
 
             this.closeProductEditor();
-            this.showToast('Na-update na ang produkto! 🧺');
+            this.showToast('Na-update na ang produkto!');
             await this.reloadAdminData();
         } catch (err) {
             this.showToast('Walang koneksyon sa server.');

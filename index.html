@@ -239,56 +239,282 @@
         </div>
     </div>
 
-    <!-- RECIPE BOX VIEW -->
-    <div id="view-recipes" class="hidden max-w" style="padding-top:40px; padding-bottom:80px;">
-        <div class="card" style="max-width: 800px; margin: 0 auto; padding: 40px;">
-            <div class="landing-badge" style="display:inline-flex; width:fit-content; margin-bottom:15px;">Mga Resipi</div>
-            <h1 style="font-size:36px; margin-bottom:20px; color:var(--brand);">Ang Lutuan at Resipi Box</h1>
-            <p style="font-size:16px; line-height:1.8; margin-bottom:20px; color:var(--ink);">
-                Tumuklas ng mga masasarap at tradisyunal na lutuing Pilipino na madali mong maihahanda sa inyong tahanan gamit ang mga sangkap mula sa PiliKart!
-            </p>
+    <!-- RECIPE BOX VIEW (REDESIGNED) -->
+    <div id="view-recipes" class="hidden max-w view-faq-recipe" style="padding-top:40px; padding-bottom:80px;">
+        
+        <div class="faq-recipe-hero">
+            <div class="landing-badge">MGA RESIPI</div>
+            <h1>Recipe Box 
+                <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--brand); transform: translateY(4px); margin-left: 10px;"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>
+            </h1>
+            <p>Mga resipi mula sa PASO kitchen — kalan at banga method. Libre, kasi ang lutong-bahay, ipinamamana, hindi ipinagkakait.</p>
+        </div>
+
+        <div class="faq-recipe-list">
+            <!-- Recipe 1 -->
+            <div class="faq-recipe-item active" onclick="app.toggleAcc(this)">
+                <div class="faq-recipe-header">
+                    <div class="faq-recipe-title-group">
+                        <div class="faq-recipe-icon">
+                            <!-- Small Paso Icon -->
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10h16v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8z"/><path d="M2 10h20"/><path d="M8 6c0-2 1-3 2-3s2 1 2 3"/><path d="M14 6c0-2 1-3 2-3s2 1 2 3"/></svg>
+                        </div>
+                        <div>
+                            <h3>Adobong Manok sa Banga</h3>
+                            <div class="faq-recipe-meta">
+                                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                1 ORAS • BANGA METHOD
+                            </div>
+                        </div>
+                    </div>
+                    <svg class="acc-chevron" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                </div>
+                <div class="faq-recipe-body">
+                    <p class="recipe-quote">Ang adobo ang pinaka-tapat na ulam ng Pilipino — toyo, suka, bawang. Sa PASO, mabagal naming niluluto sa palayok para lumapot ang sarsa nang kusa.</p>
+                    <div class="recipe-grid">
+                        <div class="recipe-ingredients">
+                            <h4><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--brand)"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> Sangkap</h4>
+                            <ul>
+                                <li>1kg manok</li>
+                                <li>½ tasa toyo</li>
+                                <li>⅓ tasa suka</li>
+                                <li>1 buong bawang, dinurog</li>
+                                <li>3 dahon ng laurel</li>
+                                <li>Pamintang buo</li>
+                                <li>2 kutsara mantika</li>
+                            </ul>
+                        </div>
+                        <div class="recipe-steps">
+                            <h4><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--brand)"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg> Paraan</h4>
+                            <ol>
+                                <li><span class="step-num">1</span> Ibabad ang manok sa toyo, bawang, laurel at paminta ng 30 minuto.</li>
+                                <li><span class="step-num">2</span> Sa banga, igisa ang manok hanggang magkulay ginto sa gilid.</li>
+                                <li><span class="step-num">3</span> Ibuhos ang pinagbabaran at ½ tasa tubig. Pakuluan, hinaan ang kalan.</li>
+                                <li><span class="step-num">4</span> Idagdag ang suka — HUWAG haluin sa unang 5 minuto (respeto sa asim!).</li>
+                                <li><span class="step-num">5</span> Patuloy na pakuluan nang mahina hanggang lumapot ang sarsa. Ihain sa mainit na kanin.</li>
+                            </ol>
+                        </div>
+                    </div>
+                    <div class="recipe-note">
+                        Tamad magluto today? <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transform:translateY(3px); margin: 0 4px;"><path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1H2a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2M7.5 13a1.5 1.5 0 0 0-1.5 1.5A1.5 1.5 0 0 0 7.5 16a1.5 1.5 0 0 0 1.5-1.5A1.5 1.5 0 0 0 7.5 13m9 0a1.5 1.5 0 0 0-1.5 1.5a1.5 1.5 0 0 0 1.5 1.5a1.5 1.5 0 0 0 1.5-1.5a1.5 1.5 0 0 0-1.5-1.5m-4.5 2c-1.5 0-3 .67-3 2h6c0-1.33-1.5-2-3-2z"/></svg> Order mo na lang sa amin — luto na sa banga!
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recipe 2 -->
+            <div class="faq-recipe-item" onclick="app.toggleAcc(this)">
+                <div class="faq-recipe-header">
+                    <div class="faq-recipe-title-group">
+                        <div class="faq-recipe-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10h16v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8z"/><path d="M2 10h20"/><path d="M8 6c0-2 1-3 2-3s2 1 2 3"/><path d="M14 6c0-2 1-3 2-3s2 1 2 3"/></svg>
+                        </div>
+                        <div>
+                            <h3>Sinigang na Baboy</h3>
+                            <div class="faq-recipe-meta">
+                                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                1.5 ORAS • BANGA METHOD
+                            </div>
+                        </div>
+                    </div>
+                    <svg class="acc-chevron" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                </div>
+                <div class="faq-recipe-body">
+                    <p class="recipe-quote">Ang asim ng sampalok at kalabasa ay perfect tandem. Mainit na sabaw para sa maulan na hapon.</p>
+                    <div class="recipe-grid">
+                        <div class="recipe-ingredients">
+                            <h4><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--brand)"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> Sangkap</h4>
+                            <ul>
+                                <li>1kg pork belly</li>
+                                <li>1 pack sampalok mix</li>
+                                <li>1 cup kangkong</li>
+                                <li>1 cup kalabasa</li>
+                                <li>5 pcs sitaw</li>
+                                <li>2 pcs sili</li>
+                                <li>1 sibuyas</li>
+                            </ul>
+                        </div>
+                        <div class="recipe-steps">
+                            <h4><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--brand)"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg> Paraan</h4>
+                            <ol>
+                                <li><span class="step-num">1</span> Pakuluan ang baboy hanggang lumambot, alisin ang scum.</li>
+                                <li><span class="step-num">2</span> Ilagay ang sibuyas at sampalok mix.</li>
+                                <li><span class="step-num">3</span> Idagdag ang kalabasa at sitaw, lutuin ng 5 minuto.</li>
+                                <li><span class="step-num">4</span> Huling ilagay ang kangkong at sili. Timplahan ng patis.</li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recipe 3 -->
+            <div class="faq-recipe-item" onclick="app.toggleAcc(this)">
+                <div class="faq-recipe-header">
+                    <div class="faq-recipe-title-group">
+                        <div class="faq-recipe-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10h16v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8z"/><path d="M2 10h20"/><path d="M8 6c0-2 1-3 2-3s2 1 2 3"/><path d="M14 6c0-2 1-3 2-3s2 1 2 3"/></svg>
+                        </div>
+                        <div>
+                            <h3>Bibingka sa Dahon ng Saging</h3>
+                            <div class="faq-recipe-meta">
+                                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                45 MINUTO • BANGA METHOD
+                            </div>
+                        </div>
+                    </div>
+                    <svg class="acc-chevron" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                </div>
+                <div class="faq-recipe-body">
+                    <p class="recipe-quote">Ang amoy ng dahon ng saging habang niluluto sa uling ay tunay na Pinoy.</p>
+                    <div class="recipe-grid">
+                        <div class="recipe-ingredients">
+                            <h4><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--brand)"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> Sangkap</h4>
+                            <ul>
+                                <li>2 cups galapong bigas</li>
+                                <li>1 cup gata ng niyog</li>
+                                <li>1/2 cup asukal</li>
+                                <li>1 tbsp baking powder</li>
+                                <li>Dahon ng saging</li>
+                                <li>Itlog na maalat (optional)</li>
+                            </ul>
+                        </div>
+                        <div class="recipe-steps">
+                            <h4><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--brand)"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg> Paraan</h4>
+                            <ol>
+                                <li><span class="step-num">1</span> Ihalo ang galapong bigas, gata, asukal, at baking powder.</li>
+                                <li><span class="step-num">2</span> Ibuhos sa dahon ng saging na may konting mantika.</li>
+                                <li><span class="step-num">3</span> Ilagay sa palayok na may mainit na baga sa ilalim at ibabaw.</li>
+                                <li><span class="step-num">4</span> Lutuin ng 30-40 minuto hanggang matuyo ang gitna.</li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
-    <!-- FAQ VIEW -->
-    <div id="view-faq" class="hidden max-w" style="padding-top:40px; padding-bottom:80px;">
-        <div class="card" style="max-width: 800px; margin: 0 auto; padding: 40px;">
-            <div class="landing-badge" style="display:inline-flex; width:fit-content; margin-bottom:15px;">Mga Tanong</div>
-            <h1 style="font-size:36px; margin-bottom:20px; color:var(--brand);">Frequently Asked Questions</h1>
-            <div style="margin-top: 30px; display: flex; flex-direction: column; gap: 20px;">
-                <div>
-                    <h3 style="font-size:18px; color:var(--leaf); margin-bottom:6px;">Paano ako mag-order?</h3>
-                    <p style="color:var(--ink); line-height:1.7;">Pumili ka ng produkto mula sa menu, i-click ang <strong>+ Add</strong>, tapos pumunta sa cart para mag-checkout. Pwede kang mag-order bilang guest o mag-sign in muna.</p>
+    <!-- FAQ VIEW (REDESIGNED) -->
+    <div id="view-faq" class="hidden max-w view-faq-recipe" style="padding-top:40px; padding-bottom:80px;">
+        
+        <div class="faq-recipe-hero">
+            <div class="landing-badge">MGA TANONG</div>
+            <h1>FAQ 
+                <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--brand); transform: translateY(4px); margin-left: 10px;"><path d="M12 2l3 3m-3-3l-3 3m3-3v14m0 0l-3-3m3 3l3-3m-9-4h14"/></svg>
+            </h1>
+            <p>Mga madalas itanong sa tindahan.</p>
+        </div>
+
+        <div class="faq-recipe-list">
+            <!-- FAQ 1 -->
+            <div class="faq-recipe-item active" onclick="app.toggleAcc(this)">
+                <div class="faq-recipe-header">
+                    <h3>Ano ang ibig sabihin ng pilikart at PASO?</h3>
+                    <svg class="acc-chevron" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
                 </div>
-                <div>
-                    <h3 style="font-size:18px; color:var(--leaf); margin-bottom:6px;">Anong payment methods ang tinatanggap niyo?</h3>
-                    <p style="color:var(--ink); line-height:1.7;">Cash on Delivery (COD) at GCash. Kung GCash, kailangan mong i-upload ang resibo sa checkout para ma-verify ang bayad.</p>
-                </div>
-                <div>
-                    <h3 style="font-size:18px; color:var(--leaf); margin-bottom:6px;">Magkano ang delivery fee?</h3>
-                    <p style="color:var(--ink); line-height:1.7;">Ang standard delivery fee ay ₱50 sa loob ng Calamba, Laguna. Ito ay makikita mo sa order summary bago ka mag-confirm.</p>
-                </div>
-                <div>
-                    <h3 style="font-size:18px; color:var(--leaf); margin-bottom:6px;">Gaano katagal bago dumating ang order?</h3>
-                    <p style="color:var(--ink); line-height:1.7;">Karaniwang 1–2 araw sa loob ng Calamba. Pwede mong i-track ang status sa <strong>My Orders</strong> page — Pending, Shipping, o Delivered.</p>
-                </div>
-                <div>
-                    <h3 style="font-size:18px; color:var(--leaf); margin-bottom:6px;">Paano ko malalaman kung out-of-stock ang isang item?</h3>
-                    <p style="color:var(--ink); line-height:1.7;">Sa product card, makikita mo ang bilang ng stock. Kapag zero na, awtomatikong naka-disable ang + Add button at "Out" ang label nito.</p>
-                </div>
-                <div>
-                    <h3 style="font-size:18px; color:var(--leaf); margin-bottom:6px;">Pwede bang mag-cancel ng order?</h3>
-                    <p style="color:var(--ink); line-height:1.7;">Bago pa ma-ship ang order mo, pwede kang mag-message sa amin sa pamamagitan ng PiliBot para i-cancel. Kapag na-ship na, hindi na pwede.</p>
-                </div>
-                <div>
-                    <h3 style="font-size:18px; color:var(--leaf); margin-bottom:6px;">Ano ang Sunset Mode?</h3>
-                    <p style="color:var(--ink); line-height:1.7;">Ito ang dark theme ng PiliKart. Buksan ang navigation menu at i-tap ang "Sunset" para makita ang system sa mas malamig na kulay. Naka-save ito sa browser mo.</p>
-                </div>
-                <div>
-                    <h3 style="font-size:18px; color:var(--leaf); margin-bottom:6px;">Sino si PiliBot?</h3>
-                    <p style="color:var(--ink); line-height:1.7;">Si PiliBot ang aming friendly chat assistant sa kanang-baba ng screen. Tanungin mo siya tungkol sa delivery, GCash, o Budget Mode.</p>
+                <div class="faq-recipe-body">
+                    <p style="color: var(--ink); line-height: 1.7; font-size: 15px; margin-bottom: 10px;">
+                        Ang pilikart ay 'pumili ka + cart' — pumili ka, ilagay sa cart, kami na ang bahala! Ang PASO naman ay ode sa indigenous na pagluluto at Calambeño heritage: ang kalan (clay stove) at banga (clay pot) na pinagmulan ng lutong-bahay namin.
+                    </p>
                 </div>
             </div>
+
+            <!-- FAQ 2 -->
+            <div class="faq-recipe-item" onclick="app.toggleAcc(this)">
+                <div class="faq-recipe-header">
+                    <h3>Magkano ang delivery fee at saan kayo naghahatid?</h3>
+                    <svg class="acc-chevron" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                </div>
+                <div class="faq-recipe-body">
+                    <p style="color: var(--ink); line-height: 1.7; font-size: 15px;">
+                        Ang standard delivery fee ay ₱50 sa loob ng Calamba, Laguna. Ito ay makikita mo sa order summary bago ka mag-confirm. Para sa labas ng Calamba, maaaring may dagdag na bayad depende sa distansya.
+                    </p>
+                </div>
+            </div>
+
+            <!-- FAQ 3 -->
+            <div class="faq-recipe-item" onclick="app.toggleAcc(this)">
+                <div class="faq-recipe-header">
+                    <h3>Ano ang mga paraan ng bayad?</h3>
+                    <svg class="acc-chevron" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                </div>
+                <div class="faq-recipe-body">
+                    <p style="color: var(--ink); line-height: 1.7; font-size: 15px;">
+                        Tumatanggap kami ng Cash on Delivery (COD) at GCash. Kung GCash ang pinili mo, kailangan mong i-upload ang screenshot ng resibo sa checkout para ma-verify agad ang bayad.
+                    </p>
+                </div>
+            </div>
+
+            <!-- FAQ 4 -->
+            <div class="faq-recipe-item" onclick="app.toggleAcc(this)">
+                <div class="faq-recipe-header">
+                    <h3>Paano gamitin ang Budget Mode?</h3>
+                    <svg class="acc-chevron" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                </div>
+                <div class="faq-recipe-body">
+                    <p style="color: var(--ink); line-height: 1.7; font-size: 15px;">
+                        Sa itaas ng menu, may "Budget Mode" input box. Ilagay mo lang ang maximum na presyo (halimbawa: 500), at awtomatikong itatago ng system ang lahat ng produktong mas mahal sa ₱500.
+                    </p>
+                </div>
+            </div>
+
+            <!-- FAQ 5 -->
+            <div class="faq-recipe-item" onclick="app.toggleAcc(this)">
+                <div class="faq-recipe-header">
+                    <h3>Pwede ba akong umorder bilang guest?</h3>
+                    <svg class="acc-chevron" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                </div>
+                <div class="faq-recipe-body">
+                    <p style="color: var(--ink); line-height: 1.7; font-size: 15px;">
+                        Oo naman! Pwede kang mag-browse at mag-checkout nang hindi nag-sign in. Pero kung gumawa ka ng account, mas madaling i-track ang orders mo at makakatanggap ka ng updates.
+                    </p>
+                </div>
+            </div>
+
+            <!-- FAQ 6 -->
+            <div class="faq-recipe-item" onclick="app.toggleAcc(this)">
+                <div class="faq-recipe-header">
+                    <h3>Ano ang Sunset Mode?</h3>
+                    <svg class="acc-chevron" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                </div>
+                <div class="faq-recipe-body">
+                    <p style="color: var(--ink); line-height: 1.7; font-size: 15px;">
+                        Ito ang dark theme ng PiliKart. Buksan ang navigation menu (hamburger icon sa taas) at i-tap ang "Sunset" para mas malamig at madaling tingnan ang system sa gabi. Naka-save ito sa browser mo.
+                    </p>
+                </div>
+            </div>
+
+            <!-- FAQ 7 -->
+            <div class="faq-recipe-item" onclick="app.toggleAcc(this)">
+                <div class="faq-recipe-header">
+                    <h3>Paano ko ma-track ang order ko?</h3>
+                    <svg class="acc-chevron" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                </div>
+                <div class="faq-recipe-body">
+                    <p style="color: var(--ink); line-height: 1.7; font-size: 15px;">
+                        Pumunta sa "My Orders" (kung naka-log in) o gamitin ang order number na ibinigay pagkatapos mong mag-checkout. Makikita mo doon kung Pending, Shipping, Out for Delivery, o Delivered na ang order mo.
+                    </p>
+                </div>
+            </div>
+
+            <!-- FAQ 8 -->
+            <div class="faq-recipe-item" onclick="app.toggleAcc(this)">
+                <div class="faq-recipe-header">
+                    <h3>Totoong solar-powered ang kitchen niyo?</h3>
+                    <svg class="acc-chevron" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                </div>
+                <div class="faq-recipe-body">
+                    <p style="color: var(--ink); line-height: 1.7; font-size: 15px;">
+                        Haha, hindi po! Pero ang aming inspirasyon ay ang kalan at banga method ng aming mga lola—mainit, masarap, at puno ng pagmamahal. Ang "solar" ay para sa aming maliwanag na ngiti habang nagluluto.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="faq-cta">
+            <h3>Hindi mo nahanap ang sagot?</h3>
+            <button class="btn btn-brand btn-large" onclick="app.toggleBot()">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1H2a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2M7.5 13a1.5 1.5 0 0 0-1.5 1.5A1.5 1.5 0 0 0 7.5 16a1.5 1.5 0 0 0 1.5-1.5A1.5 1.5 0 0 0 7.5 13m9 0a1.5 1.5 0 0 0-1.5 1.5a1.5 1.5 0 0 0 1.5 1.5a1.5 1.5 0 0 0 1.5-1.5a1.5 1.5 0 0 0-1.5-1.5m-4.5 2c-1.5 0-3 .67-3 2h6c0-1.33-1.5-2-3-2z"/></svg>
+                Itanong kay PiliBot
+            </button>
         </div>
     </div>
  
@@ -650,7 +876,10 @@
     </div>
     <div class="footer-bottom-bar">
         <span>Copyright &copy; 2026 PiliKart. All rights reserved.</span>
-        <span>🌱 Gawa nang may malasakit — Calamba, Laguna</span>
+        <span style="display:flex; align-items:center; gap:6px;">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></svg>
+            Gawa nang may malasakit — Calamba, Laguna
+        </span>
     </div>
 </footer>
  
@@ -658,8 +887,13 @@
 <div id="cart-drawer" class="drawer hidden" onclick="if (event.target === this) app.toggleCart()">
     <div class="drawer-panel cart-panel">
         <div class="cart-head">
-            <h2><span class="cart-title-icon">🧺</span> Ang Cart Mo</h2>
-            <button class="cart-close-btn" onclick="app.toggleCart()" aria-label="Isara ang cart">✕</button>
+            <h2>
+                <svg class="cart-title-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg> 
+                Ang Cart Mo
+            </h2>
+            <button class="cart-close-btn" onclick="app.toggleCart()" aria-label="Isara ang cart">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
         </div>
         <div id="cart-items" class="cart-items"></div>
         <div class="cart-foot" id="cart-foot">

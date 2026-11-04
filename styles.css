@@ -192,7 +192,7 @@ header { position: sticky; top: 0; z-index: 40; background: color-mix(in srgb, v
 .cart-panel { background: #131d16 !important; color: #f5ead6 !important; width: 100%; max-width: 440px; padding: 24px; display: flex; flex-direction: column; justify-content: space-between; }
 .cart-head { display: flex; justify-content: space-between; align-items: center; padding-bottom: 18px; border-bottom: 1px solid rgba(255, 255, 255, 0.1); margin-bottom: 20px; }
 .cart-head h2 { font-family: "Baloo 2", sans-serif; font-size: 26px; font-weight: 800; color: #fff6e6; display: flex; align-items: center; gap: 10px; }
-.cart-title-icon { font-size: 24px; }
+.cart-title-icon { width: 28px; height: 28px; stroke: var(--brand); }
 .cart-close-btn { background: #1e2c21; border: 1px solid rgba(255, 255, 255, 0.12); color: #e2cca8; width: 38px; height: 38px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px; transition: all 0.2s ease; }
 .cart-close-btn:hover { background: rgba(255, 255, 255, 0.15); color: #fff; }
 .cart-items { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding-right: 4px; }
@@ -551,3 +551,49 @@ th { background: var(--surface2); font-weight: 800; text-transform: uppercase; f
 .product-editor-content .form-group label { display: block; font-size: 12px; font-weight: 800; color: var(--muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
 .product-editor-content textarea.input { resize: vertical; min-height: 90px; line-height: 1.5; }
 @media (max-width: 600px) { .product-editor-content { padding: 22px 18px; } .pe-preview-box { flex-direction: column; text-align: center; } .pe-actions { flex-direction: column-reverse; } .pe-actions .btn { width: 100%; } }
+
+/* NEW FAQ & RECIPE BOX REDESIGN */
+.view-faq-recipe { max-width: 900px; margin: 0 auto; }
+.faq-recipe-hero { text-align: center; margin-bottom: 40px; }
+.faq-recipe-hero .landing-badge { background: rgba(63, 122, 69, 0.6); border-color: rgba(133, 181, 109, 0.8); color: #d3e8c8; display: inline-flex; }
+.faq-recipe-hero h1 { font-family: "Baloo 2", sans-serif; font-size: clamp(3rem, 6vw, 4.5rem); color: var(--ink); line-height: 1.1; margin-bottom: 12px; display: flex; align-items: center; justify-content: center; gap: 10px; }
+.faq-recipe-hero p { font-size: 16px; color: var(--muted); font-weight: 600; max-width: 600px; margin: 0 auto; line-height: 1.6; }
+.faq-recipe-list { display: flex; flex-direction: column; gap: 16px; }
+.faq-recipe-item { background: var(--surface2); border: 1px solid var(--line); border-radius: 20px; overflow: hidden; transition: all 0.4s var(--ease-smooth); cursor: pointer; }
+.faq-recipe-item.active { background: var(--surface); border-color: rgba(240, 169, 59, 0.4); box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+.faq-recipe-header { padding: 24px 30px; display: flex; justify-content: space-between; align-items: center; }
+.faq-recipe-title-group { display: flex; align-items: center; gap: 20px; }
+.faq-recipe-icon { width: 50px; height: 50px; border-radius: 50%; background: var(--surface); border: 1px solid var(--line); display: flex; align-items: center; justify-content: center; color: var(--brand); flex-shrink: 0; }
+.faq-recipe-item.active .faq-recipe-icon { background: rgba(240, 169, 59, 0.15); border-color: rgba(240, 169, 59, 0.3); }
+.faq-recipe-icon svg { width: 26px; height: 26px; }
+.faq-recipe-header h3 { font-family: "Baloo 2", sans-serif; font-size: 22px; color: var(--ink); margin-bottom: 4px; line-height: 1.2; }
+.faq-recipe-meta { font-size: 12px; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 6px; }
+.faq-recipe-meta svg { color: var(--brand); }
+.acc-chevron { color: var(--brand); transition: transform 0.4s var(--ease-smooth); flex-shrink: 0; }
+.faq-recipe-item.active .acc-chevron { transform: rotate(180deg); }
+.faq-recipe-body { max-height: 0; overflow: hidden; transition: max-height 0.5s cubic-bezier(0.25, 1, 0.5, 1); padding: 0 30px; }
+.faq-recipe-item.active .faq-recipe-body { padding-bottom: 30px; }
+.recipe-quote { font-style: italic; color: var(--muted); font-size: 15px; line-height: 1.6; margin-bottom: 24px; border-left: 3px solid var(--brand); padding-left: 16px; }
+.recipe-grid { display: grid; grid-template-columns: 1fr 1.5fr; gap: 24px; margin-bottom: 24px; }
+.recipe-ingredients { background: rgba(0,0,0,0.15); border-radius: 16px; padding: 20px; }
+[data-theme="sunset"] .recipe-ingredients { background: rgba(0,0,0,0.3); }
+.recipe-ingredients h4, .recipe-steps h4 { font-family: "Baloo 2", sans-serif; font-size: 18px; color: var(--ink); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+.recipe-ingredients ul { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }
+.recipe-ingredients li { font-size: 14px; font-weight: 600; color: var(--ink); display: flex; align-items: center; gap: 8px; }
+.recipe-ingredients li::before { content: "•"; color: var(--brand); font-size: 20px; line-height: 1; }
+.recipe-steps ol { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 12px; }
+.recipe-steps li { font-size: 14px; font-weight: 600; color: var(--ink); line-height: 1.6; display: flex; gap: 12px; align-items: flex-start; }
+.step-num { background: var(--brand); color: #fff; font-family: "Baloo 2", sans-serif; font-weight: 800; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 13px; margin-top: 2px; }
+.recipe-note { background: rgba(63, 122, 69, 0.1); border: 1px solid rgba(63, 122, 69, 0.2); border-radius: 12px; padding: 14px; text-align: center; font-size: 14px; font-weight: 700; color: var(--leaf); display: flex; align-items: center; justify-content: center; gap: 6px; }
+.faq-cta { margin-top: 40px; border: 2px dashed var(--line); border-radius: 24px; padding: 40px; text-align: center; background: rgba(0,0,0,0.02); }
+.faq-cta h3 { font-family: "Baloo 2", sans-serif; font-size: 24px; color: var(--ink); margin-bottom: 20px; }
+@media (max-width: 700px) {
+    .recipe-grid { grid-template-columns: 1fr; }
+    .faq-recipe-header { padding: 20px; }
+    .faq-recipe-title-group { gap: 14px; }
+    .faq-recipe-icon { width: 40px; height: 40px; }
+    .faq-recipe-icon svg { width: 20px; height: 20px; }
+    .faq-recipe-header h3 { font-size: 18px; }
+    .faq-recipe-body { padding: 0 20px; }
+    .faq-recipe-item.active .faq-recipe-body { padding-bottom: 20px; }
+}
