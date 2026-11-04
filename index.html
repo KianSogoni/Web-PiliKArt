@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="day">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PiliKart — Good finds. Galing Pinoy.</title>
+    <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito:wght@600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+ 
+<!-- Global Header -->
+<header id="global-header" class="hidden">
+    <div class="max-w nav-inner">
+        <div style="display:flex; align-items:center; gap:16px;">
+            <button class="menu-burger-btn" onclick="app.toggleNavDrawer()" title="Open Menu">
+                <span class="burger-line"></span>
+                <span class="burger-line"></span>
+                <span class="burger-line"></span>
+            </button>
+            <div class="brand" onclick="app.go('home')">pilikart<span>pumili ka + cart</span></div>
+        </div>
+        <div class="nav-actions">
+            <button class="nav-btn" onclick="app.toggleCart()" title="View Cart">
+                <svg class="nav-icon" viewBox="0 0 24 24"><path fill="currentColor" d="M19 6h-2c0-2.76-2.24-5-5-5S7 3.24 7 6H5c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-7-3c1.66 0 3 1.34 3 3H9c0-1.66 1.34-3 3-3zm7 17H5V8h2v2c0 .55.45 1 1 1s1-.45 1-1V8h6v2c0 .55.45 1 1 1s1-.45 1-1V8h2v12z"/></svg>
+                <span class="nav-label">Cart</span>
+                <span class="badge" id="cart-badge">0</span>
+            </button>
+        </div>
+    </div>
+</header>
+ 
+<main id="main-content" style="display:none;">
+    
+    <!-- LANDING PAGE -->
+    <div id="view-landing" class="landing-screen hidden">
+        <div class="landing-header max-w">
+            <div class="brand light">pilikart<span>pumili ka + cart</span></div>
+            <div class="top-loc">CALAMBA, LAGUNA</div>
+        </div>
+ 
+        <div class="landing-content">
+            <div class="landing-badge">MABUHAY, SUKI</div>
+            <h1 class="landing-title">Welcome to<br><span class="pk">PiliKArt!</span></h1>
+            <p class="landing-subtitle">Tuloy ka, suki! Dito, ang bawat pili ay may kasamang init ng tahanan.</p>
+            <button class="btn btn-brand btn-large" onclick="app.go('auth')">PILI KA NA!</button>
+        </div>
+ 
+        <div class="marquee-container">
+            <div class="marquee-track">
+                <span>Lumingon. Suportahan. Umunlad. &nbsp;•&nbsp; Keep the piso local &nbsp;•&nbsp; Gawa ng Pilipino, Para sa Pilipino &nbsp;•&nbsp; Yaman ng Lahi &nbsp;•&nbsp; Sariling Atin &nbsp;•&nbsp; Pumili ng Tama, Para sa'yo, Para sa Pilipino &nbsp;•&nbsp;</span>
+                <span>Lumingon. Suportahan. Umunlad. &nbsp;•&nbsp; Keep the piso local &nbsp;•&nbsp; Gawa ng Pilipino, Para sa Pilipino &nbsp;•&nbsp; Yaman ng Lahi &nbsp;•&nbsp; Sariling Atin &nbsp;•&nbsp; Pumili ng Tama, Para sa'yo, Para sa Pilipino &nbsp;•&nbsp;</span>
+            </div>
+        </div>
+    </div>
+ 
+    <!-- HOME PAGE -->
+    <div id="view-home" class="hidden home-screen">
+        <!-- 1. HERO SECTION (with looping background video) -->
+        <div class="home-hero-wrap">
+            <div class="home-hero-video" id="hero-video-bg">
+                <iframe
+                    src="https://www.youtube.com/embed/UqJJktxCY9U?autoplay=1&mute=1&loop=1&playlist=UqJJktxCY9U&controls=0&showinfo=0&modestbranding=1&rel=0&iv_load_policy=3&fs=0&playsinline=1&disablekb=1"
+                    frameborder="0"
+                    allow="autoplay; encrypted-media; picture-in-picture"
+                    referrerpolicy="strict-origin-when-cross-origin"
+                    title="PiliKart Hero Background">
+                </iframe>
+            </div>
+            <div class="home-hero-overlay"></div>
+            <div class="home-hero-credit">Animation by <strong>Dear Alice</strong> · THELINEanimation</div>
+
+            <div class="home-inner-wrap">
+                <div class="home-text-col">
+                    <div class="landing-badge warm-badge" id="home-greeting">MABUHAY, KABABAYAN!</div>
+                    <h1 class="home-hero-title">Good Finds.<br><span class="pk-italic">Galing Pinoy.</span></h1>
+                    <p class="home-hero-sub">Halika, upo ka muna. Dahan-dahan lang sa pamimili &mdash; walang nagmamadali dito. Nandito na ang mga paborito mong gawang-Pinoy, handang ihatid sa tahanan mo.</p>
+                    <div class="home-btn-group">
+                        <button class="btn btn-brand btn-large" onclick="app.scrollToMenu()">Tuloy sa Menu</button>
+                        <button class="btn btn-ghost btn-large" onclick="app.go('about')">Kilalanin Kami</button>
+                    </div>
+                </div>
+
+                <!-- Department Carousel Column -->
+                <div class="home-carousel-col">
+                    <div class="featured-label">Featured Items</div>
+                    <div class="carousel-3d-container">
+                        <div class="carousel-stage" id="carousel-card-container">
+                            <!-- Populated dynamically via JS -->
+                        </div>
+                    </div>
+                    <div class="carousel-dots" id="carousel-dots">
+                        <span class="dot active" onclick="app.setCarouselSlide(0)"></span>
+                        <span class="dot" onclick="app.setCarouselSlide(1)"></span>
+                        <span class="dot" onclick="app.setCarouselSlide(2)"></span>
+                        <span class="dot" onclick="app.setCarouselSlide(3)"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. MARQUEE DIVIDER -->
+        <div class="marquee-container">
+            <div class="marquee-track">
+                <span>Lumingon. Suportahan. Umunlad. &nbsp;•&nbsp; Keep the piso local &nbsp;•&nbsp; Gawa ng Pilipino, Para sa Pilipino &nbsp;•&nbsp; Yaman ng Lahi &nbsp;•&nbsp; Sariling Atin &nbsp;•&nbsp; Pumili ng Tama, Para sa'yo, Para sa Pilipino &nbsp;•&nbsp;</span>
+                <span>Lumingon. Suportahan. Umunlad. &nbsp;•&nbsp; Keep the piso local &nbsp;•&nbsp; Gawa ng Pilipino, Para sa Pilipino &nbsp;•&nbsp; Yaman ng Lahi &nbsp;•&nbsp; Sariling Atin &nbsp;•&nbsp; Pumili ng Tama, Para sa'yo, Para sa Pilipino &nbsp;•&nbsp;</span>
+            </div>
+        </div>
+
+        <!-- 3. MENU SECTION -->
+        <div id="home-menu-section" class="home-menu-section">
+            <div id="menu-cursor-glow"></div>
+            <div class="home-menu-header">
+                <h2>Ano'ng hanap mo ngayon, suki?</h2>
+                <p>Dahan-dahan lang sa pagpili &mdash; lahat ng narito ay gawa ng Pilipino, para sa tahanan mo.</p>
+            </div>
+
+            <!-- Department Filtering Pill Bar -->
+            <div class="dept-filter-bar" id="dept-filter-bar">
+                <button class="dept-pill active" onclick="app.filterDepartment('all', this)">All Finds</button>
+                <button class="dept-pill" onclick="app.filterDepartment('paso', this)">Paso</button>
+                <button class="dept-pill" onclick="app.filterDepartment('habi', this)">Habi</button>
+                <button class="dept-pill" onclick="app.filterDepartment('nipa', this)">Nipa</button>
+                <button class="dept-pill" onclick="app.filterDepartment('apollo', this)">Apollo</button>
+            </div>
+            
+            <!-- Refined Search & Budget Inputs -->
+            <div class="grid grid-2" style="margin-bottom: 25px; max-width: 800px; margin-left: auto; margin-right: auto;">
+                <div>
+                    <label style="display:block; font-size:12px; font-weight:800; color:var(--muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.5px;">Hanapin sa Menu</label>
+                    <input type="text" id="search-input" class="input" placeholder="Walis, lipstick, tuwalya, powerbank..." oninput="app.renderMenu()">
+                </div>
+                <div>
+                    <label style="display:block; font-size:12px; font-weight:800; color:var(--muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.5px;">Budget Mode (Max Price ₱)</label>
+                    <input type="number" id="budget-input" class="input" placeholder="Hal. 500" oninput="app.renderMenu()">
+                </div>
+            </div>
+
+            <div class="grid grid-3" id="product-grid"></div>
+        </div>
+
+    </div>
+ 
+    <!-- ABOUT US VIEW -->
+    <div id="view-about" class="hidden about-screen" style="padding-bottom: 80px;">
+        
+        <div class="about-hero">
+            <div class="landing-badge warm-badge">Ang Kwento ng PiliKart</div>
+            <h1 class="about-title">"Pumili Ka + Cart."</h1>
+            <p class="about-subtitle">Where every click is a step closer to home.</p>
+        </div>
+
+        <div class="about-content">
+            <div class="about-card">
+                <p style="font-size:18px; line-height:1.8; color:var(--ink); margin-bottom:20px; font-weight:600;">
+                    We didn't just build an e-commerce platform; we built a digital love letter to the Filipino heritage. In a world that is constantly rushing forward, PiliKart is our way of looking back—honoring the <em>kalan</em> and <em>banga</em> of our ancestors, while embracing the limitless possibilities of our future.
+                </p>
+                <p style="font-size:18px; line-height:1.8; color:var(--ink); font-weight:800; color:var(--brand);">
+                    Here, you don't just shop. You experience the warmth of a Filipino <em>tahanan</em>.
+                </p>
+            </div>
+
+            <div class="about-section-title">
+                <h2>Apat na Tindahan, Isang Pusong Pinoy</h2>
+                <p>To truly understand who we are, you must meet our four pillars. Each one is named after a piece of our history, a testament to the ingenuity and resilience of the Filipino people.</p>
+            </div>
+
+            <div class="about-departments">
+                <!-- PASO -->
+                <div class="about-dept-card">
+                    <div class="about-dept-icon paso">
+                        <svg viewBox="0 0 24 24" width="28" height="28" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10h16v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8z"/><path d="M2 10h20"/><path d="M8 6c0-2 1-3 2-3s2 1 2 3"/><path d="M14 6c0-2 1-3 2-3s2 1 2 3"/></svg>
+                    </div>
+                    <h3>PASO <span>(Food Essentials)</span></h3>
+                    <p>Named after the <em>banga</em> (clay pot) that represents our beloved Calamba, Laguna. PASO is the heart of the kitchen—bringing you the comfort of lutong-bahay and the flavors that remind you of home.</p>
+                </div>
+
+                <!-- NIPA -->
+                <div class="about-dept-card">
+                    <div class="about-dept-icon nipa">
+                        <svg viewBox="0 0 24 24" width="28" height="28" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                    </div>
+                    <h3>NIPA <span>(Home Appliances)</span></h3>
+                    <p>Derived from the <em>Bahay Kubo</em>, NIPA is built on the belief that a house is not a home without the warmth of family. We offer the essentials that turn your space into a sanctuary, no matter how simple.</p>
+                </div>
+
+                <!-- HABI -->
+                <div class="about-dept-card">
+                    <div class="about-dept-icon habi">
+                        <svg viewBox="0 0 24 24" width="28" height="28" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M20.38 3.46 16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H5v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V10h1.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23z"/></svg>
+                    </div>
+                    <h3>HABI <span>(Fashion)</span></h3>
+                    <p>In Tagalog, <em>habi</em> means to weave. Just as our ancestors wove the fabric of our culture thread by thread, HABI brings you clothing and fashion that reflect our vibrant identity—where tradition meets modern confidence.</p>
+                </div>
+
+                <!-- APOLLO -->
+                <div class="about-dept-card">
+                    <div class="about-dept-icon apollo">
+                        <svg viewBox="0 0 24 24" width="28" height="28" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg>
+                    </div>
+                    <h3>APOLLO <span>(Technologies)</span></h3>
+                    <p>Did you know that the Lunar Roving Vehicle used by Apollo missions was allegedly designed by Eduardo San Juan, a Filipino NASA engineer? APOLLO celebrates this boundless Filipino ingenuity, bringing you tech essentials that prove we can reach for the stars while remaining rooted in our soil.</p>
+                </div>
+            </div>
+
+            <div class="about-features-grid">
+                <!-- Malasakit -->
+                <div class="about-feature-card">
+                    <h3 style="display:flex; align-items:center; gap:8px;">
+                        <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" style="color:var(--brand)"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
+                        Ang Malasakit sa Bawat Transaksyon
+                    </h3>
+                    <p>We know that genuine care means looking out for everyone. In PiliKart, inclusivity isn't an afterthought—it is the foundation. That is why we built in layered discounts, offering special rates for our Senior Citizens and Persons with Disabilities (PWDs).</p>
+                    <p>We also understand the modern Filipino's journey. Whether you are an OFW sending love back home, a foreign friend exploring our culture, or a local supporting local, PiliKart speaks your language. With our integrated multi-currency system (PHP, USD, EUR, JPY), shopping for the things you love has never been more accessible.</p>
+                </div>
+
+                <!-- Kahera -->
+                <div class="about-feature-card">
+                    <h3 style="display:flex; align-items:center; gap:8px;">
+                        <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" style="color:var(--leaf)"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></svg>
+                        Ang PILI Kahera: Ang Iyong Digital Na Bulsa
+                    </h3>
+                    <p>Shopping shouldn't be complicated. That is why we created PILI Kahera, your virtual ATM and wallet all in one.</p>
+                    <p>We wanted to make financial management as simple and pleasant as possible. Need to check your balance? Top up your wallet for a big purchase? Or maybe you need to withdraw funds? PILI Kahera handles it all securely, ensuring your digital wallet is always ready to serve you. It’s not just about money; it’s about giving you peace of mind so you can focus on what matters—finding joy in your purchases.</p>
+                </div>
+            </div>
+
+            <div class="about-conclusion">
+                <h2>Bakit PiliKart?</h2>
+                <h3>Because the future is local.</h3>
+                <p>Every time you choose PiliKart, you aren't just adding to a cart. You are supporting local businesses. You are keeping the piso circulating within our communities. You are empowering Filipino farmers, artisans, and entrepreneurs.</p>
+                <p style="margin-top: 20px; font-style: italic; color: var(--muted);">Will your journey begin at the comforting embrace of HABI, or will you take flight with APOLLO?</p>
+                
+                <div style="margin-top: 30px; display:flex; gap:15px; justify-content:center;">
+                    <button class="btn btn-brand btn-large" onclick="app.scrollToMenu()">Unearth the Treasures</button>
+                    <button class="btn btn-ghost btn-large" onclick="app.go('home')">Bumalik sa Home</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- RECIPE BOX VIEW -->
+    <div id="view-recipes" class="hidden max-w" style="padding-top:40px; padding-bottom:80px;">
+        <div class="card" style="max-width: 800px; margin: 0 auto; padding: 40px;">
+            <div class="landing-badge" style="display:inline-flex; width:fit-content; margin-bottom:15px;">Mga Resipi</div>
+            <h1 style="font-size:36px; margin-bottom:20px; color:var(--brand);">Ang Lutuan at Resipi Box</h1>
+            <p style="font-size:16px; line-height:1.8; margin-bottom:20px; color:var(--ink);">
+                Tumuklas ng mga masasarap at tradisyunal na lutuing Pilipino na madali mong maihahanda sa inyong tahanan gamit ang mga sangkap mula sa PiliKart!
+            </p>
+        </div>
+    </div>
+
+    <!-- FAQ VIEW -->
+    <div id="view-faq" class="hidden max-w" style="padding-top:40px; padding-bottom:80px;">
+        <div class="card" style="max-width: 800px; margin: 0 auto; padding: 40px;">
+            <div class="landing-badge" style="display:inline-flex; width:fit-content; margin-bottom:15px;">Mga Tanong</div>
+            <h1 style="font-size:36px; margin-bottom:20px; color:var(--brand);">Frequently Asked Questions</h1>
+            <div style="margin-top: 30px; display: flex; flex-direction: column; gap: 20px;">
+                <div>
+                    <h3 style="font-size:18px; color:var(--leaf); margin-bottom:6px;">Paano ako mag-order?</h3>
+                    <p style="color:var(--ink); line-height:1.7;">Pumili ka ng produkto mula sa menu, i-click ang <strong>+ Add</strong>, tapos pumunta sa cart para mag-checkout. Pwede kang mag-order bilang guest o mag-sign in muna.</p>
+                </div>
+                <div>
+                    <h3 style="font-size:18px; color:var(--leaf); margin-bottom:6px;">Anong payment methods ang tinatanggap niyo?</h3>
+                    <p style="color:var(--ink); line-height:1.7;">Cash on Delivery (COD) at GCash. Kung GCash, kailangan mong i-upload ang resibo sa checkout para ma-verify ang bayad.</p>
+                </div>
+                <div>
+                    <h3 style="font-size:18px; color:var(--leaf); margin-bottom:6px;">Magkano ang delivery fee?</h3>
+                    <p style="color:var(--ink); line-height:1.7;">Ang standard delivery fee ay ₱50 sa loob ng Calamba, Laguna. Ito ay makikita mo sa order summary bago ka mag-confirm.</p>
+                </div>
+                <div>
+                    <h3 style="font-size:18px; color:var(--leaf); margin-bottom:6px;">Gaano katagal bago dumating ang order?</h3>
+                    <p style="color:var(--ink); line-height:1.7;">Karaniwang 1–2 araw sa loob ng Calamba. Pwede mong i-track ang status sa <strong>My Orders</strong> page — Pending, Shipping, o Delivered.</p>
+                </div>
+                <div>
+                    <h3 style="font-size:18px; color:var(--leaf); margin-bottom:6px;">Paano ko malalaman kung out-of-stock ang isang item?</h3>
+                    <p style="color:var(--ink); line-height:1.7;">Sa product card, makikita mo ang bilang ng stock. Kapag zero na, awtomatikong naka-disable ang + Add button at "Out" ang label nito.</p>
+                </div>
+                <div>
+                    <h3 style="font-size:18px; color:var(--leaf); margin-bottom:6px;">Pwede bang mag-cancel ng order?</h3>
+                    <p style="color:var(--ink); line-height:1.7;">Bago pa ma-ship ang order mo, pwede kang mag-message sa amin sa pamamagitan ng PiliBot para i-cancel. Kapag na-ship na, hindi na pwede.</p>
+                </div>
+                <div>
+                    <h3 style="font-size:18px; color:var(--leaf); margin-bottom:6px;">Ano ang Sunset Mode?</h3>
+                    <p style="color:var(--ink); line-height:1.7;">Ito ang dark theme ng PiliKart. Buksan ang navigation menu at i-tap ang "Sunset" para makita ang system sa mas malamig na kulay. Naka-save ito sa browser mo.</p>
+                </div>
+                <div>
+                    <h3 style="font-size:18px; color:var(--leaf); margin-bottom:6px;">Sino si PiliBot?</h3>
+                    <p style="color:var(--ink); line-height:1.7;">Si PiliBot ang aming friendly chat assistant sa kanang-baba ng screen. Tanungin mo siya tungkol sa delivery, GCash, o Budget Mode.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+ 
+    <!-- AUTH VIEW -->
+    <div id="view-auth" class="auth-screen hidden">
+        <div class="auth-wrap">
+            <button type="button" class="auth-back" onclick="app.go('home')"><span class="auth-back-arrow">&larr;</span> Balik sa home</button>
+ 
+            <div class="auth-card" id="auth-card">
+                <div class="auth-logo-area">
+                    <h2>pilikart</h2>
+                    <p>Ready to choose?</p>
+                </div>
+ 
+                <div class="auth-toggle-slider" id="auth-toggle" role="tablist">
+                    <div class="auth-slider-bg"></div>
+                    <button type="button" id="btn-tab-signin" class="auth-toggle-btn active" role="tab" aria-selected="true" onclick="app.setAuthMode('signin')">Sign In</button>
+                    <button type="button" id="btn-tab-signup" class="auth-toggle-btn" role="tab" aria-selected="false" onclick="app.setAuthMode('signup')">Sign Up</button>
+                </div>
+ 
+                <form id="auth-form" novalidate onsubmit="app.submitAuth(event)">
+                    <div class="auth-collapse auth-extra"><div class="in">
+                        <input type="text" id="auth-name" class="auth-input" placeholder="Buong pangalan" autocomplete="name">
+                    </div></div>
+ 
+                    <input type="email" id="auth-email" class="auth-input" placeholder="Email" autocomplete="email">
+ 
+                    <div class="auth-pass-wrap">
+                        <input type="password" id="auth-pass" class="auth-input" placeholder="Password" autocomplete="current-password">
+                        <button type="button" id="auth-eye" class="auth-eye" aria-label="Ipakita ang password" aria-pressed="false" onclick="app.togglePassword()">&#128065;</button>
+                    </div>
+ 
+                    <div id="auth-error" class="auth-error" role="alert"></div>
+ 
+                    <button type="submit" id="auth-submit" class="auth-submit-btn">
+                        <span class="auth-label" id="auth-submit-label">Pasok na!</span>
+                        <span class="auth-spinner" aria-hidden="true"></span>
+                    </button>
+                </form>
+ 
+                <div class="auth-divider">o kaya</div>
+ 
+                <button type="button" class="btn-guest-outline" onclick="app.continueAsGuest()">Continue as Guest</button>
+                <p class="auth-guest-subtitle">Browse freely &mdash; sa checkout, log in o ilagay ang address mo.</p>
+            </div>
+        </div>
+    </div>
+ 
+    <!-- CHECKOUT VIEW -->
+    <div id="view-checkout" class="hidden checkout-page">
+        <div class="max-w">
+            <div class="page-head">
+                <h1><span class="head-ic"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12V8H6a2 2 0 0 1 0-4h12v4"/><path d="M4 6v12a2 2 0 0 0 2 2h14v-4"/><path d="M18 12a2 2 0 0 0 0 4h4v-4z"/></svg></span> Checkout</h1>
+                <p>Konti na lang, suki &mdash; halika't tapusin natin ang basket mo.</p>
+            </div>
+
+            <div class="checkout-grid">
+                <div class="checkout-main">
+                    <section class="co-card">
+                        <h3><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg> Saan ihahatid?</h3>
+                        <div class="co-note" id="co-guest-note">Guest ka! Ilagay ang delivery details sa baba, o <a href="#" onclick="app.go('auth'); return false;">mag-sign in</a> para ma-track ang order mo.</div>
+                        <div class="co-row">
+                            <input type="text" id="co-name" class="input" placeholder="Pangalan ng tatanggap" autocomplete="name">
+                            <input type="tel" id="co-phone" class="input" placeholder="Phone number" autocomplete="tel">
+                        </div>
+                        <textarea id="co-addr" class="input" placeholder="Kumpletong address (Bahay, Kalye, Brgy., Lungsod)" autocomplete="street-address"></textarea>
+                    </section>
+
+                    <section class="co-card">
+                        <h3><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12V8H6a2 2 0 0 1 0-4h12v4"/><path d="M4 6v12a2 2 0 0 0 2 2h14v-4"/><path d="M18 12a2 2 0 0 0 0 4h4v-4z"/></svg> Paano ang bayad?</h3>
+                        <input type="hidden" id="co-payment" value="cod">
+                        <div class="pay-grid">
+                            <button type="button" class="pay-opt active" id="pay-cod" onclick="app.selectPayment('cod')">
+                                <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/></svg>
+                                <b>COD</b>
+                                <small>Cash on Delivery &mdash; bayad pag dating ng rider.</small>
+                            </button>
+                            <button type="button" class="pay-opt" id="pay-gcash" onclick="app.selectPayment('gcash')">
+                                <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2" width="12" height="20" rx="3"/><path d="M11 18h2"/></svg>
+                                <b>GCash</b>
+                                <small>I-scan ang QR, tapos i-upload ang screenshot ng bayad.</small>
+                            </button>
+                        </div>
+
+                        <div class="gcash-wrap" id="gcash-box">
+                            <div class="in">
+                                <div class="gcash-panel">
+                                    <div class="gcash-top">
+                                        <div class="qr-box"><img id="gcash-qr" src="assets/general/gcash-qr.png" alt="GCash QR" onerror="app.handleQrError(this)"></div>
+                                        <div>
+                                            <span class="gcash-label">Step 1 &mdash; Magbayad</span>
+                                            <h4>GCash &mdash; PiliKart</h4>
+                                            <p class="gcash-num">0917 &bull;&bull;&bull; 4567</p>
+                                            <p class="gcash-amt">Halaga: <b id="gcash-amount">&#8369;0</b> (kasama na ang shipping)</p>
+                                        </div>
+                                    </div>
+                                    <div class="gcash-hr"></div>
+                                    <span class="gcash-label">Step 2 &mdash; I-upload ang screenshot ng GCash receipt</span>
+                                    <p class="gcash-amt" style="margin-bottom:14px;">Ito ang magiging patunay ng bayad mo. JPG, PNG o WEBP &mdash; max 10MB.</p>
+                                    <label class="dropzone" for="gcash-file" id="gcash-drop">
+                                        <span class="up-ic"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4"/><path d="m7 9 5-5 5 5"/><path d="M5 20h14"/></svg></span>
+                                        <b id="gcash-drop-title">Pumili ng screenshot</b>
+                                        <span class="drop-sub" id="gcash-drop-sub">I-click para pumili ng file mula sa device mo</span>
+                                        <img id="gcash-preview" alt="Preview ng receipt" style="display:none;">
+                                    </label>
+                                    <input type="file" id="gcash-file" accept="image/*" hidden onchange="app.handleImageUpload(event)">
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+
+                <aside class="co-summary">
+                    <h3>Ang Order Mo</h3>
+                    <div id="checkout-summary"></div>
+                    <button class="btn btn-brand btn-large btn-block" id="co-submit" onclick="app.submitOrder()">Ipadala na!</button>
+                    <p class="co-foot" id="co-foot-note">Magbabayad ka pag dating ng rider. Salamat sa tiwala, suki!</p>
+                </aside>
+            </div>
+        </div>
+    </div>
+
+    <!-- ORDER SUCCESS VIEW -->
+    <div id="view-success" class="hidden max-w success-page">
+        <div id="success-body"></div>
+    </div>
+
+    <!-- ORDERS VIEW -->
+    <div id="view-orders" class="hidden max-w page-wrap">
+        <div class="page-head">
+            <h1>Mga Order Mo</h1>
+            <p>Dito mo masusubaybayan ang biyahe ng bawat order mo, suki.</p>
+        </div>
+        <div id="orders-list" class="orders-list"></div>
+    </div>
+
+    <!-- ACCOUNT VIEW -->
+    <div id="view-account" class="hidden max-w page-wrap">
+        <div class="page-head">
+            <h1>My Account</h1>
+            <p>I-update ang iyong impormasyon at pamahalaan ang seguridad ng account.</p>
+        </div>
+        
+        <div class="account-grid">
+            <!-- Profile Details -->
+            <div class="card account-card">
+                <h3>Profile Details</h3>
+                <div class="form-group">
+                    <label>Pangalan</label>
+                    <input type="text" id="acc-name" class="input">
+                </div>
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="acc-email" class="input">
+                </div>
+                <div class="form-group">
+                    <label>Contact Number</label>
+                    <input type="tel" id="acc-phone" class="input">
+                </div>
+                <div class="form-group">
+                    <label>Address</label>
+                    <textarea id="acc-address" class="input" rows="3"></textarea>
+                </div>
+                <button class="btn btn-brand" onclick="app.updateProfile()">Save Profile</button>
+            </div>
+
+            <!-- Password & Logs -->
+            <div class="account-side">
+                <div class="card account-card">
+                    <h3>Change Password</h3>
+                    <div class="form-group">
+                        <label>Current Password</label>
+                        <input type="password" id="acc-current-pass" class="input" placeholder="Ilagay ang kasalukuyang password">
+                    </div>
+                    <div class="form-group">
+                        <label>New Password</label>
+                        <input type="password" id="acc-new-pass" class="input" placeholder="Min. 6 characters">
+                    </div>
+                    <div class="form-group">
+                        <label>Confirm New Password</label>
+                        <input type="password" id="acc-confirm-pass" class="input" placeholder="I-retype ang new password">
+                    </div>
+                    <button class="btn btn-ghost" onclick="app.changePassword()">Update Password</button>
+                </div>
+
+                <div class="card account-card">
+                    <h3>Order Logs</h3>
+                    <div id="account-order-logs" class="account-orders-list"></div>
+                    <button class="btn btn-ghost" style="width:100%; margin-top:10px;" onclick="app.go('orders')">View All Orders</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quote -->
+        <div class="account-quote">
+            <p>"Ang tunay na yaman ng Pilipino ay hindi lamang makikita sa bulsa, kundi sa init ng pagtanggap at sa pagmamahal sa sariling atin."</p>
+            <span>— PiliKart</span>
+        </div>
+    </div>
+ 
+    <!-- ADMIN DASHBOARD -->
+    <div id="view-admin" class="hidden max-w" style="padding-top:20px; padding-bottom: 60px;">
+        <h2>Owner Dashboard</h2>
+        
+        <!-- Stats Cards -->
+        <div class="admin-stats-grid" style="margin:20px 0;">
+            <div class="card stat-card">
+                <div class="stat-icon sales-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                </div>
+                <div>
+                    <h3>Total Sales</h3>
+                    <h1 id="stat-sales">₱0</h1>
+                </div>
+            </div>
+            <div class="card stat-card">
+                <div class="stat-icon orders-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+                </div>
+                <div>
+                    <h3>Total Orders</h3>
+                    <h1 id="stat-orders">0</h1>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab Buttons -->
+        <div class="admin-tabs" style="display:flex; gap:10px; margin-bottom:20px;">
+            <button class="btn btn-brand admin-tab-btn active" onclick="app.switchAdminTab('orders', this)">Orders</button>
+            <button class="btn btn-ghost admin-tab-btn" onclick="app.switchAdminTab('stock', this)">Inventory</button>
+            <button class="btn btn-ghost admin-tab-btn" onclick="app.switchAdminTab('add', this)">Add Item</button>
+        </div>
+        
+        <!-- Orders Tab -->
+        <div id="admin-orders" class="admin-orders-container">
+            <!-- Advanced Search & Filter -->
+            <div class="admin-filter-bar">
+                <div class="admin-search-wrap">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <input type="text" id="admin-order-search" class="input" placeholder="Search Order ID, Customer Name, or Address..." oninput="app.filterAdminOrders()">
+                </div>
+                <select id="admin-order-status" class="input" onchange="app.filterAdminOrders()">
+                    <option value="all">All Statuses</option>
+                    <option value="Pending">Pending</option>
+                    <option value="Shipping">Shipping</option>
+                    <option value="Out for Delivery">Out for Delivery</option>
+                    <option value="Delivered">Delivered</option>
+                </select>
+            </div>
+
+            <div id="admin-orders-grid" class="admin-orders-grid"></div>
+        </div>
+        
+        <!-- Inventory Tab -->
+        <div id="admin-stock" class="hidden">
+            <div id="admin-inventory-container" class="admin-inventory-container"></div>
+        </div>
+ 
+        <!-- Add Item Tab -->
+        <div id="admin-add" class="hidden">
+            <div class="admin-add-form-wrap">
+                <form id="admin-add-form" onsubmit="app.addProduct(event)">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Product Name</label>
+                            <input type="text" id="add-name" class="input" placeholder="e.g. Chicken Adobo with Rice" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Tagline</label>
+                            <input type="text" id="add-tagline" class="input" placeholder="e.g. Pinoy comfort meal" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Description</label>
+                        <textarea id="add-desc" class="input" rows="3" placeholder="Detailed description of the product..." required></textarea>
+                    </div>
+
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Price (₱)</label>
+                            <input type="number" id="add-price" class="input" placeholder="e.g. 90" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Stock Quantity</label>
+                            <input type="number" id="add-stock" class="input" placeholder="e.g. 30" required>
+                        </div>
+                    </div>
+
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Category</label>
+                            <select id="add-cat" class="input" required>
+                                <option value="" disabled selected>Select Department</option>
+                                <option value="paso">PASO (Food)</option>
+                                <option value="nipa">NIPA (Home)</option>
+                                <option value="habi">HABI (Fashion)</option>
+                                <option value="apollo">APOLLO (Tech)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Best Seller?</label>
+                            <div class="toggle-wrap">
+                                <label class="switch">
+                                    <input type="checkbox" id="add-bestseller" value="1">
+                                    <span class="slider round"></span>
+                                </label>
+                                <span class="toggle-label">Highlight this item</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Image URL</label>
+                        <input type="url" id="add-image" class="input" placeholder="https://placehold.co/400x400/eee/333?text=New" value="https://placehold.co/400x400/eee/333?text=New" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Tags (Comma Separated)</label>
+                        <input type="text" id="add-tags" class="input" placeholder="e.g. Filipino Food, Chicken, Rice Meal">
+                    </div>
+
+                    <button type="submit" class="btn btn-brand btn-large btn-block" style="margin-top: 10px;">Add Product to Store</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</main>
+
+<!-- GLOBAL WOODEN FOOTER -->
+<footer id="site-footer" class="pilikart-footer hidden">
+    <div class="footer-inner">
+        <div class="footer-col">
+            <h2 class="footer-logo">pilikart</h2>
+            <p class="footer-tag">pumili ka + cart</p>
+            <ul class="footer-links">
+                <li><a href="#" onclick="app.scrollToMenu(); return false;">Menu</a></li>
+                <li><a href="#" onclick="app.go('orders'); return false;">My Orders</a></li>
+                <li><a href="#" onclick="app.go('recipes'); return false;">Recipe Box</a></li>
+                <li><a href="#" onclick="app.go('faq'); return false;">FAQ</a></li>
+            </ul>
+        </div>
+        <div class="footer-col">
+            <h3 class="footer-title">About Us</h3>
+            <p class="footer-text">A digital love letter to Filipino heritage, PiliKart combines Filipino heritage with Filipino ingenuity to uplift communities and bring the warmth of home to your online shopping.</p>
+        </div>
+        <div class="footer-col">
+            <h3 class="footer-title">
+                <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:middle; margin-right:8px;"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"></path><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"></path></svg>
+                Apat na Tindahan
+            </h3>
+            <ul class="footer-links footer-dept-list">
+                <li><strong>PASO</strong> - pagkain — food essentials</li>
+                <li><strong>HABI</strong> - damit — clothing & fashion</li>
+                <li><strong>NIPA</strong> - tahanan — home essentials</li>
+                <li><strong>APOLLO</strong> - teknolohiya — technology</li>
+            </ul>
+        </div>
+    </div>
+    <div class="footer-bottom-bar">
+        <span>Copyright &copy; 2026 PiliKart. All rights reserved.</span>
+        <span>🌱 Gawa nang may malasakit — Calamba, Laguna</span>
+    </div>
+</footer>
+ 
+<!-- Cart Drawer -->
+<div id="cart-drawer" class="drawer hidden" onclick="if (event.target === this) app.toggleCart()">
+    <div class="drawer-panel cart-panel">
+        <div class="cart-head">
+            <h2><span class="cart-title-icon">🧺</span> Ang Cart Mo</h2>
+            <button class="cart-close-btn" onclick="app.toggleCart()" aria-label="Isara ang cart">✕</button>
+        </div>
+        <div id="cart-items" class="cart-items"></div>
+        <div class="cart-foot" id="cart-foot">
+            <div class="sum-row"><span>Subtotal</span><span id="cart-subtotal">&#8369;0.00</span></div>
+            <div class="sum-row"><span>Shipping fee</span><span id="cart-fee">&#8369;50.00</span></div>
+            <div class="sum-row total"><span>Kabuuan</span><span id="cart-total">&#8369;0.00</span></div>
+            <button class="btn btn-brand btn-block btn-large cart-checkout-btn" onclick="app.go('checkout'); app.toggleCart();">Checkout Na &rarr;</button>
+            <a class="cart-link" onclick="app.toggleCart(); app.scrollToMenu();">Buksan ang buong cart page</a>
+        </div>
+    </div>
+</div>
+ 
+<!-- RIGHT-SIDE NAVIGATION DRAWER -->
+<div id="nav-drawer-backdrop" class="nav-drawer-backdrop" onclick="app.toggleNavDrawer()"></div>
+<div id="nav-drawer" class="nav-drawer">
+    <div class="nav-drawer-header">
+        <div class="brand" onclick="app.toggleNavDrawer(); app.go('home')">
+            pilikart
+            <span>Pumili Ka + Cart</span>
+        </div>
+        <button class="nav-drawer-close" onclick="app.toggleNavDrawer()">✕</button>
+    </div>
+
+    <div class="nav-drawer-links">
+        <a href="#" onclick="app.scrollToMenu(); app.toggleNavDrawer();">
+            <svg class="nd-icon" viewBox="0 0 24 24"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></svg>
+            <div>
+                <strong>Menu</strong>
+                <small>Ang Lutuan</small>
+            </div>
+        </a>
+        <a href="#" onclick="app.navTo('about')">
+            <svg class="nd-icon" viewBox="0 0 24 24"><path d="M4 14.5A4.5 4.5 0 0 1 8.5 10h7a4.5 4.5 0 0 1 4.5 4.5V19a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-4.5Z"/><path d="M15 10V6a3 3 0 0 0-3-3H9a3 3 0 0 0-3 3v4"/><path d="M8 21v-3"/><path d="M16 21v-3"/><path d="M2 14h2"/><path d="M20 14h2"/></svg>
+            <div>
+                <strong>About Us</strong>
+                <small>Tungkol sa PiliKart</small>
+            </div>
+        </a>
+        <a href="#" onclick="app.navTo('recipes')">
+            <svg class="nd-icon" viewBox="0 0 24 24"><path d="M4 10h16v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8z"/><path d="M2 10h20"/><path d="M8 6c0-2 1-3 2-3s2 1 2 3"/><path d="M14 6c0-2 1-3 2-3s2 1 2 3"/></svg>
+            <div>
+                <strong>Recipe Box</strong>
+                <small>Mga Resipi</small>
+            </div>
+        </a>
+        <a href="#" onclick="app.navTo('faq')">
+            <svg class="nd-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 9a3 3 0 1 1 0-6 3 3 0 0 1 0 6z"/><path d="M12 15a3 3 0 1 1 0 6 3 3 0 0 1 0-6z"/><path d="M9 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0z"/><path d="M15 12a3 3 0 1 1 6 0 3 3 0 0 1-6 0z"/></svg>
+            <div>
+                <strong>FAQ</strong>
+                <small>Mga Tanong</small>
+            </div>
+        </a>
+        <a href="#" onclick="app.navToAccount()">
+            <svg class="nd-icon" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/><path d="M17 5a2 2 0 0 0-2-2"/></svg>
+            <div>
+                <strong>My Account</strong>
+                <small id="nav-account-sub">Profile & Settings</small>
+            </div>
+        </a>
+        
+        <!-- DYNAMIC ORDERS/ADMIN LINK -->
+        <a href="#" id="nav-orders-link" onclick="app.navTo('orders')">
+            <svg class="nd-icon" id="nav-orders-icon" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+            <div>
+                <strong id="nav-orders-title">My Orders</strong>
+                <small id="nav-orders-sub">Kasaysayan ng Order</small>
+            </div>
+        </a>
+    </div>
+
+    <div class="nav-drawer-footer">
+        <div class="nd-toggle-wrap" onclick="app.toggleTheme()">
+            <div class="nd-toggle-pill" id="nd-theme-pill"></div>
+            <div class="nd-toggle-option" id="nd-opt-day">
+                <svg style="width:14px;height:14px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+                <span>Day Mode</span>
+            </div>
+            <div class="nd-toggle-option" id="nd-opt-sunset">
+                <svg style="width:14px;height:14px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+                <span>Sunset</span>
+            </div>
+        </div>
+
+        <button class="btn btn-brand" style="width:100%; justify-content:center;" id="nd-auth-btn" onclick="app.handleAuthFromDrawer()">
+            <svg style="width:16px;height:16px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 17l5-5-5-5v3H3v4h7v3zM19 3H5c-1.1 0-2 .9-2 2v4h2V5h14v14H5v-4H3v4c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z"/></svg>
+            <span id="nd-auth-label">Sign In / Sign Up</span>
+        </button>
+    </div>
+</div>
+ 
+<!-- GCash Proof Modal -->
+<div id="proof-modal" class="modal hidden" onclick="if (event.target === this) app.closeModal('proof-modal')">
+    <div class="modal-content" style="text-align:center;">
+        <h3 style="margin-bottom:15px; color:#007dfe;">GCash Receipt</h3>
+        <img id="proof-img" style="width:100%; border-radius:10px; margin-bottom:15px;">
+        <button class="btn btn-ghost" style="width:100%;" onclick="app.closeModal('proof-modal')">Close</button>
+    </div>
+</div>
+ 
+<!-- PiliBot -->
+<button id="pilibot-btn" onclick="app.toggleBot()" aria-label="PiliBot">
+    <svg class="pilibot-btn-icon" viewBox="0 0 24 24"><path fill="currentColor" d="M17.04 4.09c-.43-.13-1.11-.27-1.95-.35-2.09-.19-4.88.22-6.85 2.19-2.93 2.93-3.08 7.4-1.28 10.58l-2.07 2.07 1.41 1.41 2.07-2.07c3.18 1.8 7.65 1.65 10.58-1.28 1.97-1.97 2.38-4.76 2.19-6.85-.08-.84-.22-1.52-.35-1.95-.38-1.25-1.14-2.31-2.09-3.26-.95-.95-2.01-1.71-3.26-2.09zM12 15c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3z"/></svg>
+</button>
+
+<div id="pilibot-window" class="hidden">
+    <div class="pb-head">
+        <div style="display:flex; align-items:center; gap:6px;">
+            <svg style="width:18px; height:18px;" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1H2a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2M7.5 13a1.5 1.5 0 0 0-1.5 1.5A1.5 1.5 0 0 0 7.5 16a1.5 1.5 0 0 0 1.5-1.5A1.5 1.5 0 0 0 7.5 13m9 0a1.5 1.5 0 0 0-1.5 1.5a1.5 1.5 0 0 0 1.5 1.5a1.5 1.5 0 0 0 1.5-1.5a1.5 1.5 0 0 0-1.5-1.5m-4.5 2c-1.5 0-3 .67-3 2h6c0-1.33-1.5-2-3-2z"/></svg>
+            <span>PiliBot Assistant</span>
+        </div>
+        <span style="cursor:pointer; font-size:16px;" onclick="app.toggleBot()">✕</span>
+    </div>
+    <div class="pb-chat" id="pb-chat"><div class="pb-msg">Kumusta, suki! Ako si PiliBot. Ano ang maitutulong ko ngayon?</div></div>
+    <form class="pb-input" onclick="event.stopPropagation()" onsubmit="app.sendBotMsg(event)">
+        <input type="text" id="pb-text" class="input" placeholder="Magtanong ka lang..." style="padding:8px; border-radius:8px;">
+        <button class="btn btn-leaf" style="padding:8px 15px;">↑</button>
+    </form>
+</div>
+<!-- Add to Cart Confirmation Modal -->
+<div id="add-confirm-modal" class="modal hidden" onclick="if (event.target === this) app.closeAddModal()">
+    <div class="modal-content add-confirm-content">
+        <button class="modal-close-btn" onclick="app.closeAddModal()" aria-label="Isara">✕</button>
+        
+        <h2 class="add-confirm-title">Do you want to add the<br>following item?</h2>
+        
+        <div class="add-confirm-item-card" id="add-confirm-item-box">
+            <!-- Populated dynamically via JS -->
+        </div>
+
+        <div class="add-confirm-actions">
+            <button class="btn btn-ghost btn-cancel-custom" onclick="app.closeAddModal()">✕ Cancel</button>
+            <button class="btn btn-brand btn-add-custom" onclick="app.confirmAddToCart()">+ Add Item</button>
+        </div>
+    </div>
+</div> 
+
+<!-- PRODUCT EDITOR MODAL (Admin) -->
+<div id="product-editor-modal" class="modal hidden" onclick="if (event.target === this) app.closeProductEditor()">
+    <div class="modal-content product-editor-content">
+        <button class="modal-close-btn" onclick="app.closeProductEditor()" aria-label="Isara">✕</button>
+        <h2 class="pe-title">Edit Product</h2>
+
+        <form id="product-editor-form" onsubmit="app.saveProductEditor(event)">
+            <div class="pe-preview-box">
+                <img id="pe-preview" class="pe-preview" alt="Preview" src="https://placehold.co/400x400/eee/333?text=Preview">
+                <div class="pe-preview-hint">
+                    Ito ang litratong makikita ng mga suki sa menu.<br>
+                    Pwede kang gumamit ng <b>assets/…</b> na path o isang buong <b>https://</b> URL.
+                </div>
+            </div>
+
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Product Name</label>
+                    <input type="text" id="pe-name" class="input" required>
+                </div>
+                <div class="form-group">
+                    <label>Tagline</label>
+                    <input type="text" id="pe-tagline" class="input">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Description</label>
+                <textarea id="pe-desc" class="input" rows="3"></textarea>
+            </div>
+
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Price (₱)</label>
+                    <input type="number" id="pe-price" class="input" min="0" step="1" required>
+                </div>
+                <div class="form-group">
+                    <label>Stock</label>
+                    <input type="number" id="pe-stock" class="input" min="0" step="1" required>
+                </div>
+            </div>
+
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Department</label>
+                    <select id="pe-cat" class="input" required>
+                        <option value="paso">PASO (Food)</option>
+                        <option value="nipa">NIPA (Home)</option>
+                        <option value="habi">HABI (Fashion)</option>
+                        <option value="apollo">APOLLO (Tech)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Best Seller?</label>
+                    <div class="pe-toggle-row">
+                        <label class="switch">
+                            <input type="checkbox" id="pe-bestseller">
+                            <span class="slider round"></span>
+                        </label>
+                        <span class="toggle-label">Highlight this item</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Image URL / Path</label>
+                <input type="text" id="pe-image" class="input" oninput="app.updateEditorPreview()">
+            </div>
+
+            <div class="form-group">
+                <label>Tags (Comma Separated)</label>
+                <input type="text" id="pe-tags" class="input">
+            </div>
+
+            <div class="pe-actions">
+                <button type="button" class="btn btn-ghost" onclick="app.closeProductEditor()">Cancel</button>
+                <button type="submit" class="btn btn-brand">Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+ 
+<script src="main.js"></script>
+</body>
+</html>
