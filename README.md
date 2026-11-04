@@ -210,3 +210,6 @@ Use these credentials to log in and test the system:
 *   **Sign Up Feature:** The current `api.php` does not have a `signup` action implemented. The "Sign Up" button on the frontend will fail unless you implement the backend logic for it. For now, use the default accounts or the "Continue as Guest" option.
 *   **Images:** The product image paths in the database are pre-mapped for the `paso` category to the `assets/paso/` folder. Ensure your images are named exactly as they appear in the SQL script (e.g., `Chicken Adobo with Rice.png`). For the other categories, the script uses placeholder images, which you can update later via the Admin Dashboard.
 *   **GCash Payment:** The system allows uploading a receipt. In a real-world scenario, you would need to integrate the actual GCash API, but for this project, it is a visual mock-up stored as Base64 in the database.
+
+
+- Update 1
