@@ -559,6 +559,41 @@
         </div>
     </div>
  
+    <!-- CART PAGE VIEW -->
+        <!-- CART PAGE VIEW -->
+    <div id="view-cart" class="hidden max-w page-wrap">
+        <div class="page-head">
+            <h1><span class="head-ic" style="background:#d95b33;">🧺</span> Ang Cart Mo</h1>
+            <p>Silipin muna bago ihain.</p>
+        </div>
+
+        <div class="cart-page-grid">
+            <div class="cart-page-main" style="background:transparent; border:none; padding:0; box-shadow:none;">
+                <div class="cart-page-header-row" style="background:var(--surface); padding:16px; border-radius:20px; border:1px solid var(--line); margin-bottom:20px; box-shadow:var(--shadow);">
+                    <label class="cart-checkbox-wrap">
+                        <input type="checkbox" id="cart-select-all" onchange="app.toggleAllCartItems(this.checked)">
+                        <span class="cart-checkbox-custom"></span>
+                        <span class="cart-select-all-text">Piliin Lahat (Select All)</span>
+                    </label>
+                </div>
+                <div id="cart-page-items" class="cart-page-items-list"></div>
+            </div>
+            
+            <aside class="co-summary cart-page-summary">
+                <h3>Buod</h3>
+                <div class="sum-totals" style="margin-top:0;">
+                    <div class="sum-row"><span>Subtotal</span><span id="cart-page-subtotal">₱0.00</span></div>
+                    <div class="sum-row"><span>Shipping fee</span><span id="cart-page-fee">₱0.00</span></div>
+                    <div class="sum-row total"><span>Kabuuan</span><span id="cart-page-total">₱0.00</span></div>
+                </div>
+                <button class="btn btn-brand btn-large btn-block" onclick="app.go('checkout')" style="margin-top:20px;">Checkout Na &rarr;</button>
+                <div style="text-align:center; margin-top:15px;">
+                    <a href="#" onclick="app.scrollToMenu(); return false;" style="color:var(--muted); font-size:13px; font-weight:700; text-decoration:underline;">+ Dagdag pa ng pagkain</a>
+                </div>
+            </aside>
+        </div>
+    </div>
+
     <!-- CHECKOUT VIEW -->
     <div id="view-checkout" class="hidden checkout-page">
         <div class="max-w">
@@ -897,7 +932,7 @@
             <div class="sum-row"><span>Shipping fee</span><span id="cart-fee">&#8369;50.00</span></div>
             <div class="sum-row total"><span>Kabuuan</span><span id="cart-total">&#8369;0.00</span></div>
             <button class="btn btn-brand btn-block btn-large cart-checkout-btn" onclick="app.go('checkout'); app.toggleCart();">Checkout Na &rarr;</button>
-            <a class="cart-link" onclick="app.toggleCart(); app.scrollToMenu();">Buksan ang buong cart page</a>
+            <a class="cart-link" onclick="app.toggleCart(true); app.go('cart');">Buksan ang buong cart page</a>
         </div>
     </div>
 </div>
