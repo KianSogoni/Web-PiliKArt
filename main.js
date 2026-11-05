@@ -1,6 +1,12 @@
 const app = {
     user: null,
-    cart: (() => { try { return JSON.parse(localStorage.getItem('pk_cart') || '[]'); } catch(e) { return []; } })(),
+    // Initialize cart, ensuring selected property exists
+    cart: (() => { 
+        try { 
+            const c = JSON.parse(localStorage.getItem('pk_cart') || '[]'); 
+            return c.map(item => ({ ...item, selected: item.selected !== undefined ? item.selected : true }));
+        } catch(e) { return []; } 
+    })(),
     budget: null,
     products: [],
     orders: [],
@@ -93,10 +99,8 @@ const app = {
             const body = el.querySelector('.faq-recipe-body');
             if (!body) return;
             
-            // If clicking the active one, close it. Otherwise, close others and open this.
             const isActive = el.classList.contains('active');
             
-            // Optional: Close all others (accordion style)
             document.querySelectorAll('.faq-recipe-item').forEach(item => {
                 item.classList.remove('active');
                 const b = item.querySelector('.faq-recipe-body');
@@ -148,6 +152,7 @@ const app = {
         if (!bare) window.scrollTo({ top: 0 });
 
         if (view === 'orders') this.renderOrders();
+        if (view === 'cart') this.renderCartPage();
         if (view === 'checkout') { this.renderCheckoutSummary(); this.prefillCheckout(); }
         if (view === 'success') this.renderSuccess();
         if (view === 'auth') this.clearAuthError();
@@ -156,13 +161,11 @@ const app = {
         if (view === 'home') { this.updateGreeting(); setTimeout(() => this.sizeHeroVideo(), 50); this.maybeWelcome(); }
         
         if (view === 'faq' || view === 'recipes') {
-            // Reset accordions when navigating to them
             document.querySelectorAll('.faq-recipe-item').forEach((item, index) => {
                 item.classList.remove('active');
                 const body = item.querySelector('.faq-recipe-body');
                 if (body) body.style.maxHeight = null;
             });
-            // Auto-open the first item for visual appeal
             const firstItem = document.querySelector('.faq-recipe-item');
             if (firstItem) {
                 firstItem.classList.add('active');
@@ -578,8 +581,9 @@ const app = {
         const item = this.cart.find(x => x.id === p.id);
         if (item) {
             item.qty += this.pendingQty;
+            item.selected = true; // Ensure newly added items are checked
         } else {
-            this.cart.push({ ...p, qty: this.pendingQty });
+            this.cart.push({ ...p, qty: this.pendingQty, selected: true });
         }
         
         this.saveCart();
@@ -614,6 +618,7 @@ const app = {
     saveCart() {
         localStorage.setItem('pk_cart', JSON.stringify(this.cart));
         this.renderCart();
+        if (this.currentView === 'cart') this.renderCartPage(); // Live update if on cart page
     },
     
     renderCart() {
@@ -662,9 +667,17 @@ const app = {
  
     toggleCart(force = false) {
         const d = document.getElementById('cart-drawer');
-        if (this._cartBusy) return;
+        if (!d) return;
+        
+        if (force) {
+            d.classList.add('hidden');
+            d.classList.remove('closing');
+            this._cartBusy = false;
+            return;
+        }
+
         const isOpen = !d.classList.contains('hidden');
-        if (force || !isOpen) {
+        if (!isOpen) {
             d.classList.remove('hidden', 'closing');
             return;
         }
@@ -680,15 +693,107 @@ const app = {
         setTimeout(() => { m.classList.add('hidden'); m.classList.remove('closing'); }, 650);
     },
 
+    renderCartPage() {
+        if (!Array.isArray(this.cart)) this.cart = [];
+
+        const list = document.getElementById('cart-page-items');
+        const summary = document.querySelector('.cart-page-summary');
+        const selectAll = document.getElementById('cart-select-all');
+        if (!list || !summary) return;
+
+        if (this.cart.length === 0) {
+            list.innerHTML = this.emptyState('cart', 'Bakante pa ang cart mo', 'Pumili ka muna ng paborito mo, saka tayo mag-checkout.', 'Tingnan ang Menu', 'app.scrollToMenu()');
+            summary.style.display = 'none';
+            if (selectAll) selectAll.checked = false;
+            return;
+        }
+        
+        summary.style.display = 'block';
+
+        let needsSave = false;
+        this.cart.forEach(c => {
+            if (c.selected === undefined) {
+                c.selected = true;
+                needsSave = true;
+            }
+        });
+        if (needsSave) this.saveCart();
+
+        const allSelected = this.cart.every(c => c.selected);
+        if (selectAll) selectAll.checked = allSelected;
+
+        list.innerHTML = this.cart.map(c => `
+            <div class="cart-page-item ${c.selected ? 'selected' : ''}">
+                <label class="cart-checkbox-wrap">
+                    <input type="checkbox" ${c.selected ? 'checked' : ''} onchange="app.toggleCartItem(${c.id})">
+                    <span class="cart-checkbox-custom"></span>
+                </label>
+                <img src="${this.esc(c.image || '')}" class="cart-page-img" alt="${this.esc(c.name)}">
+                <div class="cart-page-info">
+                    <h4>${this.esc(c.name)}</h4>
+                    <p class="cart-page-price">₱${Number(c.price || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })} bawat isa</p>
+                    <p class="cart-page-subtotal-inline" style="font-weight:800; color:var(--brand); font-size:15px; margin-top:4px;">₱${(Number(c.price || 0) * c.qty).toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
+                </div>
+                <div class="cart-page-actions" style="display:flex; align-items:center; gap:12px; margin-left:auto;">
+                    <button class="qty-circle-btn" onclick="app.removeFromCart(${c.id})" style="color:#e5604d; border-color:rgba(229,96,77,0.3);"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></button>
+                    <span class="qty-num" style="font-size:16px; font-weight:800;">${c.qty}</span>
+                    <button class="qty-circle-btn" onclick="app.updateQty(${c.id}, 1)">+</button>
+                </div>
+            </div>
+        `).join('') + `<div style="margin-top:20px; text-align:left;"><a href="#" onclick="app.clearCart(); return false;" style="color:var(--muted); font-size:13px; font-weight:700; text-decoration:underline;">I-clear ang buong cart</a></div>`;
+
+        this.updateCartPageSummary();
+    },
+
+    removeFromCart(id) {
+        this.cart = this.cart.filter(x => x.id !== id);
+        this.saveCart();
+    },
+
+    clearCart() {
+        if(confirm('Sigurado ka bang i-clear ang buong cart?')) {
+            this.cart = [];
+            this.saveCart();
+        }
+    },
+
+    toggleCartItem(id) {
+        const item = this.cart.find(x => x.id === id);
+        if (item) {
+            item.selected = !item.selected;
+            this.saveCart();
+        }
+    },
+
+    toggleAllCartItems(checked) {
+        this.cart.forEach(c => c.selected = checked);
+        this.saveCart();
+    },
+
+    updateCartPageSummary() {
+        const selected = this.cart.filter(c => c.selected);
+        const subtotal = selected.reduce((s, x) => s + x.price * x.qty, 0);
+        const fee = selected.length ? this.fee : 0;
+        const total = subtotal + fee;
+
+        const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = '₱' + v.toFixed(2); };
+        set('cart-page-subtotal', subtotal);
+        set('cart-page-fee', fee);
+        set('cart-page-total', total);
+    },
+
     renderCheckoutSummary() {
         const el = document.getElementById('checkout-summary');
         if (!el) return;
-        const subtotal = this.cart.reduce((s, x) => s + x.price * x.qty, 0);
-        const fee = this.cart.length ? this.fee : 0;
-        if (!this.cart.length) {
-            el.innerHTML = this.emptyState('cart', 'Bakante pa ang basket mo', 'Pumili ka muna ng paborito mo, saka tayo mag-checkout.', 'Tingnan ang Menu', 'app.scrollToMenu()');
+        
+        const selectedCart = this.cart.filter(c => c.selected);
+        const subtotal = selectedCart.reduce((s, x) => s + x.price * x.qty, 0);
+        const fee = selectedCart.length ? this.fee : 0;
+        
+        if (!selectedCart.length) {
+            el.innerHTML = this.emptyState('cart', 'Walang napiling item', 'Bumalik ka muna sa cart at pumili ng item.', 'Balik sa Cart', 'app.go(\'cart\')');
         } else {
-            el.innerHTML = this.cart.map(c => `
+            el.innerHTML = selectedCart.map(c => `
                 <div class="sum-item">
                     <img class="sum-thumb" src="${this.esc(c.image || '')}" alt="">
                     <div class="sum-name"><b>${this.esc(c.name)}</b><small>${c.qty} \u00D7 ${this.money(c.price)}</small></div>
@@ -777,7 +882,8 @@ const app = {
 
     async submitOrder() {
         if (this.orderBusy) return;
-        if (!this.cart.length) return this.showToast('Ay, bakante pa ang cart mo!');
+        const selectedCart = this.cart.filter(c => c.selected);
+        if (!selectedCart.length) return this.showToast('Walang napiling item, suki!');
 
         const val = id => document.getElementById(id).value.trim();
         const payment = val('co-payment') === 'gcash' ? 'gcash' : 'cod';
@@ -787,10 +893,10 @@ const app = {
         if (!address) return this.fieldFail('co-addr', 'Saan namin ihahatid? Ilagay ang address mo.');
         if (payment === 'gcash' && !this.gcashBase64) return this.fieldFail('gcash-drop', 'I-upload muna ang screenshot ng GCash receipt.');
 
-        const snapshot = this.cart.map(c => ({ ...c }));
+        const snapshot = selectedCart.map(c => ({ ...c }));
         const subtotal = snapshot.reduce((s, x) => s + x.price * x.qty, 0);
         const payload = {
-            items: this.cart.map(c => ({ id: c.id, qty: c.qty })),
+            items: selectedCart.map(c => ({ id: c.id, qty: c.qty })),
             name, phone, address, payment,
             proof: this.gcashBase64,
             fee: this.fee
@@ -811,8 +917,10 @@ const app = {
 
             if (data.ok) {
                 this.lastOrder = { id: data.order_id, items: snapshot, subtotal, fee: this.fee, total: subtotal + this.fee, name, address, payment };
-                this.cart = [];
+                
+                this.cart = this.cart.filter(c => !c.selected);
                 this.saveCart();
+                
                 this.gcashBase64 = '';
                 this.resetCheckoutForm();
                 this.go('success');

@@ -586,3 +586,33 @@ th { background: var(--surface2); font-weight: 800; text-transform: uppercase; f
 .faq-cta { margin-top: 40px; border: 2px dashed var(--line); border-radius: 24px; padding: 40px; text-align: center; background: color-mix(in srgb, var(--ink) 2%, transparent); }
 .faq-cta h3 { font-family: "Baloo 2", sans-serif; font-size: 24px; color: var(--ink); margin-bottom: 20px; }
 @media (max-width: 700px) { .recipe-grid { grid-template-columns: 1fr; } .faq-recipe-header { padding: 20px; } .faq-recipe-title-group { gap: 14px; } .faq-recipe-icon { width: 40px; height: 40px; } .faq-recipe-icon svg { width: 20px; height: 20px; } .faq-recipe-header h3 { font-size: 18px; } .faq-recipe-body { padding: 0 20px; } .faq-recipe-item.active .faq-recipe-body { padding-bottom: 20px; } }
+
+/* --- CART PAGE STYLES --- */
+.cart-page-grid { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(300px, 1fr); gap: 32px; align-items: start; }
+.cart-page-main { background: transparent; border: none; padding: 0; box-shadow: none; }
+.cart-page-header-row { display: flex; align-items: center; padding: 16px 20px; background: var(--surface); border: 1px solid var(--line); border-radius: 20px; margin-bottom: 20px; box-shadow: var(--shadow); }
+.cart-page-items-list { display: flex; flex-direction: column; gap: 16px; }
+.cart-page-item { display: flex; align-items: center; gap: 16px; padding: 20px; background: var(--surface); border: 1px solid var(--line); border-radius: 20px; box-shadow: var(--shadow); transition: all 0.2s ease; }
+.cart-page-item.selected { border-color: var(--brand); background: color-mix(in srgb, var(--brand) 5%, var(--surface)); }
+.cart-page-img { width: 80px; height: 80px; border-radius: 12px; object-fit: cover; background: white; flex-shrink: 0; }
+.cart-page-info { flex: 1; }
+.cart-page-info h4 { font-size: 16px; font-weight: 800; margin-bottom: 4px; color: var(--ink); line-height: 1.2; }
+.cart-page-price { font-size: 12px; color: var(--muted); font-weight: 600; margin-bottom: 0; }
+.cart-page-qty { display: flex; align-items: center; gap: 10px; margin-right: 20px; }
+.cart-page-subtotal { font-family: "Baloo 2"; font-size: 20px; font-weight: 800; color: var(--ink); width: 100px; text-align: right; }
+
+/* Custom Checkbox */
+.cart-checkbox-wrap { display: inline-flex; align-items: center; cursor: pointer; position: relative; user-select: none; }
+.cart-checkbox-wrap input { position: absolute; opacity: 0; cursor: pointer; height: 0; width: 0; }
+.cart-checkbox-custom { height: 24px; width: 24px; background-color: var(--surface); border: 2px solid var(--line); border-radius: 6px; position: relative; transition: all 0.2s ease; flex-shrink: 0; }
+.cart-checkbox-wrap:hover input ~ .cart-checkbox-custom { border-color: var(--brand); }
+.cart-checkbox-wrap input:checked ~ .cart-checkbox-custom { background-color: var(--brand); border-color: var(--brand); }
+.cart-checkbox-custom:after { content: ""; position: absolute; display: none; left: 7px; top: 3px; width: 6px; height: 12px; border: solid white; border-width: 0 3px 3px 0; transform: rotate(45deg); }
+.cart-checkbox-wrap input:checked ~ .cart-checkbox-custom:after { display: block; }
+.cart-select-all-text { margin-left: 10px; font-weight: 700; font-size: 14px; color: var(--ink); }
+
+@media (max-width: 900px) { 
+    .cart-page-grid { grid-template-columns: 1fr; } 
+    .cart-page-item { flex-wrap: wrap; } 
+    .cart-page-subtotal { width: auto; text-align: left; margin-left: auto; } 
+}
