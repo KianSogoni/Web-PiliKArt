@@ -1,6 +1,19 @@
 # 🧺 PiliKart - E-Commerce System
 
-A lightweight, custom-built e-commerce platform for local Filipino products (Paso, Nipa, Habi, Apollo). This system uses **Vanilla PHP**, **MySQL**, and **Vanilla JavaScript** with a clean, responsive UI featuring dark mode, a shopping cart, and an admin dashboard.
+**PiliKart** (pumili ka + cart) is a lightweight, custom-built e-commerce platform celebrating Filipino heritage. It features four distinct departments named after pieces of Philippine history: **PASO** (Food), **NIPA** (Home), **HABI** (Fashion), and **APOLLO** (Tech). 
+
+Built entirely with **Vanilla PHP**, **MySQL**, and **Vanilla JavaScript**, it offers a smooth, app-like experience without the overhead of heavy frameworks. It includes a fully functional storefront, an interactive shopping cart, a chatbot assistant (PiliBot), and a comprehensive admin dashboard.
+
+## ✨ Key Features (Latest Version)
+*   **Dynamic UI & Themes:** Features a custom "Day Mode" and a warm, dark "Sunset Mode" toggle that saves to the user's local storage.
+*   **Local Video Hero:** The homepage features a looping, muted local video background (`Dear Alice.mp4`) that scales perfectly to any screen size.
+*   **Dedicated Cart Page:** Users can now view a full-page cart, use "Select All" checkboxes, and choose specific items to checkout while leaving others in the cart.
+*   **Interactive FAQ & Recipe Box:** Redesigned with smooth accordion-style animations, using custom SVG icons instead of emojis.
+*   **Admin Dashboard:** A complete backend interface to manage orders (update statuses, delete), track sales, and edit products via a detailed pop-up modal.
+*   **PiliBot Assistant:** A built-in chatbot that answers common customer questions about delivery, GCash, and order tracking.
+*   **Dynamic Search & Budget Mode:** Users can filter products instantly by searching keywords or setting a maximum price budget.
+
+---
 
 ## 🛠️ Prerequisites
 Before you begin, ensure you have the following installed:
@@ -17,9 +30,12 @@ Before you begin, ensure you have the following installed:
 1. Locate your XAMPP `htdocs` folder (usually `C:\xampp\htdocs\`).
 2. Create a folder named `pilikart`.
 3. Place all project files inside this folder: `db.php`, `api.php`, `index.html`, `main.js`, and `styles.css`.
-4. **Create the Assets Folder:** Create a folder named `assets` in the same directory. Inside it, create the following subfolders to match the image paths in the code:
-   * `assets/general/` (Place your `landingpagekubo.png` here)
-   * `assets/paso/` (Place the food images here, e.g., `Chicken Adobo with Rice.png`)
+4. **Create the Assets Folder:** Create a folder named `assets` in the same directory. Inside it, create the following subfolders and add the corresponding files:
+   * `assets/general/` 
+     * `landingpagekubo.png` (Landing page background)
+     * `Dear Alice.mp4` (Hero video background)
+     * `gcash-qr.png` (Mockup GCash QR code)
+   * `assets/paso/` (Food images, e.g., `Chicken Adobo with Rice.png`)
 
 ### Step 2: Set Up the Database (MySQL)
 1. Open **XAMPP Control Panel** and start **MySQL**.
