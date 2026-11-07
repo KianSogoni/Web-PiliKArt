@@ -267,6 +267,10 @@ const app = {
         this.currentView = view;
         if (!bare) window.scrollTo({ top: 0 });
 
+        // Hide PiliBot on landing/auth pages
+        const botBtn = document.getElementById('pilibot-btn');
+        if (botBtn) botBtn.style.display = bare ? 'none' : 'flex';
+
         if (view === 'orders') this.renderOrders();
         if (view === 'cart') this.renderCartPage();
         if (view === 'checkout') { this.populateCities(); this.renderCheckoutSummary(); this.prefillCheckout(); }
@@ -426,11 +430,19 @@ const app = {
     },
 
     togglePassword() {
-        const p = document.getElementById('auth-pass'), eye = document.getElementById('auth-eye');
+        const p = document.getElementById('auth-pass');
+        const iconShow = document.getElementById('eye-icon-show');
+        const iconHide = document.getElementById('eye-icon-hide');
         const show = p.type === 'password';
         p.type = show ? 'text' : 'password';
-        eye.setAttribute('aria-pressed', String(show));
-        eye.innerHTML = show ? '&#128584;' : '&#128065;';
+        
+        if (show) {
+            iconShow.style.display = 'none';
+            iconHide.style.display = 'block';
+        } else {
+            iconShow.style.display = 'block';
+            iconHide.style.display = 'none';
+        }
         p.focus();
     },
 
@@ -945,14 +957,12 @@ const app = {
         const el = document.getElementById('checkout-summary');
         if (!el) return;
 
-        // Ensure defaults in case the cart was saved from a previous buggy session
         let needsSave = false;
         this.cart.forEach(c => {
             if (c.selected === undefined) { c.selected = true; needsSave = true; }
         });
         if (needsSave) this.saveCart();
 
-        // If the user reaches checkout with a full cart but nothing selected, auto-select everything
         if (this.cart.length > 0 && !this.cart.some(c => c.selected)) {
             this.cart.forEach(c => c.selected = true);
             this.saveCart();
@@ -1075,6 +1085,12 @@ const app = {
         const city = val('co-city'), brgy = val('co-brgy'), street = val('co-street');
 
         if (!name) return this.fieldFail('co-name', 'Sino ang tatanggap, suki? Ilagay ang pangalan.');
+        
+        const cleanPhone = phone.replace(/[\s-]/g, '');
+        if (!/^(09|\+639)\d{9}$/.test(cleanPhone)) {
+            return this.fieldFail('co-phone', 'Mali ang format ng number. Dapat 09XXXXXXXXX o +639XXXXXXXXX.');
+        }
+
         if (!city) return this.fieldFail('co-city', 'Saan namin ihahatid? Pumili ng lungsod.');
         if (!brgy) return this.fieldFail('co-brgy', 'Pumili ng barangay.');
 
@@ -1093,7 +1109,7 @@ const app = {
 
         const payload = {
             items: selectedCart.map(c => ({ id: c.id, qty: c.qty })),
-            name, phone, address, payment,
+            name, phone: cleanPhone, address, payment,
             proof: this.gcashBase64,
             fee: this.fee,
             protection_fee: protectionFee
@@ -1327,12 +1343,17 @@ const app = {
         if (!name) return this.showToast('Ilagay ang iyong pangalan.');
         if (!/^\S+@\S+\.\S+$/.test(email)) return this.showToast('Mali ang email format.');
 
+        let cleanPhone = phone.replace(/[\s-]/g, '');
+        if (cleanPhone && !/^(09|\+639)\d{9}$/.test(cleanPhone)) {
+            return this.showToast('Mali ang format ng contact number. Dapat 09XXXXXXXXX o +639XXXXXXXXX.');
+        }
+
         const address = (city || brgy || street) ? JSON.stringify({ street, brgy, city }) : '';
 
         try {
             const res = await fetch('api.php?action=update-profile', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, email, phone, address })
+                body: JSON.stringify({ name, email, phone: cleanPhone, address })
             });
             const data = await res.json();
             if (data.ok) {
@@ -1379,7 +1400,8 @@ const app = {
         if (!this.user || this.user.role !== 'admin') return;
 
         let sales = this.orders.reduce((s, o) => s + parseInt(o.total), 0);
-        document.getElementById('stat-sales').textContent = '₱' + sales.toLocaleString();
+        // Fixed to use Peso symbol \u20B1
+        document.getElementById('stat-sales').textContent = '\u20B1' + sales.toLocaleString();
         document.getElementById('stat-orders').textContent = this.orders.length;
 
         this.renderAdminOrders();

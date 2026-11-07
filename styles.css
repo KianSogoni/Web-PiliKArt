@@ -633,3 +633,89 @@ select.input {
 .protection-label { display: flex; flex-direction: column; gap: 3px; line-height: 1.35; margin-left: 2px; }
 .protection-label b { font-size: 14px; color: var(--ink); font-weight: 800; }
 .protection-label small { font-size: 12px; color: var(--muted); font-weight: 600; }
+/* =========================================
+   FIXES & POLISH
+   ========================================= */
+
+/* 1. Toggle Text White when Active */
+.nd-toggle-wrap:not(.is-sunset) #nd-opt-day span,
+.nd-toggle-wrap:not(.is-sunset) #nd-opt-day svg,
+.nd-toggle-wrap.is-sunset #nd-opt-sunset span,
+.nd-toggle-wrap.is-sunset #nd-opt-sunset svg {
+    color: #ffffff !important;
+    stroke: #ffffff !important;
+}
+
+/* 2. Smoother Animations & Button Spinner */
+.btn { transition: all 0.25s cubic-bezier(0.25, 1, 0.5, 1); }
+.btn:active:not(:disabled) { transform: scale(0.96) translateY(0); }
+.btn.loading { pointer-events: none; opacity: 0.8; }
+.btn.loading::after {
+    content: "";
+    width: 16px;
+    height: 16px;
+    border: 2px solid currentColor;
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+    display: inline-block;
+    margin-left: 8px;
+    vertical-align: middle;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* 3. Carousel Size: Glass & Square */
+.carousel-3d-container { 
+    height: 400px; 
+    perspective: 1200px; 
+}
+.carousel-stage { 
+    width: 320px; 
+    height: 320px; /* Square aspect */
+    transform-style: preserve-3d; 
+}
+.carousel-card { 
+    border-radius: 30px; 
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.05) !important;
+    backdrop-filter: blur(20px) saturate(150%);
+    -webkit-backdrop-filter: blur(20px) saturate(150%);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.2);
+}
+[data-theme="day"] .carousel-card {
+    background: rgba(247, 236, 213, 0.6) !important;
+    border: 1px solid rgba(255, 255, 255, 0.8);
+}
+.carousel-img { 
+    height: 150px; /* Fixed height for square card */
+}
+.carousel-glass-panel { 
+    background: transparent !important; 
+    padding: 16px; 
+}
+.carousel-card.active { 
+    transform: translateX(0) translateZ(0) scale(1.05); 
+}
+.carousel-card.prev { 
+    transform: translateX(-60%) translateZ(-100px) rotateY(25deg) scale(0.85); 
+}
+.carousel-card.next { 
+    transform: translateX(60%) translateZ(-100px) rotateY(-25deg) scale(0.85); 
+}
+
+/* 4. Auth Eye Icon tweaks */
+.auth-eye {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--muted);
+}
+.auth-eye:hover {
+    color: var(--brand);
+}
+.auth-eye svg {
+    transition: transform 0.2s ease;
+}
+.auth-eye:active svg {
+    transform: scale(0.85);
+}

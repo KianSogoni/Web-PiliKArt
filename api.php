@@ -133,12 +133,18 @@ switch ($action) {
         if ($name === '') out(['error' => 'Ilagay ang pangalan mo.'], 400);
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) out(['error' => 'Mali ang email format.'], 400);
 
+        // Phone validation (Backend)
+        $cleanPhone = str_replace([' ', '-'], '', $phone);
+        if ($cleanPhone && !preg_match('/^(09|\+639)\d{9}$/', $cleanPhone)) {
+            out(['error' => 'Mali ang format ng contact number. Dapat 09XXXXXXXXX o +639XXXXXXXXX.'], 400);
+        }
+
         $stmt = $pdo->prepare('SELECT id FROM users WHERE email=? AND id!=?');
         $stmt->execute([$email, $_SESSION['user_id']]);
         if ($stmt->fetch()) out(['error' => 'Ginagamit na ang email na ito ng ibang account.'], 409);
 
         $stmt = $pdo->prepare('UPDATE users SET name=?, email=?, phone=?, address=? WHERE id=?');
-        $stmt->execute([$name, $email, $phone, $address, $_SESSION['user_id']]);
+        $stmt->execute([$name, $email, $cleanPhone, $address, $_SESSION['user_id']]);
         
         $_SESSION['name'] = $name;
         out(['ok' => true]);
@@ -168,6 +174,14 @@ switch ($action) {
         try {
             $items = $in['items'] ?? [];
             if (!$items) out(['error' => 'Walang laman ang cart.'], 400);
+
+            // Phone validation (Backend)
+            $phone = trim($in['phone'] ?? '');
+            $cleanPhone = str_replace([' ', '-'], '', $phone);
+            if (!preg_match('/^(09|\+639)\d{9}$/', $cleanPhone)) {
+                out(['error' => 'Mali ang format ng contact number. Dapat 09XXXXXXXXX o +639XXXXXXXXX.'], 400);
+            }
+
             $ids = array_column($items, 'id');
             $ph = implode(',', array_fill(0, count($ids), '?'));
             $stmt = $pdo->prepare("SELECT * FROM products WHERE id IN ($ph)");
@@ -200,7 +214,7 @@ switch ($action) {
             $stmt->execute([
                 $_SESSION['user_id'] ?? null,
                 $in['name'],
-                $in['phone'] ?? '',
+                $cleanPhone,
                 $address,
                 ($in['payment'] ?? 'cod') === 'gcash' ? 'gcash' : 'cod',
                 $in['proof'] ?? '',
