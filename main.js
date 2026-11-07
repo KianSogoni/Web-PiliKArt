@@ -1,4 +1,37 @@
 const app = {
+    // Add inside your app object in main_2.js
+
+
+    initLeavesAnimation() {
+    const container = document.getElementById('leaves-container');
+    if (!container) return;
+
+    // Keep the animation sparse (e.g., 10 leaves total across the screen)
+    const leafCount = 10;
+    const types = ['leaf-green-dark', 'leaf-green-light', 'leaf-tan'];
+
+    for (let i = 0; i < leafCount; i++) {
+        const leaf = document.createElement('div');
+        const type = types[Math.floor(Math.random() * types.length)];
+        
+        leaf.className = `leaf ${type}`;
+        
+        // Randomize positioning, sizing, speeds, and delays for a natural look
+        const left = Math.random() * 100; // random horizontal start (%)
+        const duration = 10 + Math.random() * 10; // fall speed between 10s - 20s
+        const delay = Math.random() * 15; // staggered start delay
+        const size = 18 + Math.random() * 14; // leaf size between 18px - 32px
+        const swayDuration = 3 + Math.random() * 4; // sway speed
+
+        leaf.style.left = `${left}%`;
+        leaf.style.width = `${size}px`;
+        leaf.style.height = `${size}px`;
+        leaf.style.animationDuration = `${duration}s, ${swayDuration}s`;
+        leaf.style.animationDelay = `${delay}s, ${delay}s`;
+
+        container.appendChild(leaf);
+    }
+},
     user: null,
     // Initialize cart, ensuring selected property exists
     cart: (() => { 
@@ -53,7 +86,7 @@ const app = {
             image: "https://placehold.co/600x338/1a2b1c/85b56d?text=Apollo+Tech"
         }
     ],
-
+    
     async init() {
         document.getElementById('main-content').style.display = 'block';
  
@@ -85,6 +118,7 @@ const app = {
         this.checkTheme();
         this.updateNavDrawerAuthUI();
         this.sizeHeroVideo();
+        this.initLeavesAnimation();
         
         setInterval(() => {
             if (!document.getElementById('view-home').classList.contains('hidden')) {
@@ -1529,3 +1563,4 @@ window.addEventListener('load', () => app.sizeHeroVideo());
 
 window.app = app;
 document.addEventListener('DOMContentLoaded', () => app.init());
+
