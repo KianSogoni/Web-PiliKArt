@@ -1162,7 +1162,7 @@ const app = {
         this.renderCheckoutSummary();
     },
 
-    renderCheckoutSummary() {
+        renderCheckoutSummary() {
         const el = document.getElementById('checkout-summary');
         if (!el) return;
 
@@ -1189,19 +1189,19 @@ const app = {
                 <div class="sum-item">
                     <img class="sum-thumb" src="${this.esc(c.image || '')}" alt="">
                     <div class="sum-name">
-                        <b>${this.esc(c.name)}</b>
-                        ${c.variation ? `<br><small style="color:var(--brand); font-size:10px;">${this.esc(c.variation)}</small>` : ''}
-                        <small>${c.qty} \u00D7 ${this.money(c.price)}</small>
+                        <b style="display:block; line-height:1.2; margin-bottom:2px;">${this.esc(c.name)}</b>
+                        ${c.variation ? `<div style="color:var(--brand); font-size:11px; font-weight:800; margin-bottom:2px;">${this.esc(c.variation)}</div>` : ''}
+                        <div style="color:var(--muted); font-size:12px; font-weight:700;">${c.qty} × ${this.money(c.price)}</div>
                     </div>
-                    <span class="sum-price">${this.money(c.price * c.qty)}</span>
+                    <span class="sum-price" style="align-self: flex-start; margin-top: 4px;">${this.money(c.price * c.qty)}</span>
                 </div>`).join('') + `
                 <div class="protection-option">
                     <label class="cart-checkbox-wrap protection-checkbox-wrap">
                         <input type="checkbox" id="protection-checkbox" ${this.protectionEnabled ? 'checked' : ''} onchange="app.toggleProtection(this.checked)">
                         <span class="cart-checkbox-custom"></span>
                         <span class="protection-label">
-                            <b>Proteksyon sa spill/damage</b>
-                            <small>+${this.money(Math.ceil(subtotal / 200) * 50)} (₱50 kada ₱200 subtotal)</small>
+                            <b>Delivery Protection</b>
+                            <small>+${this.money(Math.ceil(subtotal / 200) * 50)} (₱50 per ₱200 subtotal)</small>
                         </span>
                     </label>
                 </div>
