@@ -74,18 +74,33 @@ header { position: sticky; top: 0; z-index: 40; background: color-mix(in srgb, v
 .home-btn-group { display: flex; gap: 15px; align-items: center; flex-wrap: wrap; }
 .warm-badge { display: inline-flex; background: var(--brand); border: 1px solid var(--brand-dark); color: #ffffff; padding: 6px 16px; border-radius: 99px; font-size: 12px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
 .home-carousel-col { display: flex; flex-direction: column; align-items: center; gap: 15px; width: 100%; max-width: 500px; margin: 0 auto; }
-.featured-label { font-family: "Baloo 2", sans-serif; font-size: 14px; font-weight: 800; letter-spacing: 0.2em; color: var(--brand); text-shadow: 0 2px 8px rgba(0,0,0,0.8); text-transform: uppercase; margin-bottom: 10px; }
-.carousel-3d-container { width: 100%; height: 500px; perspective: 1200px; position: relative; display: flex; justify-content: center; align-items: center; }
-.carousel-stage { position: relative; width: 280px; height: 440px; transform-style: preserve-3d; }
-.carousel-card { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-radius: 24px; overflow: hidden; box-shadow: 0 20px 50px rgba(80, 48, 20, 0.2); transition: transform var(--dur-xslow) var(--ease-smooth), opacity var(--dur-slow) ease, filter var(--dur-slow) ease; background: var(--surface2); border: 1.5px solid var(--line); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); display: flex; flex-direction: column; }
-.carousel-img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-bottom: 1.5px solid var(--line); }
-.carousel-glass-panel { position: relative; flex: 1; padding: 20px; display: flex; flex-direction: column; align-items: center; text-align: center; background: linear-gradient(to bottom, color-mix(in srgb, var(--surface) 60%, transparent) 0%, color-mix(in srgb, var(--surface) 90%, transparent) 100%); }
+.featured-label { font-family: "Baloo 2", sans-serif; font-size: 12px; font-weight: 800; letter-spacing: 0.1em; color: var(--brand); text-transform: uppercase; margin-bottom: 10px; text-align: center; }
+.glass-pill { 
+    background: rgba(255, 255, 255, 0.1); 
+    backdrop-filter: blur(10px); 
+    -webkit-backdrop-filter: blur(10px); 
+    padding: 8px 20px; 
+    border-radius: 12px; 
+    border: 1px solid rgba(255, 255, 255, 0.2); 
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1); 
+}
+[data-theme="sunset"] .glass-pill {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--amber);
+}
+.carousel-3d-container { width: 100%; height: 400px; perspective: 1200px; position: relative; display: flex; justify-content: center; align-items: center; }
+.carousel-stage { position: relative; width: 320px; height: 320px; transform-style: preserve-3d; }
+.carousel-card { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-radius: 30px; overflow: hidden; box-shadow: 0 20px 50px rgba(80, 48, 20, 0.2); transition: transform var(--dur-xslow) var(--ease-smooth), opacity var(--dur-slow) ease, filter var(--dur-slow) ease; background: rgba(255, 255, 255, 0.05) !important; border: 1px solid rgba(255, 255, 255, 0.2); backdrop-filter: blur(20px) saturate(150%); -webkit-backdrop-filter: blur(20px) saturate(150%); display: flex; flex-direction: column; }
+[data-theme="day"] .carousel-card { background: rgba(247, 236, 213, 0.6) !important; border: 1px solid rgba(255, 255, 255, 0.8); }
+.carousel-img { width: 100%; height: 150px; object-fit: cover; border-bottom: 1.5px solid var(--line); }
+.carousel-glass-panel { position: relative; flex: 1; padding: 16px; display: flex; flex-direction: column; align-items: center; text-align: center; background: transparent !important; }
 .carousel-badge { background: color-mix(in srgb, var(--brand) 20%, transparent); border: 1px solid var(--brand); color: var(--brand); font-size: 10px; font-weight: 800; padding: 4px 12px; border-radius: 99px; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 12px; }
-.carousel-title { font-family: "Baloo 2", sans-serif; font-size: 22px; color: var(--ink); line-height: 1.2; margin-bottom: 10px; text-shadow: 0 2px 4px rgba(255,255,255,0.2); }
+.carousel-title { font-family: "Baloo 2", sans-serif; font-size: 20px; color: var(--ink); line-height: 1.2; margin-bottom: 10px; text-shadow: 0 2px 4px rgba(255,255,255,0.2); }
 .carousel-desc { font-size: 13px; color: var(--muted); line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 4; line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; margin-bottom: 0; font-weight: 600; }
-.carousel-card.active { transform: translateX(0) translateZ(0) scale(1); z-index: 3; opacity: 1; box-shadow: 0 0 40px rgba(240, 169, 59, 0.2), 0 20px 50px rgba(80, 48, 20, 0.3); border-color: var(--brand); }
-.carousel-card.prev { transform: translateX(-70%) translateZ(-100px) rotateY(25deg) scale(0.85); z-index: 2; opacity: 0.6; filter: blur(2px) brightness(0.8); }
-.carousel-card.next { transform: translateX(70%) translateZ(-100px) rotateY(-25deg) scale(0.85); z-index: 2; opacity: 0.6; filter: blur(2px) brightness(0.8); }
+.carousel-card.active { transform: translateX(0) translateZ(0) scale(1.05); z-index: 3; opacity: 1; box-shadow: 0 0 40px rgba(240, 169, 59, 0.2), 0 20px 50px rgba(80, 48, 20, 0.3); border-color: var(--brand); }
+.carousel-card.prev { transform: translateX(-60%) translateZ(-100px) rotateY(25deg) scale(0.85); z-index: 2; opacity: 0.6; filter: blur(2px) brightness(0.8); }
+.carousel-card.next { transform: translateX(60%) translateZ(-100px) rotateY(-25deg) scale(0.85); z-index: 2; opacity: 0.6; filter: blur(2px) brightness(0.8); }
 .carousel-card.hidden { transform: translateX(0) translateZ(-300px) scale(0.5); z-index: 1; opacity: 0; pointer-events: none; }
 .carousel-dots { display: flex; gap: 8px; justify-content: center; margin-top: 15px; }
 .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--line); cursor: pointer; transition: all var(--dur-mid) var(--ease-smooth); }
@@ -181,7 +196,7 @@ header { position: sticky; top: 0; z-index: 40; background: color-mix(in srgb, v
 .nav-drawer-links a small { color: var(--muted); font-size: 11px; font-weight: 700; }
 .nav-drawer-footer { padding: 20px; background: var(--surface2); border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 12px; }
 .nd-toggle-wrap { background: var(--bg); border-radius: 99px; display: flex; position: relative; padding: 4px; cursor: pointer; border: 1px solid var(--line); }
-.nd-toggle-pill { position: absolute; top: 4px; bottom: 4px; left: 4px; width: calc(50% - 4px); background: var(--brand); border-radius: 99px; transition: transform var(--dur-mid) var(--ease-smooth); z-index: 1; }
+.nd-toggle-pill { position: absolute; top: 4px; bottom: 4px; left: 4px; width: calc(50% - 4px); background: var(--leaf); border-radius: 99px; transition: transform var(--dur-mid) var(--ease-smooth); z-index: 1; }
 .nd-toggle-wrap.is-sunset .nd-toggle-pill { transform: translateX(100%); }
 .nd-toggle-option { flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 8px; position: relative; z-index: 2; font-size: 12px; font-weight: 800; font-family: "Baloo 2", sans-serif; color: var(--muted); transition: color var(--dur-mid); }
 .nd-toggle-wrap:not(.is-sunset) #nd-opt-day, .nd-toggle-wrap.is-sunset #nd-opt-sunset { color: var(--ink); }
@@ -247,9 +262,10 @@ header { position: sticky; top: 0; z-index: 40; background: color-mix(in srgb, v
 table { width: 100%; border-collapse: collapse; margin-top: 15px; }
 th, td { padding: 12px; text-align: left; border-bottom: 1px solid var(--line); font-size: 14px; transition: background var(--dur-fast); }
 th { background: var(--surface2); font-weight: 800; text-transform: uppercase; font-size: 11px; }
-#pilibot-btn { position: fixed; bottom: 25px; right: 25px; z-index: 90; background: var(--leaf); color: white; border: none; border-radius: 50%; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 15px rgba(80, 48, 20, 0.3); transition: transform var(--dur-mid) var(--ease-smooth), background var(--dur-mid), box-shadow var(--dur-mid); }
+#pilibot-btn { position: fixed; bottom: 25px; right: 25px; z-index: 90; background: var(--leaf); color: white; border: none; border-radius: 50%; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 15px rgba(80, 48, 20, 0.3); transition: transform var(--dur-mid) var(--ease-smooth), background var(--dur-mid), box-shadow var(--dur-mid); animation: floatyBot 3s ease-in-out infinite; }
 #pilibot-btn:hover { transform: translateY(-4px) scale(1.05); background: color-mix(in srgb, var(--leaf) 80%, black); box-shadow: 0 8px 24px rgba(80, 48, 20, 0.4); }
-.pilibot-btn-icon { width: 32px; height: 32px; fill: currentColor; }
+@keyframes floatyBot { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+.pilibot-btn-icon { width: 36px; height: 36px; fill: currentColor; }
 #pilibot-window { position: fixed; bottom: 95px; right: 25px; width: 320px; height: 450px; background: var(--surface); border: 2px solid var(--leaf); border-radius: 20px; display: flex; flex-direction: column; z-index: 90; overflow: hidden; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2); animation: modalIn var(--dur-slow) var(--ease-smooth) both; }
 .pb-head { background: var(--leaf); color: white; padding: 12px 15px; font-weight: 800; display: flex; justify-content: space-between; align-items: center; }
 .pb-chat { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; font-size: 13px; }
@@ -270,14 +286,16 @@ th { background: var(--surface2); font-weight: 800; text-transform: uppercase; f
 .auth-toggle-slider { background: var(--bg); border-radius: 99px; display: flex; position: relative; padding: 4px; margin-bottom: 20px; }
 .auth-toggle-btn { flex: 1; background: none; border: 0; padding: 10px; position: relative; z-index: 2; cursor: pointer; font-family: "Baloo 2", sans-serif; font-weight: 800; font-size: 14px; color: var(--muted); transition: color var(--dur-mid) ease; }
 .auth-toggle-btn.active { color: var(--ink); }
-.auth-slider-bg { position: absolute; top: 4px; bottom: 4px; left: 4px; width: calc(50% - 4px); z-index: 1; background: var(--brand); border-radius: 99px; transition: transform var(--dur-mid) var(--ease-smooth); }
+.auth-slider-bg { position: absolute; top: 4px; bottom: 4px; left: 4px; width: calc(50% - 4px); z-index: 1; background: var(--leaf); border-radius: 99px; transition: transform var(--dur-mid) var(--ease-smooth); }
 .auth-toggle-slider.is-signup .auth-slider-bg { transform: translateX(100%); }
 .auth-input { width: 100%; margin-bottom: 10px; padding: 12px 16px; border-radius: 16px; outline: none; background: var(--bg); border: 1.5px solid var(--line); color: var(--ink); font-weight: 600; font-size: 13px; transition: all var(--dur-mid) var(--ease-smooth); }
 .auth-input:focus { border-color: var(--brand); box-shadow: 0 0 0 4px rgba(230, 126, 60, 0.15); }
 .auth-pass-wrap { position: relative; }
 .auth-pass-wrap .auth-input { padding-right: 46px; }
-.auth-eye { position: absolute; right: 8px; top: 5px; width: 32px; height: 32px; border-radius: 50%; border: 0; background: transparent; cursor: pointer; font-size: 15px; opacity: .65; transition: opacity var(--dur-fast); }
-.auth-eye:hover { opacity: 1; }
+.auth-eye { position: absolute; right: 8px; top: 5px; width: 32px; height: 32px; border-radius: 50%; border: 0; background: transparent; cursor: pointer; font-size: 15px; opacity: .65; transition: opacity var(--dur-fast); display: flex; align-items: center; justify-content: center; color: var(--muted); }
+.auth-eye:hover { opacity: 1; color: var(--brand); }
+.auth-eye svg { transition: transform 0.2s ease; }
+.auth-eye:active svg { transform: scale(0.85); }
 .auth-error { min-height: 0; max-height: 0; overflow: hidden; opacity: 0; text-align: center; color: #ff9a85; font-size: 12px; font-weight: 800; transition: all var(--dur-mid) var(--ease-smooth); }
 .auth-error.show { max-height: 44px; opacity: 1; margin: 0 0 10px; }
 .auth-submit-btn { width: 100%; padding: 12px; border: 0; border-radius: 99px; cursor: pointer; background: var(--brand); color: #fff; font-family: "Baloo 2", sans-serif; font-weight: 800; font-size: 14px; transition: all var(--dur-mid) var(--ease-smooth); }
@@ -633,89 +651,9 @@ select.input {
 .protection-label { display: flex; flex-direction: column; gap: 3px; line-height: 1.35; margin-left: 2px; }
 .protection-label b { font-size: 14px; color: var(--ink); font-weight: 800; }
 .protection-label small { font-size: 12px; color: var(--muted); font-weight: 600; }
-/* =========================================
-   FIXES & POLISH
-   ========================================= */
 
-/* 1. Toggle Text White when Active */
-.nd-toggle-wrap:not(.is-sunset) #nd-opt-day span,
-.nd-toggle-wrap:not(.is-sunset) #nd-opt-day svg,
-.nd-toggle-wrap.is-sunset #nd-opt-sunset span,
-.nd-toggle-wrap.is-sunset #nd-opt-sunset svg {
-    color: #ffffff !important;
-    stroke: #ffffff !important;
-}
-
-/* 2. Smoother Animations & Button Spinner */
-.btn { transition: all 0.25s cubic-bezier(0.25, 1, 0.5, 1); }
-.btn:active:not(:disabled) { transform: scale(0.96) translateY(0); }
-.btn.loading { pointer-events: none; opacity: 0.8; }
-.btn.loading::after {
-    content: "";
-    width: 16px;
-    height: 16px;
-    border: 2px solid currentColor;
-    border-top-color: transparent;
-    border-radius: 50%;
-    animation: spin 0.6s linear infinite;
-    display: inline-block;
-    margin-left: 8px;
-    vertical-align: middle;
-}
-@keyframes spin { to { transform: rotate(360deg); } }
-
-/* 3. Carousel Size: Glass & Square */
-.carousel-3d-container { 
-    height: 400px; 
-    perspective: 1200px; 
-}
-.carousel-stage { 
-    width: 320px; 
-    height: 320px; /* Square aspect */
-    transform-style: preserve-3d; 
-}
-.carousel-card { 
-    border-radius: 30px; 
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    background: rgba(255, 255, 255, 0.05) !important;
-    backdrop-filter: blur(20px) saturate(150%);
-    -webkit-backdrop-filter: blur(20px) saturate(150%);
-    box-shadow: 0 20px 40px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.2);
-}
-[data-theme="day"] .carousel-card {
-    background: rgba(247, 236, 213, 0.6) !important;
-    border: 1px solid rgba(255, 255, 255, 0.8);
-}
-.carousel-img { 
-    height: 150px; /* Fixed height for square card */
-}
-.carousel-glass-panel { 
-    background: transparent !important; 
-    padding: 16px; 
-}
-.carousel-card.active { 
-    transform: translateX(0) translateZ(0) scale(1.05); 
-}
-.carousel-card.prev { 
-    transform: translateX(-60%) translateZ(-100px) rotateY(25deg) scale(0.85); 
-}
-.carousel-card.next { 
-    transform: translateX(60%) translateZ(-100px) rotateY(-25deg) scale(0.85); 
-}
-
-/* 4. Auth Eye Icon tweaks */
-.auth-eye {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--muted);
-}
-.auth-eye:hover {
-    color: var(--brand);
-}
-.auth-eye svg {
-    transition: transform 0.2s ease;
-}
-.auth-eye:active svg {
-    transform: scale(0.85);
-}
+/* General Slide bar should be green */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--surface2); }
+::-webkit-scrollbar-thumb { background: var(--leaf); border-radius: 5px; }
+::-webkit-scrollbar-thumb:hover { background: var(--brand); }

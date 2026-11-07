@@ -65,6 +65,7 @@ const app = {
     },
 
     carouselIndex: 0,
+    carouselTimer: null,
     departments: [
         {
             name: "PASO",
@@ -124,13 +125,45 @@ const app = {
         this.updateNavDrawerAuthUI();
         this.sizeHeroVideo();
         this.initLeavesAnimation();
+        this.checkCartStock();
 
-        setInterval(() => {
+        if (this.carouselTimer) clearInterval(this.carouselTimer);
+        this.carouselTimer = setInterval(() => {
             if (!document.getElementById('view-home').classList.contains('hidden')) {
                 this.carouselIndex = (this.carouselIndex + 1) % this.departments.length;
                 this.renderCarousel();
             }
         }, 7000);
+    },
+
+    checkCartStock() {
+        if (!this.products.length || !this.cart.length) return;
+
+        const missing = [];
+        this.cart.forEach(c => {
+            const p = this.products.find(x => x.id === c.id);
+            if (!p || p.stock <= 0 || p.stock < c.qty) {
+                missing.push(c.name);
+            }
+        });
+
+        if (missing.length > 0) {
+            const listEl = document.getElementById('stock-alert-list');
+            if (listEl) {
+                listEl.innerHTML = missing.map(name => `<li>${this.esc(name)}</li>`).join('');
+            }
+            document.getElementById('stock-alert-modal').classList.remove('hidden');
+        }
+    },
+
+    removeOutOfStockItems() {
+        this.cart = this.cart.filter(c => {
+            const p = this.products.find(x => x.id === c.id);
+            return p && p.stock > 0 && p.stock >= c.qty;
+        });
+        this.saveCart();
+        document.getElementById('stock-alert-modal').classList.add('hidden');
+        this.showToast('Inalis na ang mga kulang/ubos na items sa cart mo.');
     },
 
     formatAddress(addrStr) {
@@ -267,7 +300,6 @@ const app = {
         this.currentView = view;
         if (!bare) window.scrollTo({ top: 0 });
 
-        // Hide PiliBot on landing/auth pages
         const botBtn = document.getElementById('pilibot-btn');
         if (botBtn) botBtn.style.display = bare ? 'none' : 'flex';
 
@@ -1400,7 +1432,7 @@ const app = {
         if (!this.user || this.user.role !== 'admin') return;
 
         let sales = this.orders.reduce((s, o) => s + parseInt(o.total), 0);
-        // Fixed to use Peso symbol \u20B1
+        // Uses Peso sign properly
         document.getElementById('stat-sales').textContent = '\u20B1' + sales.toLocaleString();
         document.getElementById('stat-orders').textContent = this.orders.length;
 

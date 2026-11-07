@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PiliKart — Good finds. Galing Pinoy.</title>
     <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito:wght@600;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=5">
+    <link rel="stylesheet" href="styles.css?v=6">
 </head>
 <body>
  
@@ -79,7 +79,7 @@
 
                 <!-- Department Carousel Column -->
                 <div class="home-carousel-col">
-                    <div class="featured-label">Featured Items</div>
+                    <div class="featured-label glass-pill">where you can choose to your heart's desires</div>
                     <div class="carousel-3d-container">
                         <div class="carousel-stage" id="carousel-card-container">
                             <!-- Populated dynamically via JS -->
@@ -506,7 +506,6 @@
 
         <div class="faq-cta">
             <h3>Hindi mo nahanap ang sagot?</h3>
-            <!-- Changed to btn-leaf for green -->
             <button class="btn btn-leaf btn-large" onclick="app.toggleBot()">
                 <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1H2a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2M7.5 13a1.5 1.5 0 0 0-1.5 1.5A1.5 1.5 0 0 0 7.5 16a1.5 1.5 0 0 0 1.5-1.5A1.5 1.5 0 0 0 7.5 13m9 0a1.5 1.5 0 0 0-1.5 1.5a1.5 1.5 0 0 0 1.5 1.5a1.5 1.5 0 0 0 1.5-1.5a1.5 1.5 0 0 0-1.5-1.5m-4.5 2c-1.5 0-3 .67-3 2h6c0-1.33-1.5-2-3-2z"/></svg>
                 Itanong kay PiliBot
@@ -736,7 +735,12 @@
     <!-- ACCOUNT VIEW -->
     <div id="view-account" class="hidden max-w page-wrap">
         <div class="page-head">
-            <h1>My Account</h1>
+            <h1>
+                <span class="head-ic" style="background:linear-gradient(135deg, #a9744a, #8a5c38); color:#fbeed4;">
+                    <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                </span> 
+                My Account
+            </h1>
             <p>I-update ang iyong impormasyon at pamahalaan ang seguridad ng account.</p>
         </div>
         
@@ -811,13 +815,23 @@
  
     <!-- ADMIN DASHBOARD -->
     <div id="view-admin" class="hidden max-w" style="padding-top:20px; padding-bottom: 60px;">
-        <h2>Owner Dashboard</h2>
+        <div class="page-head">
+            <h1>
+                <span class="head-ic" style="background:linear-gradient(135deg, #a9744a, #8a5c38); color:#fbeed4;">
+                    <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+                </span>
+                Owner Dashboard
+            </h1>
+        </div>
         
         <!-- Stats Cards -->
         <div class="admin-stats-grid" style="margin:20px 0;">
             <div class="card stat-card">
                 <div class="stat-icon sales-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                    <!-- Peso Sign SVG -->
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M7 21V3h5.5a5.5 5.5 0 0 1 0 11H7M3 8h8M3 13h8"/>
+                    </svg>
                 </div>
                 <div>
                     <h3>Total Sales</h3>
@@ -1085,18 +1099,40 @@
         <button class="btn btn-ghost" style="width:100%;" onclick="app.closeModal('proof-modal')">Close</button>
     </div>
 </div>
+
+<!-- Stock Alert Modal -->
+<div id="stock-alert-modal" class="modal hidden">
+    <div class="modal-content" style="text-align:center;">
+        <div style="width:60px;height:60px;border-radius:50%;background:var(--amber);color:white;display:flex;align-items:center;justify-content:center;margin:0 auto 15px;">
+            <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        </div>
+        <h3 style="margin-bottom:15px; font-size:22px;">Stock Update</h3>
+        <p style="color:var(--muted); font-size:14px; margin-bottom:20px; line-height:1.6;">Ang mga sumusunod na item sa cart mo ay ubos na o kulang na ang stock. Kailangan itong alisin para makatuloy ka sa checkout.</p>
+        <ul id="stock-alert-list" style="text-align:left; margin-bottom:20px; padding-left:20px; font-size:14px; font-weight:700; color:var(--ink); line-height:1.8;"></ul>
+        <button class="btn btn-brand btn-block" onclick="app.removeOutOfStockItems()">Alisin ang mga Item</button>
+    </div>
+</div>
  
 <!-- PiliBot Floating Button -->
 <button id="pilibot-btn" onclick="app.toggleBot()" aria-label="PiliBot">
     <svg class="pilibot-btn-icon" viewBox="0 0 24 24">
-        <path fill="currentColor" d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1H2a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2M7.5 13a1.5 1.5 0 0 0-1.5 1.5A1.5 1.5 0 0 0 7.5 16a1.5 1.5 0 0 0 1.5-1.5A1.5 1.5 0 0 0 7.5 13m9 0a1.5 1.5 0 0 0-1.5 1.5a1.5 1.5 0 0 0 1.5 1.5a1.5 1.5 0 0 0 1.5-1.5a1.5 1.5 0 0 0-1.5-1.5m-4.5 2c-1.5 0-3 .67-3 2h6c0-1.33-1.5-2-3-2z"/>
+        <!-- Cute Happy Robot Face -->
+        <path fill="currentColor" d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1H2a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2Z"/>
+        <circle cx="9" cy="12" r="1.5" fill="var(--leaf)"/>
+        <circle cx="15" cy="12" r="1.5" fill="var(--leaf)"/>
+        <path d="M9 15.5s1 1.5 3 1.5 3-1.5 3-1.5" fill="none" stroke="var(--leaf)" stroke-width="1.5" stroke-linecap="round"/>
     </svg>
 </button>
 
 <div id="pilibot-window" class="hidden">
     <div class="pb-head">
         <div style="display:flex; align-items:center; gap:6px;">
-            <svg style="width:18px; height:18px;" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1H2a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2M7.5 13a1.5 1.5 0 0 0-1.5 1.5A1.5 1.5 0 0 0 7.5 16a1.5 1.5 0 0 0 1.5-1.5A1.5 1.5 0 0 0 7.5 13m9 0a1.5 1.5 0 0 0-1.5 1.5a1.5 1.5 0 0 0 1.5 1.5a1.5 1.5 0 0 0 1.5-1.5a1.5 1.5 0 0 0-1.5-1.5m-4.5 2c-1.5 0-3 .67-3 2h6c0-1.33-1.5-2-3-2z"/></svg>
+            <svg style="width:18px; height:18px;" viewBox="0 0 24 24">
+                <path fill="currentColor" d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1H2a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2Z"/>
+                <circle cx="9" cy="12" r="1.5" fill="var(--leaf)"/>
+                <circle cx="15" cy="12" r="1.5" fill="var(--leaf)"/>
+                <path d="M9 15.5s1 1.5 3 1.5 3-1.5 3-1.5" fill="none" stroke="var(--leaf)" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
             <span>PiliBot Assistant</span>
         </div>
         <span style="cursor:pointer; font-size:16px;" onclick="app.toggleBot()">✕</span>
@@ -1212,6 +1248,6 @@
 <!-- Toast -->
 <div id="toast"></div>
  
-<script src="main.js?v=5"></script>
+<script src="main.js?v=6"></script>
 </body>
 </html>
