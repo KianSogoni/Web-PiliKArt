@@ -175,17 +175,40 @@ switch ($action) {
             $prods = array_column($stmt->fetchAll(), null, 'id');
  
             $subtotal = 0; $lines = [];
+            $hasPaso = false;
             foreach ($items as $it) {
                 $p = $prods[$it['id']] ?? null;
                 if (!$p || $p['sold_out'] || $p['stock'] < $it['qty']) out(['error' => "Kulang ang stock."], 400);
+                if (strtolower($p['category']) === 'paso') $hasPaso = true;
                 $subtotal += $p['price'] * $it['qty'];
                 $lines[] = ['id' => $p['id'], 'name' => $p['name'], 'price' => $p['price'], 'qty' => $it['qty']];
             }
-            $fee = (int)$pdo->query("SELECT `value` FROM settings WHERE `key`='delivery_fee'")->fetchColumn();
+
+            // PASO restriction — food items deliverable only within Calamba
+            $address = (string)($in['address'] ?? '');
+            if ($hasPaso && stripos($address, 'Calamba') === false) {
+                out(['error' => 'Ang PASO (pagkain) items ay pwede lang i-deliver sa loob ng Calamba, Laguna.'], 400);
+            }
+
+            $fee = isset($in['fee']) ? (int)$in['fee'] : (int)$pdo->query("SELECT `value` FROM settings WHERE `key`='delivery_fee'")->fetchColumn();
+            $protectionFee = isset($in['protection_fee']) ? (int)$in['protection_fee'] : 0;
+            if ($protectionFee < 0) $protectionFee = 0;
+            $total = $subtotal + $fee + $protectionFee;
  
             $pdo->beginTransaction();
-            $stmt = $pdo->prepare('INSERT INTO orders (user_id, customer_name, phone, address, payment, payment_proof, subtotal, delivery_fee, total) VALUES (?,?,?,?,?,?,?,?,?)');
-            $stmt->execute([$_SESSION['user_id'] ?? null, $in['name'], $in['phone'] ?? '', $in['address'], ($in['payment'] ?? 'cod') === 'gcash' ? 'gcash' : 'cod', $in['proof'] ?? '', $subtotal, $fee, $subtotal + $fee]);
+            $stmt = $pdo->prepare('INSERT INTO orders (user_id, customer_name, phone, address, payment, payment_proof, subtotal, delivery_fee, protection_fee, total) VALUES (?,?,?,?,?,?,?,?,?,?)');
+            $stmt->execute([
+                $_SESSION['user_id'] ?? null,
+                $in['name'],
+                $in['phone'] ?? '',
+                $address,
+                ($in['payment'] ?? 'cod') === 'gcash' ? 'gcash' : 'cod',
+                $in['proof'] ?? '',
+                $subtotal,
+                $fee,
+                $protectionFee,
+                $total
+            ]);
             $oid = $pdo->lastInsertId();
  
             $oiStmt = $pdo->prepare('INSERT INTO order_items (order_id, product_id, name, price, qty) VALUES (?,?,?,?,?)');
