@@ -74,7 +74,7 @@ header { position: sticky; top: 0; z-index: 40; background: color-mix(in srgb, v
 .home-btn-group { display: flex; gap: 15px; align-items: center; flex-wrap: wrap; }
 .warm-badge { display: inline-flex; background: var(--brand); border: 1px solid var(--brand-dark); color: #ffffff; padding: 6px 16px; border-radius: 99px; font-size: 12px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
 .home-carousel-col { display: flex; flex-direction: column; align-items: center; gap: 15px; width: 100%; max-width: 500px; margin: 0 auto; }
-.featured-label { font-family: "Baloo 2", sans-serif; font-size: 12px; font-weight: 800; letter-spacing: 0.1em; color: var(--brand); text-transform: uppercase; margin-bottom: 10px; text-align: center; }
+.featured-label { font-family: "Baloo 2", sans-serif; font-size: 12px; font-weight: 800; letter-spacing: 0.1em; color: #ffffff; text-transform: uppercase; margin-bottom: 10px; text-align: center; }
 .glass-pill { 
     background: rgba(255, 255, 255, 0.1); 
     backdrop-filter: blur(10px); 
@@ -199,7 +199,25 @@ header { position: sticky; top: 0; z-index: 40; background: color-mix(in srgb, v
 .nd-toggle-pill { position: absolute; top: 4px; bottom: 4px; left: 4px; width: calc(50% - 4px); background: var(--leaf); border-radius: 99px; transition: transform var(--dur-mid) var(--ease-smooth); z-index: 1; }
 .nd-toggle-wrap.is-sunset .nd-toggle-pill { transform: translateX(100%); }
 .nd-toggle-option { flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 8px; position: relative; z-index: 2; font-size: 12px; font-weight: 800; font-family: "Baloo 2", sans-serif; color: var(--muted); transition: color var(--dur-mid); }
-.nd-toggle-wrap:not(.is-sunset) #nd-opt-day, .nd-toggle-wrap.is-sunset #nd-opt-sunset { color: var(--ink); }
+/* Toggle Active State (White text) */
+.nd-toggle-wrap:not(.is-sunset) #nd-opt-day,
+.nd-toggle-wrap.is-sunset #nd-opt-sunset {
+    color: #ffffff !important;
+}
+.nd-toggle-wrap:not(.is-sunset) #nd-opt-day svg,
+.nd-toggle-wrap.is-sunset #nd-opt-sunset svg {
+    stroke: #ffffff !important;
+}
+
+/* Toggle Inactive State (Muted text) */
+.nd-toggle-wrap:not(.is-sunset) #nd-opt-sunset,
+.nd-toggle-wrap.is-sunset #nd-opt-day {
+    color: var(--muted) !important;
+}
+.nd-toggle-wrap:not(.is-sunset) #nd-opt-sunset svg,
+.nd-toggle-wrap.is-sunset #nd-opt-day svg {
+    stroke: var(--muted) !important;
+}
 .drawer { position: fixed; inset: 0; z-index: 150; background: rgba(0, 0, 0, 0.4); display: flex; justify-content: flex-end; animation: fadeIn var(--dur-mid) var(--ease-smooth) both; }
 .drawer-panel { width: 100%; max-width: 400px; background: var(--bg); padding: 20px; display: flex; flex-direction: column; height: 100%; overflow-y: auto; animation: slideIn var(--dur-slow) var(--ease-smooth) both; box-shadow: -20px 0 60px rgba(0, 0, 0, 0.2); }
 @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
@@ -657,3 +675,107 @@ select.input {
 ::-webkit-scrollbar-track { background: var(--surface2); }
 ::-webkit-scrollbar-thumb { background: var(--leaf); border-radius: 5px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--brand); }
+/* =========================================
+   PILIBOT CUTE CIRCLE & ANIMATIONS
+   ========================================= */
+
+#pilibot-btn {
+    position: fixed;
+    bottom: 25px;
+    right: 25px;
+    z-index: 90;
+    background: linear-gradient(135deg, #e67e3c 0%, #d95b33 100%) !important;
+    border: 2px solid #ffffff;
+    border-radius: 50%;
+    width: 70px;
+    height: 70px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 8px 24px rgba(217, 91, 51, 0.4);
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s;
+    animation: floatyBot 4s ease-in-out infinite;
+}
+
+#pilibot-btn:hover {
+    transform: scale(1.1) translateY(-5px);
+    box-shadow: 0 12px 30px rgba(217, 91, 51, 0.6);
+    animation-play-state: paused;
+}
+
+#pilibot-btn:active {
+    transform: scale(0.9) translateY(2px) !important;
+    animation: none !important;
+}
+
+/* Icon Wrapping and Morphing */
+.pilibot-icon-wrap {
+    position: relative;
+    width: 85%;
+    height: 85%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.pilibot-svg {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.leaf-icon {
+    opacity: 0;
+    transform: scale(0.5) rotate(-45deg);
+}
+
+#pilibot-btn.is-leaf .bot-icon {
+    opacity: 0;
+    transform: scale(0.5) rotate(45deg);
+}
+
+#pilibot-btn.is-leaf .leaf-icon {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+}
+
+/* Look side to side every 3 seconds */
+@keyframes lookAround {
+    0%, 20%, 100% { transform: translateX(0); }
+    40%, 60% { transform: translateX(-4px); }
+    80% { transform: translateX(4px); }
+}
+
+.bot-face {
+    animation: lookAround 3s ease-in-out infinite;
+}
+
+/* Floating heart animation */
+#pilibot-heart-container {
+    position: absolute;
+    top: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    pointer-events: none;
+    z-index: 100;
+}
+
+.floating-heart {
+    position: absolute;
+    font-size: 22px;
+    animation: floatHeart 1s ease-out forwards;
+    user-select: none;
+}
+
+@keyframes floatHeart {
+    0% { transform: translate(-50%, 0) scale(0.5); opacity: 0; }
+    30% { transform: translate(-50%, -20px) scale(1.2); opacity: 1; }
+    100% { transform: translate(-50%, -55px) scale(1); opacity: 0; }
+}
+
+@keyframes floatyBot {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    50% { transform: translateY(-8px) rotate(2deg); }
+}

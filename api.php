@@ -195,7 +195,13 @@ switch ($action) {
                 if (!$p || $p['sold_out'] || $p['stock'] < $it['qty']) out(['error' => "Kulang ang stock."], 400);
                 if (strtolower($p['category']) === 'paso') $hasPaso = true;
                 $subtotal += $p['price'] * $it['qty'];
-                $lines[] = ['id' => $p['id'], 'name' => $p['name'], 'price' => $p['price'], 'qty' => $it['qty']];
+                $lines[] = [
+                    'id' => $p['id'], 
+                    'name' => $p['name'], 
+                    'price' => $p['price'], 
+                    'qty' => $it['qty'],
+                    'variation' => $it['variation'] ?? '' // NEW
+                ];
             }
 
             // PASO restriction — food items deliverable only within Calamba
@@ -225,10 +231,10 @@ switch ($action) {
             ]);
             $oid = $pdo->lastInsertId();
  
-            $oiStmt = $pdo->prepare('INSERT INTO order_items (order_id, product_id, name, price, qty) VALUES (?,?,?,?,?)');
+            $oiStmt = $pdo->prepare('INSERT INTO order_items (order_id, product_id, name, price, qty, variation) VALUES (?,?,?,?,?,?)'); // NEW
             $upStmt = $pdo->prepare('UPDATE products SET stock = stock - ?, sold_out = (stock <= 0) WHERE id = ?');
             foreach ($lines as $l) {
-                $oiStmt->execute([$oid, $l['id'], $l['name'], $l['price'], $l['qty']]);
+                $oiStmt->execute([$oid, $l['id'], $l['name'], $l['price'], $l['qty'], $l['variation']]); // NEW
                 $upStmt->execute([$l['qty'], $l['id']]);
             }
             if (!empty($_SESSION['user_id'])) {
@@ -279,7 +285,7 @@ switch ($action) {
         $cat = strtolower(trim($in['category'] ?? 'paso'));
         if (!in_array($cat, ['paso', 'nipa', 'habi', 'apollo'], true)) $cat = 'paso';
 
-        $stmt = $pdo->prepare('UPDATE products SET name=?, tagline=?, description=?, price=?, category=?, image=?, stock=?, sold_out=?, best_seller=?, tags=? WHERE id=?');
+        $stmt = $pdo->prepare('UPDATE products SET name=?, tagline=?, description=?, price=?, category=?, image=?, stock=?, sold_out=?, best_seller=?, tags=?, options=? WHERE id=?');
         $stmt->execute([
             $name,
             trim($in['tagline'] ?? ''),
@@ -291,6 +297,7 @@ switch ($action) {
             $stock <= 0 ? 1 : 0,
             (int)($in['best_seller'] ?? 0),
             trim($in['tags'] ?? ''),
+            trim($in['options'] ?? ''), // NEW
             $pid
         ]);
         out(['ok' => true]);
@@ -300,7 +307,7 @@ switch ($action) {
         out(['ok' => true]);
  
     case 'admin-add-product':
-        $stmt = $pdo->prepare('INSERT INTO products (name,tagline,description,price,category,image,stock,best_seller,tags) VALUES (?,?,?,?,?,?,?,?,?)');
+        $stmt = $pdo->prepare('INSERT INTO products (name,tagline,description,price,category,image,stock,best_seller,tags,options) VALUES (?,?,?,?,?,?,?,?,?,?)');
         $stmt->execute([
             $in['name'], 
             $in['tagline'], 
@@ -310,7 +317,8 @@ switch ($action) {
             $in['image'], 
             $in['stock'], 
             (int)($in['best_seller'] ?? 0),
-            $in['tags']
+            $in['tags'],
+            $in['options'] ?? '' // NEW
         ]);
         out(['ok' => true]);
  

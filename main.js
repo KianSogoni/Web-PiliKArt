@@ -8,6 +8,34 @@ const app = {
         "Santa Rosa": { "Aplaya": 50, "Balibago": 45, "Caingin": 30, "Dila": 25, "Dita": 40, "Don Jose": 70, "Ibaba": 15, "Kanluran": 15, "Labas": 25, "Macabling": 40, "Malitlit": 60, "Malusak": 10, "Market Area": 10, "Pooc": 30, "Pulong Santa Cruz": 60, "Santo Domingo": 50, "Sinalhan": 45, "Tagapo": 20 }
     },
 
+    // Inside the app object, find tapPiliBot and replace it with this:
+    tapPiliBot() {
+        this.toggleBot();
+
+        const btn = document.getElementById('pilibot-btn');
+        const heartContainer = document.getElementById('pilibot-heart-container');
+
+        if (btn) {
+            // Trigger leaf morph animation
+            btn.classList.add('is-leaf');
+
+            // Spawn floating heart
+            if (heartContainer) {
+                const heart = document.createElement('div');
+                heart.className = 'floating-heart';
+                heart.innerHTML = '❤️';
+                heartContainer.appendChild(heart);
+                setTimeout(() => heart.remove(), 1000);
+            }
+
+            // Revert back to robot icon after 1.5 seconds
+            clearTimeout(this._piliLeafTimer);
+            this._piliLeafTimer = setTimeout(() => {
+                btn.classList.remove('is-leaf');
+            }, 1500);
+        }
+    },
+    
     initLeavesAnimation() {
         const container = document.getElementById('leaves-container');
         if (!container) return;
@@ -727,6 +755,31 @@ const app = {
         const box = document.getElementById('add-confirm-item-box');
         if (!box) return;
 
+        // Parse Options
+        let optionsHtml = '';
+        if (p.options) {
+            try {
+                const parsedOpts = JSON.parse(p.options);
+                for (const [groupName, choices] of Object.entries(parsedOpts)) {
+                    if (Array.isArray(choices) && choices.length > 0) {
+                        optionsHtml += `
+                            <div class="ci-option-group" style="margin-top: 12px;">
+                                <label style="font-size:12px; font-weight:800; color:var(--muted); margin-bottom:6px; display:block; text-transform:uppercase;">${groupName}</label>
+                                <div class="ci-radio-pills" style="display:flex; gap:8px; flex-wrap:wrap;">
+                                    ${choices.map((c, i) => `
+                                        <label class="ci-radio-label">
+                                            <input type="radio" name="opt_${groupName}" value="${this.esc(c)}" ${i === 0 ? 'checked' : ''}>
+                                            <span>${this.esc(c)}</span>
+                                        </label>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        `;
+                    }
+                }
+            } catch(e) { console.warn('Invalid options JSON', e); }
+        }
+
         const totalCost = p.price * this.pendingQty;
         const formattedUnit = Number(p.price).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         const formattedTotal = Number(totalCost).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -740,11 +793,8 @@ const app = {
                 </div>
             </div>
             <p class="ci-desc">${this.esc(p.description || '')}</p>
-            ${p.tags ? `
-            <div class="ci-tags-wrap">
-                ${p.tags.split(',').map(t => `<span class="ci-tag">${this.esc(t.trim())}</span>`).join('')}
-            </div>` : ''}
-            <div class="ci-controls-row">
+            ${optionsHtml}
+            <div class="ci-controls-row" style="margin-top:20px;">
                 <div class="qty-stepper">
                     <button class="qty-step-btn" onclick="app.adjustPendingQty(-1)">−</button>
                     <span class="qty-val">${this.pendingQty}</span>
@@ -769,12 +819,22 @@ const app = {
         if (!this.pendingCartItem) return;
         const p = this.pendingCartItem;
 
-        const item = this.cart.find(x => x.id === p.id);
+        // Gather selected options
+        const selectedOptions = [];
+        document.querySelectorAll('#add-confirm-item-box input[type="radio"]:checked').forEach(input => {
+            const groupName = input.name.replace('opt_', '');
+            selectedOptions.push(`${groupName}: ${input.value}`);
+        });
+        const variationStr = selectedOptions.join(', ');
+
+        // Check if the exact product + variation is already in the cart
+        const item = this.cart.find(x => x.id === p.id && (x.variation || '') === variationStr);
+        
         if (item) {
             item.qty += this.pendingQty;
             item.selected = true;
         } else {
-            this.cart.push({ ...p, qty: this.pendingQty, selected: true });
+            this.cart.push({ ...p, qty: this.pendingQty, selected: true, variation: variationStr });
         }
 
         this.saveCart();
@@ -782,7 +842,9 @@ const app = {
 
         const badge = document.getElementById('cart-badge');
         if (badge) { badge.classList.remove('bump'); void badge.offsetWidth; badge.classList.add('bump'); }
-        this.showToast(`${p.name} (${this.pendingQty}x) — nasa basket mo na!`);
+        
+        const varText = variationStr ? ` (${variationStr})` : '';
+        this.showToast(`${p.name}${varText} (${this.pendingQty}x) — nasa basket mo na!`);
     },
 
     closeAddModal() {
@@ -825,12 +887,13 @@ const app = {
                     <img class="cart-card-thumb" src="${this.esc(c.image || '')}" alt="${this.esc(c.name)}">
                     <div class="cart-card-info">
                         <b class="cart-card-title">${this.esc(c.name)}</b>
+                        ${c.variation ? `<small style="display:block; font-size:11px; color:var(--brand); margin-top:2px;">${this.esc(c.variation)}</small>` : ''}
                         <span class="cart-card-price">₱${(c.price * c.qty).toFixed(2)}</span>
                     </div>
                     <div class="cart-card-qty">
-                        <button class="qty-circle-btn" aria-label="${c.qty > 1 ? 'Bawasan' : 'Alisin'}" onclick="app.updateQty(${c.id}, -1)">−</button>
+                        <button class="qty-circle-btn" aria-label="${c.qty > 1 ? 'Bawasan' : 'Alisin'}" onclick="app.updateQty(${c.id}, ${c.variation ? `'${this.esc(c.variation)}'` : 'null'}, -1)">−</button>
                         <span class="qty-num">${c.qty}</span>
-                        <button class="qty-circle-btn" aria-label="Dagdagan" onclick="app.updateQty(${c.id}, 1)">+</button>
+                        <button class="qty-circle-btn" aria-label="Dagdagan" onclick="app.updateQty(${c.id}, ${c.variation ? `'${this.esc(c.variation)}'` : 'null'}, 1)">+</button>
                     </div>
                 </div>
             `).join('') || this.emptyState('cart', 'Ay, bakante pa ang cart mo!', 'Mukhang wala pang laman ang iyong cart. Mamili na ng paborito mo!', 'Tingnan ang Menu', 'app.toggleCart(); app.scrollToMenu();');
@@ -847,11 +910,11 @@ const app = {
         set('cart-total', total);
     },
 
-    updateQty(id, d) {
-        const i = this.cart.find(x => x.id === id);
+    updateQty(id, variation, d) {
+        const i = this.cart.find(x => x.id === id && (x.variation || '') === (variation || ''));
         if (i) {
             i.qty += d;
-            if (i.qty <= 0) this.cart = this.cart.filter(x => x.id !== id);
+            if (i.qty <= 0) this.cart = this.cart.filter(x => !(x.id === id && (x.variation || '') === (variation || '')));
             this.saveCart();
         }
     },
@@ -916,21 +979,22 @@ const app = {
         list.innerHTML = this.cart.map(c => `
             <div class="cart-page-item ${c.selected ? 'selected' : ''}">
                 <label class="cart-checkbox-wrap">
-                    <input type="checkbox" ${c.selected ? 'checked' : ''} onchange="app.toggleCartItem(${c.id})">
+                    <input type="checkbox" ${c.selected ? 'checked' : ''} onchange="app.toggleCartItem(${c.id}, ${c.variation ? `'${this.esc(c.variation)}'` : 'null'})">
                     <span class="cart-checkbox-custom"></span>
                 </label>
                 <img src="${this.esc(c.image || '')}" class="cart-page-img" alt="${this.esc(c.name)}">
                 <div class="cart-page-info">
                     <h4>${this.esc(c.name)}</h4>
+                    ${c.variation ? `<p style="font-size:12px; font-weight:800; color:var(--brand); margin-bottom:4px;">${this.esc(c.variation)}</p>` : ''}
                     <p class="cart-page-price">₱${Number(c.price || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })} bawat isa</p>
                     <p class="cart-page-subtotal-inline" style="font-weight:800; color:var(--brand); font-size:15px; margin-top:4px;">₱${(Number(c.price || 0) * c.qty).toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
                 </div>
                 <div class="cart-page-actions" style="display:flex; align-items:center; gap:8px; margin-left:auto;">
-                    <button class="qty-circle-btn" onclick="app.updateQty(${c.id}, 1)" title="Dagdagan">+</button>
+                    <button class="qty-circle-btn" onclick="app.updateQty(${c.id}, ${c.variation ? `'${this.esc(c.variation)}'` : 'null'}, 1)" title="Dagdagan">+</button>
                     <span class="qty-num" style="font-size:16px; font-weight:800; min-width:24px; text-align:center;">${c.qty}</span>
-                    <button class="qty-circle-btn" onclick="app.updateQty(${c.id}, -1)" title="Bawasan">−</button>
+                    <button class="qty-circle-btn" onclick="app.updateQty(${c.id}, ${c.variation ? `'${this.esc(c.variation)}'` : 'null'}, -1)" title="Bawasan">−</button>
                     <div style="width:1px; height:20px; background:var(--line); margin: 0 6px;"></div>
-                    <button class="qty-circle-btn" onclick="app.removeFromCart(${c.id})" style="color:#e5604d; border-color:rgba(229,96,77,0.3);" title="Alisin">
+                    <button class="qty-circle-btn" onclick="app.removeFromCart(${c.id}, ${c.variation ? `'${this.esc(c.variation)}'` : 'null'})" style="color:#e5604d; border-color:rgba(229,96,77,0.3);" title="Alisin">
                         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <polyline points="3 6 5 6 21 6"></polyline>
                             <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
@@ -943,8 +1007,8 @@ const app = {
         this.updateCartPageSummary();
     },
 
-    removeFromCart(id) {
-        this.cart = this.cart.filter(x => x.id !== id);
+    removeFromCart(id, variation) {
+        this.cart = this.cart.filter(x => !(x.id === id && (x.variation || '') === (variation || '')));
         this.saveCart();
     },
 
@@ -955,8 +1019,8 @@ const app = {
         }
     },
 
-    toggleCartItem(id) {
-        const item = this.cart.find(x => x.id === id);
+    toggleCartItem(id, variation) {
+        const item = this.cart.find(x => x.id === id && (x.variation || '') === (variation || ''));
         if (item) {
             item.selected = !item.selected;
             this.saveCart();
@@ -1011,7 +1075,11 @@ const app = {
             el.innerHTML = selectedCart.map(c => `
                 <div class="sum-item">
                     <img class="sum-thumb" src="${this.esc(c.image || '')}" alt="">
-                    <div class="sum-name"><b>${this.esc(c.name)}</b><small>${c.qty} \u00D7 ${this.money(c.price)}</small></div>
+                    <div class="sum-name">
+                        <b>${this.esc(c.name)}</b>
+                        ${c.variation ? `<br><small style="color:var(--brand); font-size:10px;">${this.esc(c.variation)}</small>` : ''}
+                        <small>${c.qty} \u00D7 ${this.money(c.price)}</small>
+                    </div>
                     <span class="sum-price">${this.money(c.price * c.qty)}</span>
                 </div>`).join('') + `
                 <div class="protection-option">
@@ -1140,7 +1208,7 @@ const app = {
         const protectionFee = this.protectionEnabled ? Math.ceil(subtotal / 200) * 50 : 0;
 
         const payload = {
-            items: selectedCart.map(c => ({ id: c.id, qty: c.qty })),
+            items: selectedCart.map(c => ({ id: c.id, qty: c.qty, variation: c.variation || '' })),
             name, phone: cleanPhone, address, payment,
             proof: this.gcashBase64,
             fee: this.fee,
@@ -1236,7 +1304,7 @@ const app = {
 
             <div class="items-card">
                 <h3>Mga napili mo</h3>
-                ${o.items.map(c => `<div class="sum-row item"><span>${c.qty}\u00D7 ${this.esc(c.name)}</span><span>${this.money(c.price * c.qty)}</span></div>`).join('')}
+                ${o.items.map(c => `<div class="sum-row item"><span>${c.qty}\u00D7 ${this.esc(c.name)} ${c.variation ? `<small>(${this.esc(c.variation)})</small>` : ''}</span><span>${this.money(c.price * c.qty)}</span></div>`).join('')}
                 <div class="sum-totals">
                     <div class="sum-row"><span>Shipping fee</span><span>${this.money(o.fee)}</span></div>
                     ${o.protectionFee ? `<div class="sum-row"><span>Protection fee</span><span>${this.money(o.protectionFee)}</span></div>` : ''}
@@ -1291,7 +1359,7 @@ const app = {
                             <div class="order-item-row">
                                 <div class="order-item-info">
                                     <span class="item-qty">${i.qty}x</span>
-                                    <span class="item-name">${this.esc(i.name)}</span>
+                                    <span class="item-name">${this.esc(i.name)} ${i.variation ? `<small style="color:var(--brand); font-size:11px;">(${this.esc(i.variation)})</small>` : ''}</span>
                                 </div>
                                 <span class="item-total">${this.money(i.price * i.qty)}</span>
                             </div>
@@ -1432,7 +1500,6 @@ const app = {
         if (!this.user || this.user.role !== 'admin') return;
 
         let sales = this.orders.reduce((s, o) => s + parseInt(o.total), 0);
-        // Uses Peso sign properly
         document.getElementById('stat-sales').textContent = '\u20B1' + sales.toLocaleString();
         document.getElementById('stat-orders').textContent = this.orders.length;
 
@@ -1502,7 +1569,7 @@ const app = {
                 </div>
 
                 <div class="admin-order-items">
-                    ${o.items.map(i => `<div class="admin-item-row"><span>${i.qty}x ${this.esc(i.name)}</span><span>${this.money(i.price * i.qty)}</span></div>`).join('')}
+                    ${o.items.map(i => `<div class="admin-item-row"><span>${i.qty}x ${this.esc(i.name)} ${i.variation ? `<small style="color:var(--brand);">(${this.esc(i.variation)})</small>` : ''}</span><span>${this.money(i.price * i.qty)}</span></div>`).join('')}
                 </div>
 
                 <div class="admin-order-footer">
@@ -1605,6 +1672,7 @@ const app = {
         $('pe-image').value = p.image || '';
         $('pe-tags').value = p.tags || '';
         $('pe-bestseller').checked = Number(p.best_seller) === 1;
+        $('pe-options').value = p.options || ''; // NEW
 
         this.updateEditorPreview();
         document.getElementById('product-editor-modal').classList.remove('hidden');
@@ -1647,7 +1715,8 @@ const app = {
             category: v('pe-cat'),
             image: v('pe-image'),
             tags: v('pe-tags'),
-            best_seller: document.getElementById('pe-bestseller').checked ? 1 : 0
+            best_seller: document.getElementById('pe-bestseller').checked ? 1 : 0,
+            options: v('pe-options') // NEW
         };
 
         try {
@@ -1723,7 +1792,8 @@ const app = {
             category: document.getElementById('add-cat').value,
             image: document.getElementById('add-image').value.trim(),
             tags: document.getElementById('add-tags').value.trim(),
-            best_seller: document.getElementById('add-bestseller').checked ? 1 : 0
+            best_seller: document.getElementById('add-bestseller').checked ? 1 : 0,
+            options: document.getElementById('add-options').value.trim() // NEW
         };
 
         try {

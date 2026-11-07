@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PiliKart — Good finds. Galing Pinoy.</title>
     <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito:wght@600;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=6">
+    <link rel="stylesheet" href="styles.css?v=8">
 </head>
 <body>
  
@@ -507,7 +507,28 @@
         <div class="faq-cta">
             <h3>Hindi mo nahanap ang sagot?</h3>
             <button class="btn btn-leaf btn-large" onclick="app.toggleBot()">
-                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1H2a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2M7.5 13a1.5 1.5 0 0 0-1.5 1.5A1.5 1.5 0 0 0 7.5 16a1.5 1.5 0 0 0 1.5-1.5A1.5 1.5 0 0 0 7.5 13m9 0a1.5 1.5 0 0 0-1.5 1.5a1.5 1.5 0 0 0 1.5 1.5a1.5 1.5 0 0 0 1.5-1.5a1.5 1.5 0 0 0-1.5-1.5m-4.5 2c-1.5 0-3 .67-3 2h6c0-1.33-1.5-2-3-2z"/></svg>
+                <svg viewBox="0 0 100 100" width="20" height="20" fill="currentColor">
+                    <defs>
+                        <mask id="bot-mask-faq">
+                            <rect width="100" height="100" fill="white" />
+                            <rect x="28" y="45" width="44" height="28" rx="14" fill="black" />
+                            <g class="bot-face">
+                                <rect x="38" y="53" width="4" height="10" rx="2" fill="white" />
+                                <rect x="58" y="53" width="4" height="10" rx="2" fill="white" />
+                                <path d="M 47,62 Q 50,65 53,62" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" />
+                            </g>
+                            <path d="M 30,35 Q 38,28 45,28" fill="none" stroke="black" stroke-width="3" stroke-linecap="round" />
+                        </mask>
+                    </defs>
+                    <g fill="currentColor" mask="url(#bot-mask-faq)">
+                        <path d="M 25,60 C 25,35 35,25 50,25 C 65,25 75,35 75,60 C 75,85 65,90 50,90 C 35,90 25,85 25,60 Z" />
+                        <path d="M 25,55 A 8 8 0 0 0 25 75 Z" />
+                        <path d="M 75,55 A 8 8 0 0 1 75 75 Z" />
+                        <circle cx="50" cy="15" r="5" />
+                        <rect x="47" y="15" width="6" height="12" rx="3" />
+                        <path d="M 80,25 Q 80,32 87,32 Q 80,32 80,39 Q 80,32 73,32 Q 80,32 80,25 Z" />
+                    </g>
+                </svg>
                 Itanong kay PiliBot
             </button>
         </div>
@@ -827,10 +848,12 @@
         <!-- Stats Cards -->
         <div class="admin-stats-grid" style="margin:20px 0;">
             <div class="card stat-card">
-                <div class="stat-icon sales-icon">
-                    <!-- Peso Sign SVG -->
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M7 21V3h5.5a5.5 5.5 0 0 1 0 11H7M3 8h8M3 13h8"/>
+                                <div class="stat-icon sales-icon">
+                    <!-- Actual Philippine Peso Sign SVG -->
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M7 20V4h6a5 5 0 0 1 0 10H7" />
+                        <path d="M4 8h10" />
+                        <path d="M4 12h10" />
                     </svg>
                 </div>
                 <div>
@@ -932,6 +955,13 @@
                                 <span class="toggle-label">Highlight this item</span>
                             </div>
                         </div>
+                    </div>
+
+                    <!-- NEW OPTIONS FIELD -->
+                    <div class="form-group">
+                        <label>Options (JSON Format)</label>
+                        <input type="text" id="add-options" class="input" placeholder='e.g. {"Spice Level": ["Mild", "Spicy"], "Size": ["Regular", "Large"]}'>
+                        <small style="color:var(--muted); font-size:11px; margin-top:4px; display:block;">Leave blank if no variations.</small>
                     </div>
 
                     <div class="form-group">
@@ -1114,28 +1144,67 @@
 </div>
  
 <!-- PiliBot Floating Button -->
-<button id="pilibot-btn" onclick="app.toggleBot()" aria-label="PiliBot">
-    <svg class="pilibot-btn-icon" viewBox="0 0 24 24">
-        <!-- Cute Happy Robot Face -->
-        <path fill="currentColor" d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1H2a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2Z"/>
-        <circle cx="9" cy="12" r="1.5" fill="var(--leaf)"/>
-        <circle cx="15" cy="12" r="1.5" fill="var(--leaf)"/>
-        <path d="M9 15.5s1 1.5 3 1.5 3-1.5 3-1.5" fill="none" stroke="var(--leaf)" stroke-width="1.5" stroke-linecap="round"/>
-    </svg>
+<button id="pilibot-btn" onclick="app.tapPiliBot()" aria-label="PiliBot">
+    <div id="pilibot-heart-container"></div>
+    
+    <div class="pilibot-icon-wrap">
+        <svg class="pilibot-svg bot-icon" viewBox="0 0 100 100">
+            <defs>
+                <mask id="bot-mask-btn">
+                    <rect width="100" height="100" fill="white" />
+                    <rect x="28" y="45" width="44" height="28" rx="14" fill="black" />
+                    <g class="bot-face">
+                        <rect x="38" y="53" width="4" height="10" rx="2" fill="white" />
+                        <rect x="58" y="53" width="4" height="10" rx="2" fill="white" />
+                        <path d="M 47,62 Q 50,65 53,62" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" />
+                    </g>
+                    <path d="M 30,35 Q 38,28 45,28" fill="none" stroke="black" stroke-width="3" stroke-linecap="round" />
+                </mask>
+            </defs>
+            <g fill="#ffffff" mask="url(#bot-mask-btn)">
+                <path d="M 25,60 C 25,35 35,25 50,25 C 65,25 75,35 75,60 C 75,85 65,90 50,90 C 35,90 25,85 25,60 Z" />
+                <path d="M 25,55 A 8 8 0 0 0 25 75 Z" />
+                <path d="M 75,55 A 8 8 0 0 1 75 75 Z" />
+                <circle cx="50" cy="15" r="5" />
+                <rect x="47" y="15" width="6" height="12" rx="3" />
+                <path d="M 80,25 Q 80,32 87,32 Q 80,32 80,39 Q 80,32 73,32 Q 80,32 80,25 Z" />
+            </g>
+        </svg>
+        
+        <svg class="pilibot-svg leaf-icon" viewBox="0 0 100 100">
+            <path d="M 50,15 C 20,40 20,80 50,90 C 80,80 80,40 50,15 Z" fill="#ffffff" />
+        </svg>
+    </div>
 </button>
 
 <div id="pilibot-window" class="hidden">
     <div class="pb-head">
-        <div style="display:flex; align-items:center; gap:6px;">
-            <svg style="width:18px; height:18px;" viewBox="0 0 24 24">
-                <path fill="currentColor" d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1H2a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2Z"/>
-                <circle cx="9" cy="12" r="1.5" fill="var(--leaf)"/>
-                <circle cx="15" cy="12" r="1.5" fill="var(--leaf)"/>
-                <path d="M9 15.5s1 1.5 3 1.5 3-1.5 3-1.5" fill="none" stroke="var(--leaf)" stroke-width="1.5" stroke-linecap="round"/>
+        <div style="display:flex; align-items:center; gap:8px;">
+            <svg style="width:24px; height:24px;" viewBox="0 0 100 100">
+                <defs>
+                    <mask id="bot-mask-header">
+                        <rect width="100" height="100" fill="white" />
+                        <rect x="28" y="45" width="44" height="28" rx="14" fill="black" />
+                        <g class="bot-face">
+                            <rect x="38" y="53" width="4" height="10" rx="2" fill="white" />
+                            <rect x="58" y="53" width="4" height="10" rx="2" fill="white" />
+                            <path d="M 47,62 Q 50,65 53,62" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" />
+                        </g>
+                        <path d="M 30,35 Q 38,28 45,28" fill="none" stroke="black" stroke-width="3" stroke-linecap="round" />
+                    </mask>
+                </defs>
+                <g fill="currentColor" mask="url(#bot-mask-header)">
+                    <path d="M 25,60 C 25,35 35,25 50,25 C 65,25 75,35 75,60 C 75,85 65,90 50,90 C 35,90 25,85 25,60 Z" />
+                    <path d="M 25,55 A 8 8 0 0 0 25 75 Z" />
+                    <path d="M 75,55 A 8 8 0 0 1 75 75 Z" />
+                    <circle cx="50" cy="15" r="5" />
+                    <rect x="47" y="15" width="6" height="12" rx="3" />
+                    <path d="M 80,25 Q 80,32 87,32 Q 80,32 80,39 Q 80,32 73,32 Q 80,32 80,25 Z" />
+                </g>
             </svg>
-            <span>PiliBot Assistant</span>
+            <span style="font-family:'Baloo 2'; font-weight:800; font-size:16px;">PiliBot Assistant</span>
         </div>
-        <span style="cursor:pointer; font-size:16px;" onclick="app.toggleBot()">✕</span>
+        <span style="cursor:pointer; font-size:16px; font-weight:800;" onclick="app.toggleBot()">✕</span>
     </div>
     <div class="pb-chat" id="pb-chat"><div class="pb-msg">Kumusta, suki! Ako si PiliBot. Ano ang maitutulong ko ngayon?</div></div>
     <form class="pb-input" onclick="event.stopPropagation()" onsubmit="app.sendBotMsg(event)">
@@ -1224,6 +1293,12 @@
                 </div>
             </div>
 
+            <!-- NEW OPTIONS FIELD -->
+            <div class="form-group">
+                <label>Options (JSON Format)</label>
+                <input type="text" id="pe-options" class="input" placeholder='e.g. {"Spice Level": ["Mild", "Spicy"], "Size": ["Regular", "Large"]}'>
+            </div>
+
             <div class="form-group">
                 <label>Image URL / Path</label>
                 <input type="text" id="pe-image" class="input" oninput="app.updateEditorPreview()">
@@ -1248,6 +1323,6 @@
 <!-- Toast -->
 <div id="toast"></div>
  
-<script src="main.js?v=6"></script>
+<script src="main.js?v=8"></script>
 </body>
 </html>
