@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PiliKart — Good finds. Galing Pinoy.</title>
     <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito:wght@600;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=2">
+    <link rel="stylesheet" href="styles.css?v=8">
 </head>
 <body>
  
@@ -32,8 +32,11 @@
  
 <main id="main-content" style="display:none;">
     
-    <!-- LANDING PAGE -->
+        <!-- LANDING PAGE -->
     <div id="view-landing" class="landing-screen hidden">
+        <!-- The interactive lantern/glow effect -->
+        <div id="landing-glow"></div>
+
         <div class="landing-header max-w">
             <div class="brand light">pilikart<span>pumili ka + cart</span></div>
             <div class="top-loc">CALAMBA, LAGUNA</div>
@@ -42,11 +45,12 @@
         <div class="landing-content">
             <div class="landing-badge">MABUHAY, SUKI</div>
             <h1 class="landing-title">Welcome to<br><span class="pk">PiliKArt!</span></h1>
-            <p class="landing-subtitle">Tuloy ka, suki! Dito, ang bawat pili ay may kasamang init ng tahanan.</p>
-            <button class="btn btn-brand btn-large" onclick="app.go('auth')">PILI KA NA!</button>
+            <p class="landing-subtitle" id="typewriter-text"></p>
+            
+            <button class="btn btn-brand btn-large" onclick="app.enterStore()">PILI KA NA!</button>
         </div>
  
-        <div class="marquee-container">
+        <div class="marquee-container interactive-marquee">
             <div class="marquee-track">
                 <span>Lumingon. Suportahan. Umunlad. &nbsp;•&nbsp; Keep the piso local &nbsp;•&nbsp; Gawa ng Pilipino, Para sa Pilipino &nbsp;•&nbsp; Yaman ng Lahi &nbsp;•&nbsp; Sariling Atin &nbsp;•&nbsp; Pumili ng Tama, Para sa'yo, Para sa Pilipino &nbsp;•&nbsp;</span>
                 <span>Lumingon. Suportahan. Umunlad. &nbsp;•&nbsp; Keep the piso local &nbsp;•&nbsp; Gawa ng Pilipino, Para sa Pilipino &nbsp;•&nbsp; Yaman ng Lahi &nbsp;•&nbsp; Sariling Atin &nbsp;•&nbsp; Pumili ng Tama, Para sa'yo, Para sa Pilipino &nbsp;•&nbsp;</span>
@@ -56,7 +60,7 @@
  
     <!-- HOME PAGE -->
     <div id="view-home" class="hidden home-screen">
-        <!-- 1. HERO SECTION (with looping background video) -->
+        <!-- 1. HERO SECTION -->
         <div class="home-hero-wrap">
             <div class="home-hero-video" id="hero-video-bg">
                 <video class="hero-local-video" autoplay muted loop playsinline>
@@ -79,7 +83,7 @@
 
                 <!-- Department Carousel Column -->
                 <div class="home-carousel-col">
-                    <div class="featured-label">Featured Items</div>
+                    <div class="featured-label glass-pill">where you can choose to your heart's desires</div>
                     <div class="carousel-3d-container">
                         <div class="carousel-stage" id="carousel-card-container">
                             <!-- Populated dynamically via JS -->
@@ -235,7 +239,7 @@
         </div>
     </div>
 
-    <!-- RECIPE BOX VIEW (REDESIGNED) -->
+    <!-- RECIPE BOX VIEW -->
     <div id="view-recipes" class="hidden max-w view-faq-recipe" style="padding-top:40px; padding-bottom:80px;">
         
         <div class="faq-recipe-hero">
@@ -252,7 +256,6 @@
                 <div class="faq-recipe-header">
                     <div class="faq-recipe-title-group">
                         <div class="faq-recipe-icon">
-                            <!-- Small Paso Icon -->
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10h16v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8z"/><path d="M2 10h20"/><path d="M8 6c0-2 1-3 2-3s2 1 2 3"/><path d="M14 6c0-2 1-3 2-3s2 1 2 3"/></svg>
                         </div>
                         <div>
@@ -386,9 +389,39 @@
                 </div>
             </div>
         </div>
+
+        <!-- NEW CTA FOR RECIPE BOX -->
+        <div class="faq-cta">
+            <h3>Gusto mo ng ibang recipe?</h3>
+            <button class="btn btn-leaf btn-large" onclick="app.toggleBot()">
+                <svg style="width:26px; height:26px; fill: currentColor;" viewBox="0 0 100 100">
+                    <defs>
+                        <mask id="bot-mask-recipe">
+                            <rect width="100" height="100" fill="white" />
+                            <rect x="22" y="38" width="56" height="36" rx="18" fill="black" />
+                            <g class="bot-face">
+                                <rect x="36" y="48" width="7" height="13" rx="3.5" fill="white" />
+                                <rect x="57" y="48" width="7" height="13" rx="3.5" fill="white" />
+                                <path d="M 50,66 L 50,71 M 50,68 L 46,66 M 50,68 L 54,66" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" opacity="0.6" />
+                            </g>
+                        </mask>
+                    </defs>
+                    <g>
+                        <path d="M 50,28 L 50,20" stroke="currentColor" stroke-width="3" stroke-linecap="round" fill="none" />
+                        <path d="M 50,20 C 42,14 44,6 50,5 C 56,6 58,14 50,20 Z" />
+                        <g mask="url(#bot-mask-recipe)">
+                            <rect x="14" y="28" width="72" height="56" rx="28" />
+                            <rect x="8" y="46" width="10" height="20" rx="5" />
+                            <rect x="82" y="46" width="10" height="20" rx="5" />
+                        </g>
+                    </g>
+                </svg>
+                Itanong kay PiliBot
+            </button>
+        </div>
     </div>
 
-    <!-- FAQ VIEW (REDESIGNED) -->
+    <!-- FAQ VIEW -->
     <div id="view-faq" class="hidden max-w view-faq-recipe" style="padding-top:40px; padding-bottom:80px;">
         
         <div class="faq-recipe-hero">
@@ -507,8 +540,29 @@
 
         <div class="faq-cta">
             <h3>Hindi mo nahanap ang sagot?</h3>
-            <button class="btn btn-brand btn-large" onclick="app.toggleBot()">
-                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1H2a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2M7.5 13a1.5 1.5 0 0 0-1.5 1.5A1.5 1.5 0 0 0 7.5 16a1.5 1.5 0 0 0 1.5-1.5A1.5 1.5 0 0 0 7.5 13m9 0a1.5 1.5 0 0 0-1.5 1.5a1.5 1.5 0 0 0 1.5 1.5a1.5 1.5 0 0 0 1.5-1.5a1.5 1.5 0 0 0-1.5-1.5m-4.5 2c-1.5 0-3 .67-3 2h6c0-1.33-1.5-2-3-2z"/></svg>
+            <button class="btn btn-leaf btn-large" onclick="app.toggleBot()">
+                <svg style="width:26px; height:26px; fill: currentColor;" viewBox="0 0 100 100">
+                    <defs>
+                        <mask id="bot-mask-faq">
+                            <rect width="100" height="100" fill="white" />
+                            <rect x="22" y="38" width="56" height="36" rx="18" fill="black" />
+                            <g class="bot-face">
+                                <rect x="36" y="48" width="7" height="13" rx="3.5" fill="white" />
+                                <rect x="57" y="48" width="7" height="13" rx="3.5" fill="white" />
+                                <path d="M 50,66 L 50,71 M 50,68 L 46,66 M 50,68 L 54,66" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" opacity="0.6" />
+                            </g>
+                        </mask>
+                    </defs>
+                    <g>
+                        <path d="M 50,28 L 50,20" stroke="currentColor" stroke-width="3" stroke-linecap="round" fill="none" />
+                        <path d="M 50,20 C 42,14 44,6 50,5 C 56,6 58,14 50,20 Z" />
+                        <g mask="url(#bot-mask-faq)">
+                            <rect x="14" y="28" width="72" height="56" rx="28" />
+                            <rect x="8" y="46" width="10" height="20" rx="5" />
+                            <rect x="82" y="46" width="10" height="20" rx="5" />
+                        </g>
+                    </g>
+                </svg>
                 Itanong kay PiliBot
             </button>
         </div>
@@ -540,7 +594,18 @@
  
                     <div class="auth-pass-wrap">
                         <input type="password" id="auth-pass" class="auth-input" placeholder="Password" autocomplete="current-password">
-                        <button type="button" id="auth-eye" class="auth-eye" aria-label="Ipakita ang password" aria-pressed="false" onclick="app.togglePassword()">&#128065;</button>
+                        <button type="button" id="auth-eye" class="auth-eye" aria-label="Ipakita ang password" aria-pressed="false" onclick="app.togglePassword()">
+                            <!-- Default SVG Eye -->
+                            <svg id="eye-icon-show" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                <circle cx="12" cy="12" r="3"/>
+                            </svg>
+                            <!-- Hidden SVG Eye-Off -->
+                            <svg id="eye-icon-hide" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;">
+                                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                                <line x1="1" y1="1" x2="23" y2="23"></line>
+                            </svg>
+                        </button>
                     </div>
  
                     <div id="auth-error" class="auth-error" role="alert"></div>
@@ -560,7 +625,6 @@
     </div>
  
     <!-- CART PAGE VIEW -->
-        <!-- CART PAGE VIEW -->
     <div id="view-cart" class="hidden max-w page-wrap">
         <div class="page-head">
             <h1>
@@ -597,7 +661,7 @@
                 </div>
                 <button class="btn btn-brand btn-large btn-block" onclick="app.go('checkout')" style="margin-top:20px;">Checkout Na &rarr;</button>
                 <div style="text-align:center; margin-top:15px;">
-                    <a href="#" onclick="app.scrollToMenu(); return false;" style="color:var(--muted); font-size:13px; font-weight:700; text-decoration:underline;">+ Dagdag pa ng pagkain</a>
+                    <a href="#" onclick="app.scrollToMenu(); return false;" style="color:var(--muted); font-size:13px; font-weight:700; text-decoration:underline;">+ Pipili pa ako ng ibang items</a>
                 </div>
             </aside>
         </div>
@@ -616,11 +680,43 @@
                     <section class="co-card">
                         <h3><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg> Saan ihahatid?</h3>
                         <div class="co-note" id="co-guest-note">Guest ka! Ilagay ang delivery details sa baba, o <a href="#" onclick="app.go('auth'); return false;">mag-sign in</a> para ma-track ang order mo.</div>
-                        <div class="co-row">
-                            <input type="text" id="co-name" class="input" placeholder="Pangalan ng tatanggap" autocomplete="name">
-                            <input type="tel" id="co-phone" class="input" placeholder="Phone number" autocomplete="tel">
+                                                <div class="co-note hidden" id="co-no-address-note" style="background: rgba(240, 169, 59, 0.15); border-left: 4px solid var(--amber); color: var(--ink);">
+                            <b>Paalala:</b> Wala ka pang naka-save na address sa iyong <a href="#" onclick="app.go('account'); return false;">My Account</a>. Mangyaring ilagay ito para mas mapabilis ang susunod mong checkout.
                         </div>
-                        <textarea id="co-addr" class="input" placeholder="Kumpletong address (Bahay, Kalye, Brgy., Lungsod)" autocomplete="street-address"></textarea>
+                        <div class="co-note hidden" id="paso-restriction-note" style="background: rgba(240, 169, 59, 0.15); border-left: 4px solid var(--amber); color: var(--ink);">
+                            <b>Paalala:</b> May PASO (pagkain) item ka sa cart. Ang mga PASO items ay pwede lang i-deliver sa loob ng <b>Calamba, Laguna</b>.
+                        </div>
+
+                        <div class="co-row">
+                            <div class="co-field">
+                                <label>Pangalan ng tatanggap</label>
+                                <input type="text" id="co-name" class="input" placeholder="Hal. Juan Dela Cruz" autocomplete="name">
+                            </div>
+                            <div class="co-field">
+                                <label>Contact number</label>
+                                <input type="tel" id="co-phone" class="input" placeholder="Hal. 09171234567" autocomplete="tel">
+                            </div>
+                        </div>
+
+                        <div class="co-row">
+                            <div class="co-field">
+                                <label>Lungsod</label>
+                                <select id="co-city" class="input" onchange="app.updateBrgyDropdown()">
+                                    <option value="" disabled selected>Pumili ng Lungsod</option>
+                                </select>
+                            </div>
+                            <div class="co-field">
+                                <label>Barangay</label>
+                                <select id="co-brgy" class="input" onchange="app.updateShippingFee()">
+                                    <option value="" disabled selected>Pumili ng Barangay</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="co-field" style="margin-bottom:0;">
+                            <label>Additional info (House no., Street, Bldg no., Subdivision)</label>
+                            <input type="text" id="co-street" class="input" placeholder="Hal. Blk 5 Lot 12, Villa Clara Subd., Bldg A" autocomplete="street-address">
+                        </div>
                     </section>
 
                     <section class="co-card">
@@ -694,7 +790,12 @@
     <!-- ACCOUNT VIEW -->
     <div id="view-account" class="hidden max-w page-wrap">
         <div class="page-head">
-            <h1>My Account</h1>
+            <h1>
+                <span class="head-ic" style="background:linear-gradient(135deg, #a9744a, #8a5c38); color:#fbeed4;">
+                    <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                </span> 
+                My Account
+            </h1>
             <p>I-update ang iyong impormasyon at pamahalaan ang seguridad ng account.</p>
         </div>
         
@@ -712,11 +813,23 @@
                 </div>
                 <div class="form-group">
                     <label>Contact Number</label>
-                    <input type="tel" id="acc-phone" class="input">
+                    <input type="tel" id="acc-phone" class="input" placeholder="09171234567">
                 </div>
                 <div class="form-group">
-                    <label>Address</label>
-                    <textarea id="acc-address" class="input" rows="3"></textarea>
+                    <label>Lungsod</label>
+                    <select id="acc-city" class="input" onchange="app.updateAccBrgyDropdown()">
+                        <option value="" disabled selected>Pumili ng Lungsod</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Barangay</label>
+                    <select id="acc-brgy" class="input">
+                        <option value="" disabled selected>Pumili ng Barangay</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Additional info (House no., Street, Bldg no., Subdivision)</label>
+                    <input type="text" id="acc-street" class="input" placeholder="Hal. Blk 5 Lot 12, Villa Clara Subd.">
                 </div>
                 <button class="btn btn-brand" onclick="app.updateProfile()">Save Profile</button>
             </div>
@@ -757,13 +870,25 @@
  
     <!-- ADMIN DASHBOARD -->
     <div id="view-admin" class="hidden max-w" style="padding-top:20px; padding-bottom: 60px;">
-        <h2>Owner Dashboard</h2>
+        <div class="page-head">
+            <h1>
+                <span class="head-ic" style="background:linear-gradient(135deg, #a9744a, #8a5c38); color:#fbeed4;">
+                    <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+                </span>
+                Owner Dashboard
+            </h1>
+        </div>
         
         <!-- Stats Cards -->
         <div class="admin-stats-grid" style="margin:20px 0;">
             <div class="card stat-card">
-                <div class="stat-icon sales-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                                <div class="stat-icon sales-icon">
+                    <!-- Actual Philippine Peso Sign SVG -->
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M7 20V4h6a5 5 0 0 1 0 10H7" />
+                        <path d="M4 8h10" />
+                        <path d="M4 12h10" />
+                    </svg>
                 </div>
                 <div>
                     <h3>Total Sales</h3>
@@ -790,7 +915,6 @@
         
         <!-- Orders Tab -->
         <div id="admin-orders" class="admin-orders-container">
-            <!-- Advanced Search & Filter -->
             <div class="admin-filter-bar">
                 <div class="admin-search-wrap">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
@@ -865,6 +989,13 @@
                                 <span class="toggle-label">Highlight this item</span>
                             </div>
                         </div>
+                    </div>
+
+                    <!-- NEW OPTIONS FIELD -->
+                    <div class="form-group">
+                        <label>Options (JSON Format)</label>
+                        <input type="text" id="add-options" class="input" placeholder='e.g. {"Spice Level": ["Mild", "Spicy"], "Size": ["Regular", "Large"]}'>
+                        <small style="color:var(--muted); font-size:11px; margin-top:4px; display:block;">Leave blank if no variations.</small>
                     </div>
 
                     <div class="form-group">
@@ -1032,19 +1163,101 @@
         <button class="btn btn-ghost" style="width:100%;" onclick="app.closeModal('proof-modal')">Close</button>
     </div>
 </div>
+
+<!-- Stock Alert Modal -->
+<div id="stock-alert-modal" class="modal hidden">
+    <div class="modal-content" style="text-align:center;">
+        <div style="width:60px;height:60px;border-radius:50%;background:var(--amber);color:white;display:flex;align-items:center;justify-content:center;margin:0 auto 15px;">
+            <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        </div>
+        <h3 style="margin-bottom:15px; font-size:22px;">Stock Update</h3>
+        <p style="color:var(--muted); font-size:14px; margin-bottom:20px; line-height:1.6;">Ang mga sumusunod na item sa cart mo ay ubos na o kulang na ang stock. Kailangan itong alisin para makatuloy ka sa checkout.</p>
+        <ul id="stock-alert-list" style="text-align:left; margin-bottom:20px; padding-left:20px; font-size:14px; font-weight:700; color:var(--ink); line-height:1.8;"></ul>
+        <button class="btn btn-brand btn-block" onclick="app.removeOutOfStockItems()">Alisin ang mga Item</button>
+    </div>
+</div>
  
-<!-- PiliBot -->
-<button id="pilibot-btn" onclick="app.toggleBot()" aria-label="PiliBot">
-    <svg class="pilibot-btn-icon" viewBox="0 0 24 24"><path fill="currentColor" d="M17.04 4.09c-.43-.13-1.11-.27-1.95-.35-2.09-.19-4.88.22-6.85 2.19-2.93 2.93-3.08 7.4-1.28 10.58l-2.07 2.07 1.41 1.41 2.07-2.07c3.18 1.8 7.65 1.65 10.58-1.28 1.97-1.97 2.38-4.76 2.19-6.85-.08-.84-.22-1.52-.35-1.95-.38-1.25-1.14-2.31-2.09-3.26-.95-.95-2.01-1.71-3.26-2.09zM12 15c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3z"/></svg>
+<!-- PiliBot Floating Button -->
+<button id="pilibot-btn" onclick="app.tapPiliBot()" aria-label="PiliBot">
+    <div class="pilibot-icon-wrap">
+        <!-- Robot Icon based on reference + leaf details -->
+        <svg class="pilibot-svg bot-icon" viewBox="0 0 100 100">
+            <defs>
+                <mask id="bot-mask-ref">
+                    <!-- Base mask fill -->
+                    <rect width="100" height="100" fill="white" />
+                    <!-- Inner screen cutout (exact shape from reference image) -->
+                    <rect x="22" y="38" width="56" height="36" rx="18" fill="black" />
+                    
+                    <g class="bot-face">
+                        <!-- Cute pill-shaped eyes from reference -->
+                        <rect x="36" y="48" width="7" height="13" rx="3.5" fill="white" />
+                        <rect x="57" y="48" width="7" height="13" rx="3.5" fill="white" />
+                        
+                        <!-- Leaf vein motif inside face cutout -->
+                        <path d="M 50,66 L 50,71 M 50,68 L 46,66 M 50,68 L 54,66" 
+                              fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" opacity="0.6" />
+                    </g>
+                </mask>
+            </defs>
+
+            <g fill="#ffffff">
+                <!-- Leaf Antenna (Replaces standard bulb antenna) -->
+                <!-- Stem -->
+                <path d="M 50,28 L 50,20" stroke="#ffffff" stroke-width="3" stroke-linecap="round" fill="none" />
+                <!-- Leaf head -->
+                <path d="M 50,20 C 42,14 44,6 50,5 C 56,6 58,14 50,20 Z" />
+
+                <!-- Outer Head & Ears Shell (Masked for screen area) -->
+                <g mask="url(#bot-mask-ref)">
+                    <!-- Main Wide Round Head -->
+                    <rect x="14" y="28" width="72" height="56" rx="28" />
+                    <!-- Left Ear Knob -->
+                    <rect x="8" y="46" width="10" height="20" rx="5" />
+                    <!-- Right Ear Knob -->
+                    <rect x="82" y="46" width="10" height="20" rx="5" />
+                </g>
+            </g>
+        </svg>
+        
+        <!-- Leaf Icon (Morph target for toggle state) -->
+        <svg class="pilibot-svg leaf-icon" viewBox="0 0 100 100">
+            <path d="M 50,15 C 20,40 20,80 50,90 C 80,80 80,40 50,15 Z" fill="#ffffff" />
+            <path d="M 50,25 L 50,80 M 50,40 L 35,30 M 50,55 L 65,45 M 50,65 L 38,58" 
+                  fill="none" stroke="#85b56d" stroke-width="2.5" stroke-linecap="round" opacity="0.4" />
+        </svg>
+    </div>
 </button>
 
 <div id="pilibot-window" class="hidden">
     <div class="pb-head">
-        <div style="display:flex; align-items:center; gap:6px;">
-            <svg style="width:18px; height:18px;" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1H2a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2M7.5 13a1.5 1.5 0 0 0-1.5 1.5A1.5 1.5 0 0 0 7.5 16a1.5 1.5 0 0 0 1.5-1.5A1.5 1.5 0 0 0 7.5 13m9 0a1.5 1.5 0 0 0-1.5 1.5a1.5 1.5 0 0 0 1.5 1.5a1.5 1.5 0 0 0 1.5-1.5a1.5 1.5 0 0 0-1.5-1.5m-4.5 2c-1.5 0-3 .67-3 2h6c0-1.33-1.5-2-3-2z"/></svg>
-            <span>PiliBot Assistant</span>
+        <div style="display:flex; align-items:center; gap:8px;">
+            <!-- NEW HEADER ICON -->
+            <svg style="width:26px; height:26px; fill: currentColor;" viewBox="0 0 100 100">
+                <defs>
+                    <mask id="bot-mask-header">
+                        <rect width="100" height="100" fill="white" />
+                        <rect x="22" y="38" width="56" height="36" rx="18" fill="black" />
+                        <g class="bot-face">
+                            <rect x="36" y="48" width="7" height="13" rx="3.5" fill="white" />
+                            <rect x="57" y="48" width="7" height="13" rx="3.5" fill="white" />
+                            <path d="M 50,66 L 50,71 M 50,68 L 46,66 M 50,68 L 54,66" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" opacity="0.6" />
+                        </g>
+                    </mask>
+                </defs>
+                <g>
+                    <path d="M 50,28 L 50,20" stroke="currentColor" stroke-width="3" stroke-linecap="round" fill="none" />
+                    <path d="M 50,20 C 42,14 44,6 50,5 C 56,6 58,14 50,20 Z" />
+                    <g mask="url(#bot-mask-header)">
+                        <rect x="14" y="28" width="72" height="56" rx="28" />
+                        <rect x="8" y="46" width="10" height="20" rx="5" />
+                        <rect x="82" y="46" width="10" height="20" rx="5" />
+                    </g>
+                </g>
+            </svg>
+            <span style="font-family:'Baloo 2'; font-weight:800; font-size:16px;">PiliBot Assistant</span>
         </div>
-        <span style="cursor:pointer; font-size:16px;" onclick="app.toggleBot()">✕</span>
+        <span style="cursor:pointer; font-size:16px; font-weight:800;" onclick="app.toggleBot()">✕</span>
     </div>
     <div class="pb-chat" id="pb-chat"><div class="pb-msg">Kumusta, suki! Ako si PiliBot. Ano ang maitutulong ko ngayon?</div></div>
     <form class="pb-input" onclick="event.stopPropagation()" onsubmit="app.sendBotMsg(event)">
@@ -1052,6 +1265,7 @@
         <button class="btn btn-leaf" style="padding:8px 15px;">↑</button>
     </form>
 </div>
+
 <!-- Add to Cart Confirmation Modal -->
 <div id="add-confirm-modal" class="modal hidden" onclick="if (event.target === this) app.closeAddModal()">
     <div class="modal-content add-confirm-content">
@@ -1059,9 +1273,7 @@
         
         <h2 class="add-confirm-title">Do you want to add the<br>following item?</h2>
         
-        <div class="add-confirm-item-card" id="add-confirm-item-box">
-            <!-- Populated dynamically via JS -->
-        </div>
+        <div class="add-confirm-item-card" id="add-confirm-item-box"></div>
 
         <div class="add-confirm-actions">
             <button class="btn btn-ghost btn-cancel-custom" onclick="app.closeAddModal()">✕ Cancel</button>
@@ -1134,6 +1346,12 @@
                 </div>
             </div>
 
+            <!-- NEW OPTIONS FIELD -->
+            <div class="form-group">
+                <label>Options (JSON Format)</label>
+                <input type="text" id="pe-options" class="input" placeholder='e.g. {"Spice Level": ["Mild", "Spicy"], "Size": ["Regular", "Large"]}'>
+            </div>
+
             <div class="form-group">
                 <label>Image URL / Path</label>
                 <input type="text" id="pe-image" class="input" oninput="app.updateEditorPreview()">
@@ -1151,12 +1369,13 @@
         </form>
     </div>
 </div>
+
 <!-- Falling Leaves Background Container -->
 <div id="leaves-container"></div>
 
 <!-- Toast -->
 <div id="toast"></div>
  
-<script src="main.js?v=3"></script>
+<script src="main.js?v=8"></script>
 </body>
 </html>

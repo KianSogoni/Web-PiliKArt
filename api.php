@@ -133,12 +133,18 @@ switch ($action) {
         if ($name === '') out(['error' => 'Ilagay ang pangalan mo.'], 400);
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) out(['error' => 'Mali ang email format.'], 400);
 
+        // Phone validation (Backend)
+        $cleanPhone = str_replace([' ', '-'], '', $phone);
+        if ($cleanPhone && !preg_match('/^(09|\+639)\d{9}$/', $cleanPhone)) {
+            out(['error' => 'Mali ang format ng contact number. Dapat 09XXXXXXXXX o +639XXXXXXXXX.'], 400);
+        }
+
         $stmt = $pdo->prepare('SELECT id FROM users WHERE email=? AND id!=?');
         $stmt->execute([$email, $_SESSION['user_id']]);
         if ($stmt->fetch()) out(['error' => 'Ginagamit na ang email na ito ng ibang account.'], 409);
 
         $stmt = $pdo->prepare('UPDATE users SET name=?, email=?, phone=?, address=? WHERE id=?');
-        $stmt->execute([$name, $email, $phone, $address, $_SESSION['user_id']]);
+        $stmt->execute([$name, $email, $cleanPhone, $address, $_SESSION['user_id']]);
         
         $_SESSION['name'] = $name;
         out(['ok' => true]);
@@ -168,6 +174,14 @@ switch ($action) {
         try {
             $items = $in['items'] ?? [];
             if (!$items) out(['error' => 'Walang laman ang cart.'], 400);
+
+            // Phone validation (Backend)
+            $phone = trim($in['phone'] ?? '');
+            $cleanPhone = str_replace([' ', '-'], '', $phone);
+            if (!preg_match('/^(09|\+639)\d{9}$/', $cleanPhone)) {
+                out(['error' => 'Mali ang format ng contact number. Dapat 09XXXXXXXXX o +639XXXXXXXXX.'], 400);
+            }
+
             $ids = array_column($items, 'id');
             $ph = implode(',', array_fill(0, count($ids), '?'));
             $stmt = $pdo->prepare("SELECT * FROM products WHERE id IN ($ph)");
@@ -175,23 +189,52 @@ switch ($action) {
             $prods = array_column($stmt->fetchAll(), null, 'id');
  
             $subtotal = 0; $lines = [];
+            $hasPaso = false;
             foreach ($items as $it) {
                 $p = $prods[$it['id']] ?? null;
                 if (!$p || $p['sold_out'] || $p['stock'] < $it['qty']) out(['error' => "Kulang ang stock."], 400);
+                if (strtolower($p['category']) === 'paso') $hasPaso = true;
                 $subtotal += $p['price'] * $it['qty'];
-                $lines[] = ['id' => $p['id'], 'name' => $p['name'], 'price' => $p['price'], 'qty' => $it['qty']];
+                $lines[] = [
+                    'id' => $p['id'], 
+                    'name' => $p['name'], 
+                    'price' => $p['price'], 
+                    'qty' => $it['qty'],
+                    'variation' => $it['variation'] ?? '' // NEW
+                ];
             }
-            $fee = (int)$pdo->query("SELECT `value` FROM settings WHERE `key`='delivery_fee'")->fetchColumn();
+
+            // PASO restriction — food items deliverable only within Calamba
+            $address = (string)($in['address'] ?? '');
+            if ($hasPaso && stripos($address, 'Calamba') === false) {
+                out(['error' => 'Ang PASO (pagkain) items ay pwede lang i-deliver sa loob ng Calamba, Laguna.'], 400);
+            }
+
+            $fee = isset($in['fee']) ? (int)$in['fee'] : (int)$pdo->query("SELECT `value` FROM settings WHERE `key`='delivery_fee'")->fetchColumn();
+            $protectionFee = isset($in['protection_fee']) ? (int)$in['protection_fee'] : 0;
+            if ($protectionFee < 0) $protectionFee = 0;
+            $total = $subtotal + $fee + $protectionFee;
  
             $pdo->beginTransaction();
-            $stmt = $pdo->prepare('INSERT INTO orders (user_id, customer_name, phone, address, payment, payment_proof, subtotal, delivery_fee, total) VALUES (?,?,?,?,?,?,?,?,?)');
-            $stmt->execute([$_SESSION['user_id'] ?? null, $in['name'], $in['phone'] ?? '', $in['address'], ($in['payment'] ?? 'cod') === 'gcash' ? 'gcash' : 'cod', $in['proof'] ?? '', $subtotal, $fee, $subtotal + $fee]);
+            $stmt = $pdo->prepare('INSERT INTO orders (user_id, customer_name, phone, address, payment, payment_proof, subtotal, delivery_fee, protection_fee, total) VALUES (?,?,?,?,?,?,?,?,?,?)');
+            $stmt->execute([
+                $_SESSION['user_id'] ?? null,
+                $in['name'],
+                $cleanPhone,
+                $address,
+                ($in['payment'] ?? 'cod') === 'gcash' ? 'gcash' : 'cod',
+                $in['proof'] ?? '',
+                $subtotal,
+                $fee,
+                $protectionFee,
+                $total
+            ]);
             $oid = $pdo->lastInsertId();
  
-            $oiStmt = $pdo->prepare('INSERT INTO order_items (order_id, product_id, name, price, qty) VALUES (?,?,?,?,?)');
+            $oiStmt = $pdo->prepare('INSERT INTO order_items (order_id, product_id, name, price, qty, variation) VALUES (?,?,?,?,?,?)'); // NEW
             $upStmt = $pdo->prepare('UPDATE products SET stock = stock - ?, sold_out = (stock <= 0) WHERE id = ?');
             foreach ($lines as $l) {
-                $oiStmt->execute([$oid, $l['id'], $l['name'], $l['price'], $l['qty']]);
+                $oiStmt->execute([$oid, $l['id'], $l['name'], $l['price'], $l['qty'], $l['variation']]); // NEW
                 $upStmt->execute([$l['qty'], $l['id']]);
             }
             if (!empty($_SESSION['user_id'])) {
@@ -242,7 +285,7 @@ switch ($action) {
         $cat = strtolower(trim($in['category'] ?? 'paso'));
         if (!in_array($cat, ['paso', 'nipa', 'habi', 'apollo'], true)) $cat = 'paso';
 
-        $stmt = $pdo->prepare('UPDATE products SET name=?, tagline=?, description=?, price=?, category=?, image=?, stock=?, sold_out=?, best_seller=?, tags=? WHERE id=?');
+        $stmt = $pdo->prepare('UPDATE products SET name=?, tagline=?, description=?, price=?, category=?, image=?, stock=?, sold_out=?, best_seller=?, tags=?, options=? WHERE id=?');
         $stmt->execute([
             $name,
             trim($in['tagline'] ?? ''),
@@ -254,6 +297,7 @@ switch ($action) {
             $stock <= 0 ? 1 : 0,
             (int)($in['best_seller'] ?? 0),
             trim($in['tags'] ?? ''),
+            trim($in['options'] ?? ''), // NEW
             $pid
         ]);
         out(['ok' => true]);
@@ -263,7 +307,7 @@ switch ($action) {
         out(['ok' => true]);
  
     case 'admin-add-product':
-        $stmt = $pdo->prepare('INSERT INTO products (name,tagline,description,price,category,image,stock,best_seller,tags) VALUES (?,?,?,?,?,?,?,?,?)');
+        $stmt = $pdo->prepare('INSERT INTO products (name,tagline,description,price,category,image,stock,best_seller,tags,options) VALUES (?,?,?,?,?,?,?,?,?,?)');
         $stmt->execute([
             $in['name'], 
             $in['tagline'], 
@@ -273,7 +317,8 @@ switch ($action) {
             $in['image'], 
             $in['stock'], 
             (int)($in['best_seller'] ?? 0),
-            $in['tags']
+            $in['tags'],
+            $in['options'] ?? '' // NEW
         ]);
         out(['ok' => true]);
  
