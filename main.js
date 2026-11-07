@@ -94,7 +94,7 @@ const app = {
 
     carouselIndex: 0,
     carouselTimer: null,
-    departments: [
+        departments: [
         {
             name: "PASO",
             desc: "Taste the warmth of Lola's kitchen. Every bite is a memory of home, crafted with the love only a Filipino family knows.",
@@ -103,21 +103,21 @@ const app = {
         },
         {
             name: "NIPA",
-            desc: "More than just a house, it's where the heart is. Find the simple comforts that turn your space into a warm, welcoming Filipino home.",
-            featured: "Broom and Dustpan Set",
-            image: "https://placehold.co/600x338/1a2b1c/85b56d?text=Nipa+Essentials"
+            desc: "More than just a house, it's where the heart is. The iconic Tabo is the ultimate symbol of Filipino practical living.",
+            featured: "Classic Plastic Tabo",
+            image: "https://placehold.co/600x338/1a2b1c/85b56d?text=Tabo"
         },
         {
             name: "HABI",
-            desc: "Woven with the threads of our ancestors. Wear your heritage proudly, as each piece tells a story of Filipino resilience and beauty.",
-            featured: "Velvet Matte Lipstick",
-            image: "https://placehold.co/600x338/1a2b1c/85b56d?text=Habi+Fashion"
+            desc: "Woven with the threads of our ancestors. Wear your heritage proudly with the elegant Baro't Saya, a true Filipiniana classic.",
+            featured: "Baro't Saya",
+            image: "https://placehold.co/600x338/1a2b1c/85b56d?text=Baro't+Saya"
         },
         {
             name: "APOLLO",
-            desc: "Reach for the stars while keeping your feet on the ground. Discover innovations made for the modern Pinoy, with a heart for home.",
-            featured: "Powerbank (10,000mAh)",
-            image: "https://placehold.co/600x338/1a2b1c/85b56d?text=Apollo+Tech"
+            desc: "Reach for the stars while keeping your feet on the ground. Because no Filipino gathering is complete without a Videoke session!",
+            featured: "Mini Karaoke Machine",
+            image: "https://placehold.co/600x338/1a2b1c/85b56d?text=Mini+Karaoke"
         }
     ],
 
@@ -154,6 +154,8 @@ const app = {
         this.sizeHeroVideo();
         this.initLeavesAnimation();
         this.checkCartStock();
+        this.initLandingPage();
+        this.initLandingInteractions();
 
         if (this.carouselTimer) clearInterval(this.carouselTimer);
         this.carouselTimer = setInterval(() => {
@@ -452,7 +454,97 @@ const app = {
         clearTimeout(this._toastTimer);
         this._toastTimer = setTimeout(() => t.classList.remove('show'), 3600);
     },
+        // --- LANDING PAGE INTERACTIONS ---
+    
+    initLandingPage() {
+        // 1. Typewriter Effect
+        const text = "Tuloy ka, suki! Dito, ang bawat pili ay may kasamang init ng tahanan.";
+        const el = document.getElementById('typewriter-text');
+        if (el) {
+            el.innerHTML = '<span class="type-cursor"></span>';
+            let i = 0;
+            const typeWriter = () => {
+                if (i < text.length) {
+                    el.innerHTML = text.substring(0, i + 1) + '<span class="type-cursor"></span>';
+                    i++;
+                    setTimeout(typeWriter, 40); // Speed of typing
+                }
+            };
+            // Start typing after a tiny delay
+            setTimeout(typeWriter, 500);
+        }
 
+        // 2. Mouse Follow Glow (Lantern Effect)
+        const landingScreen = document.getElementById('view-landing');
+        const glow = document.getElementById('landing-glow');
+        
+        if (landingScreen && glow) {
+            landingScreen.addEventListener('mousemove', (e) => {
+                // Only move if we are actually on the landing page
+                if (!landingScreen.classList.contains('hidden')) {
+                    const rect = landingScreen.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const y = e.clientY - rect.top;
+                    glow.style.transform = `translate(${x}px, ${y}px)`;
+                }
+            });
+            
+            // Reset glow position when mouse leaves
+            landingScreen.addEventListener('mouseleave', () => {
+                glow.style.transform = `translate(-50%, -50%)`;
+            });
+        }
+    },
+
+    // 3. Cinematic Entry Transition
+    enterStore() {
+        const landing = document.getElementById('view-landing');
+        if (!landing) return;
+        
+        // Add the zooming class
+        landing.classList.add('is-entering');
+        
+        // Wait for the animation to finish before switching views
+        setTimeout(() => {
+            this.go('auth');
+            // Reset the class so it works again if they log out
+            setTimeout(() => landing.classList.remove('is-entering'), 500);
+        }, 800); // Matches the CSS transition duration
+    },
+        // 1. Set up the mouse follower
+    initLandingInteractions() {
+        const landingScreen = document.getElementById('view-landing');
+        const glow = document.getElementById('landing-glow');
+        
+        if (landingScreen && glow) {
+            landingScreen.addEventListener('mousemove', (e) => {
+                // Only move if we are actually on the landing page
+                if (!landingScreen.classList.contains('hidden')) {
+                    const rect = landingScreen.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const y = e.clientY - rect.top;
+                    glow.style.transform = `translate(${x}px, ${y}px)`;
+                }
+            });
+        }
+    },
+
+    // 2. The cinematic entry transition
+    enterStore() {
+        const landing = document.getElementById('view-landing');
+        if (!landing) return;
+        
+        // Add the zooming class
+        landing.classList.add('is-entering');
+        
+        // Wait for the 1.2s animation to finish before switching the view
+        setTimeout(() => {
+            this.go('auth');
+            
+            // Reset the class so it's ready for next time
+            setTimeout(() => landing.classList.remove('is-entering'), 100);
+        }, 1200); // Must match the CSS transition time
+    },
     handleAuth() {
         if (this.user) {
             fetch('api.php?action=logout').then(() => location.reload());
@@ -694,11 +786,18 @@ const app = {
             if (p.stock <= 0) stockClass = 'stock-out';
             else if (p.stock <= 10) stockClass = 'stock-low';
 
+            // NEW: Check if it's a best seller
+            const isBestSeller = Number(p.best_seller) === 1;
+            const bestSellerPill = isBestSeller ? `<span class="best-seller-pill">⭐ Suki's Choice</span>` : '';
+
             return `
                 <div class="card product-card ${out ? 'is-out' : ''} ${animate ? 'enter' : ''}" style="--i:${idx}">
                     <div class="prod-badges-row">
                         <span class="dept-badge ${catKey}">${icon} ${meta.label}</span>
-                        ${stockPill}
+                        <div class="badges-right">
+                            ${bestSellerPill}
+                            ${stockPill}
+                        </div>
                     </div>
                     <div class="prod-img-wrap">
                         <img src="${p.image}" class="product-img" alt="${p.name}" loading="lazy">
@@ -763,9 +862,9 @@ const app = {
                 for (const [groupName, choices] of Object.entries(parsedOpts)) {
                     if (Array.isArray(choices) && choices.length > 0) {
                         optionsHtml += `
-                            <div class="ci-option-group" style="margin-top: 12px;">
-                                <label style="font-size:12px; font-weight:800; color:var(--muted); margin-bottom:6px; display:block; text-transform:uppercase;">${groupName}</label>
-                                <div class="ci-radio-pills" style="display:flex; gap:8px; flex-wrap:wrap;">
+                            <div class="ci-option-group">
+                                <label class="ci-option-label">${groupName}</label>
+                                <div class="ci-radio-pills">
                                     ${choices.map((c, i) => `
                                         <label class="ci-radio-label">
                                             <input type="radio" name="opt_${groupName}" value="${this.esc(c)}" ${i === 0 ? 'checked' : ''}>
@@ -785,24 +884,38 @@ const app = {
         const formattedTotal = Number(totalCost).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
         box.innerHTML = `
-            <div class="ci-preview-row">
-                <img src="${this.esc(p.image || '')}" class="ci-thumb" alt="${this.esc(p.name)}">
-                <div class="ci-meta">
-                    <b>${this.esc(p.name)}</b>
-                    <small class="ci-tagline">${this.esc(p.tagline || '')}</small>
+            <div class="ci-horizontal-layout">
+                <!-- Left Column: Image -->
+                <div class="ci-left-col">
+                    <img src="${this.esc(p.image || '')}" class="ci-hero-thumb" alt="${this.esc(p.name)}">
                 </div>
-            </div>
-            <p class="ci-desc">${this.esc(p.description || '')}</p>
-            ${optionsHtml}
-            <div class="ci-controls-row" style="margin-top:20px;">
-                <div class="qty-stepper">
-                    <button class="qty-step-btn" onclick="app.adjustPendingQty(-1)">−</button>
-                    <span class="qty-val">${this.pendingQty}</span>
-                    <button class="qty-step-btn" onclick="app.adjustPendingQty(1)">+</button>
-                </div>
-                <div class="ci-summary-info">
-                    <span class="ci-stock-text">${p.stock} available &bull; ₱${formattedUnit} each</span>
-                    <span class="ci-total-text">Total: <b>₱${formattedTotal}</b></span>
+
+                <!-- Right Column: Details & Options -->
+                <div class="ci-right-col">
+                    <div class="ci-header">
+                        <h3 class="ci-title">${this.esc(p.name)}</h3>
+                        ${p.tagline ? `<p class="ci-tagline">${this.esc(p.tagline)}</p>` : ''}
+                    </div>
+                    
+                    <p class="ci-desc">${this.esc(p.description || '')}</p>
+                    
+                    ${optionsHtml ? `<div class="ci-options-container">${optionsHtml}</div>` : ''}
+
+                    <div class="ci-bottom-controls">
+                        <div class="qty-stepper-wrap">
+                            <span class="ci-control-label">Quantity</span>
+                            <div class="qty-stepper">
+                                <button class="qty-step-btn" onclick="app.adjustPendingQty(-1)">−</button>
+                                <span class="qty-val">${this.pendingQty}</span>
+                                <button class="qty-step-btn" onclick="app.adjustPendingQty(1)">+</button>
+                            </div>
+                        </div>
+                        
+                        <div class="ci-price-wrap">
+                            <span class="ci-stock-text">${p.stock} available &bull; ₱${formattedUnit} each</span>
+                            <span class="ci-total-text">Total: <b>₱${formattedTotal}</b></span>
+                        </div>
+                    </div>
                 </div>
             </div>
         `;

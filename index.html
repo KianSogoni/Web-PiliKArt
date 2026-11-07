@@ -32,8 +32,11 @@
  
 <main id="main-content" style="display:none;">
     
-    <!-- LANDING PAGE -->
+        <!-- LANDING PAGE -->
     <div id="view-landing" class="landing-screen hidden">
+        <!-- The interactive lantern/glow effect -->
+        <div id="landing-glow"></div>
+
         <div class="landing-header max-w">
             <div class="brand light">pilikart<span>pumili ka + cart</span></div>
             <div class="top-loc">CALAMBA, LAGUNA</div>
@@ -42,11 +45,12 @@
         <div class="landing-content">
             <div class="landing-badge">MABUHAY, SUKI</div>
             <h1 class="landing-title">Welcome to<br><span class="pk">PiliKArt!</span></h1>
-            <p class="landing-subtitle">Tuloy ka, suki! Dito, ang bawat pili ay may kasamang init ng tahanan.</p>
-            <button class="btn btn-brand btn-large" onclick="app.go('auth')">PILI KA NA!</button>
+            <p class="landing-subtitle" id="typewriter-text"></p>
+            
+            <button class="btn btn-brand btn-large" onclick="app.enterStore()">PILI KA NA!</button>
         </div>
  
-        <div class="marquee-container">
+        <div class="marquee-container interactive-marquee">
             <div class="marquee-track">
                 <span>Lumingon. Suportahan. Umunlad. &nbsp;•&nbsp; Keep the piso local &nbsp;•&nbsp; Gawa ng Pilipino, Para sa Pilipino &nbsp;•&nbsp; Yaman ng Lahi &nbsp;•&nbsp; Sariling Atin &nbsp;•&nbsp; Pumili ng Tama, Para sa'yo, Para sa Pilipino &nbsp;•&nbsp;</span>
                 <span>Lumingon. Suportahan. Umunlad. &nbsp;•&nbsp; Keep the piso local &nbsp;•&nbsp; Gawa ng Pilipino, Para sa Pilipino &nbsp;•&nbsp; Yaman ng Lahi &nbsp;•&nbsp; Sariling Atin &nbsp;•&nbsp; Pumili ng Tama, Para sa'yo, Para sa Pilipino &nbsp;•&nbsp;</span>
