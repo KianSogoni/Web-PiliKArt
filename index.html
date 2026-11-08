@@ -907,10 +907,12 @@
         </div>
 
         <!-- Tab Buttons -->
-        <div class="admin-tabs" style="display:flex; gap:10px; margin-bottom:20px;">
+        <div class="admin-tabs" style="display:flex; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
             <button class="btn btn-brand admin-tab-btn active" onclick="app.switchAdminTab('orders', this)">Orders</button>
             <button class="btn btn-ghost admin-tab-btn" onclick="app.switchAdminTab('stock', this)">Inventory</button>
             <button class="btn btn-ghost admin-tab-btn" onclick="app.switchAdminTab('add', this)">Add Item</button>
+            <button class="btn btn-ghost admin-tab-btn" onclick="app.switchAdminTab('users', this)">Users</button>
+            <button class="btn btn-ghost admin-tab-btn" onclick="app.switchAdminTab('analytics', this)">Analytics</button>
         </div>
         
         <!-- Orders Tab -->
@@ -918,7 +920,8 @@
             <div class="admin-filter-bar">
                 <div class="admin-search-wrap">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                    <input type="text" id="admin-order-search" class="input" placeholder="Search Order ID, Customer Name, or Address..." oninput="app.filterAdminOrders()">
+                    <!-- CHANGED TO USE API -->
+                    <input type="text" id="admin-order-search" class="input" placeholder="Search Order ID, Customer Name, or Address..." oninput="app.fetchAdminOrdersAPI()">
                 </div>
                 <select id="admin-order-status" class="input" onchange="app.filterAdminOrders()">
                     <option value="all">All Statuses</option>
@@ -1012,6 +1015,31 @@
                 </form>
             </div>
         </div>
+
+        <!-- Users Tab -->
+        <div id="admin-users" class="hidden">
+            <div class="admin-add-form-wrap" style="max-width: 100%; padding: 0; background: transparent; border: none; box-shadow: none;">
+                <div class="admin-inventory-section">
+                    <div class="admin-inv-header">
+                        <h3><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> Registered Users</h3>
+                    </div>
+                    <div class="admin-inv-grid" id="admin-users-grid"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Analytics Tab -->
+        <div id="admin-analytics" class="hidden">
+            <div class="admin-add-form-wrap" style="max-width: 100%; padding: 0; background: transparent; border: none; box-shadow: none;">
+                <div class="admin-inventory-section">
+                    <div class="admin-inv-header">
+                        <h3><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg> Top 5 Best Selling Products</h3>
+                    </div>
+                    <div id="admin-analytics-grid" style="display: flex; flex-direction: column; gap: 15px;"></div>
+                </div>
+            </div>
+        </div>
+
     </div>
 </main>
 
@@ -1376,6 +1404,6 @@
 <!-- Toast -->
 <div id="toast"></div>
  
-<script src="main.js?v=8"></script>
+<script src="main.js?v=9"></script>
 </body>
 </html>

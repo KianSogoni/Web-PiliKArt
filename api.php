@@ -321,7 +321,49 @@ switch ($action) {
             $in['options'] ?? '' // NEW
         ]);
         out(['ok' => true]);
- 
+    
+        case 'admin-get-analytics':
+        // Uses: INNER JOIN, SUM(), GROUP BY, HAVING, ORDER BY, LIMIT, and Aliases (AS)
+        $stmt = $pdo->query("
+            SELECT p.name, SUM(oi.qty) AS total_sold, SUM(oi.qty * oi.price) AS total_revenue
+            FROM order_items oi
+            INNER JOIN products p ON oi.product_id = p.id
+            GROUP BY p.id, p.name
+            HAVING total_sold > 0
+            ORDER BY total_sold DESC
+            LIMIT 5
+        ");
+        out($stmt->fetchAll());
+
+    case 'admin-search-orders':
+        // Uses: LIKE, WHERE, OR, ORDER BY
+        $q = '%' . ($_GET['q'] ?? '') . '%';
+        $stmt = $pdo->prepare("
+            SELECT * FROM orders 
+            WHERE customer_name LIKE ? OR address LIKE ? OR id LIKE ?
+            ORDER BY id DESC
+        ");
+        $stmt->execute([$q, $q, $q]);
+        $orders = $stmt->fetchAll();
+        
+        // Fetch items for each order so they render properly
+        foreach ($orders as &$o) {
+            $stmtItems = $pdo->prepare('SELECT * FROM order_items WHERE order_id=?');
+            $stmtItems->execute([$o['id']]);
+            $o['items'] = $stmtItems->fetchAll();
+        }
+        out($orders);
+
+    case 'admin-get-users':
+        // Uses: LEFT JOIN, COUNT(), GROUP BY
+        $stmt = $pdo->query("
+            SELECT u.name, u.email, COUNT(o.id) AS order_count
+            FROM users u
+            LEFT JOIN orders o ON u.id = o.user_id
+            GROUP BY u.id
+        ");
+        out($stmt->fetchAll());
+        
     case 'mark-read':
         if (!empty($_SESSION['user_id'])) {
             try {
