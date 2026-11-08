@@ -275,10 +275,16 @@ switch ($action) {
         }
  
     case 'admin-update-order':
-        $stmt = $pdo->prepare('UPDATE orders SET status=? WHERE id=?');
+        if ($in['status'] === 'Delivered') {
+            $stmt = $pdo->prepare('UPDATE orders SET status=?, delivered_at=NOW() WHERE id=?');
+        } else {
+            $stmt = $pdo->prepare('UPDATE orders SET status=?, delivered_at=NULL WHERE id=?');
+        }
         $stmt->execute([$in['status'], $in['order_id']]);
+        
         $stmt = $pdo->prepare('SELECT user_id FROM orders WHERE id=?');
         $stmt->execute([$in['order_id']]);
+        // ... rest of the code
         if($uid = $stmt->fetchColumn()){
             try {
                 $pdo->prepare('INSERT INTO notifications (user_id, order_id, message) VALUES (?,?,?)')->execute([$uid, $in['order_id'], "Update sa order #{$in['order_id']}: ngayon ay {$in['status']}."]);
@@ -647,6 +653,11 @@ switch ($action) {
         $s = $pdo->prepare('SELECT status FROM group_carts WHERE id=?');
         $s->execute([$gid]);
         if ($s->fetchColumn() !== 'open') out(['error' => 'Cart locked'], 400);
+        $s = $pdo->prepare('SELECT COUNT(*) FROM group_cart_members WHERE group_cart_id=? AND paid=1');
+        $s->execute([$gid]);
+        if ((int)$s->fetchColumn() > 0) {
+            out(['error' => 'Hindi na mababago ang items: may nagbayad na. Kailangang i-unverify muna ang mga bayad.'], 400);
+        }
         $pid = (int)($in['product_id'] ?? 0);
         $qty = max(1, (int)($in['qty'] ?? 1));
         $var = trim($in['variation'] ?? '');
@@ -675,6 +686,11 @@ switch ($action) {
         $s->execute([$gid, $uid]);
         $me = $s->fetch();
         if (!$me) out(['error' => 'Not approved'], 403);
+        $s = $pdo->prepare('SELECT COUNT(*) FROM group_cart_members WHERE group_cart_id=? AND paid=1');
+        $s->execute([$gid]);
+        if ((int)$s->fetchColumn() > 0) {
+            out(['error' => 'Hindi na mababago ang items: may nagbayad na. Kailangang i-unverify muna ang mga bayad.'], 400);
+        }
         $s = $pdo->prepare('SELECT * FROM group_cart_items WHERE id=? AND group_cart_id=?');
         $s->execute([$iid, $gid]);
         $it = $s->fetch();
@@ -687,6 +703,7 @@ switch ($action) {
             $pdo->prepare('UPDATE group_cart_items SET qty=? WHERE id=?')->execute([$new, $iid]);
         }
         out(['ok' => true]);
+        
 
     case 'group-set-split':
         $uid = (int)($_SESSION['user_id'] ?? 0);
@@ -716,12 +733,28 @@ switch ($action) {
         resetGroupPayments($pdo, $gid);
         out(['ok' => true]);
 
+    case 'group-set-member-fixed-amount':
+        $uid = (int)($_SESSION['user_id'] ?? 0);
+        $gid = (int)($in['group_id'] ?? 0);
+        $mid = (int)($in['member_id'] ?? 0);
+        $amount = max(0, (int)($in['amount'] ?? 0));
+        $s = $pdo->prepare('SELECT * FROM group_cart_members WHERE group_cart_id=? AND user_id=? AND role="host"');
+        $s->execute([$gid, $uid]);
+        if (!$s->fetch()) out(['error' => 'Only host'], 403);
+        $pdo->prepare('UPDATE group_cart_members SET fixed_share_amount=? WHERE id=? AND group_cart_id=?')
+            ->execute([$amount, $mid, $gid]);
+        resetGroupPayments($pdo, $gid);
+        out(['ok' => true]);
+
     case 'group-mark-paid':
         $uid = (int)($_SESSION['user_id'] ?? 0);
         $gid = (int)($in['group_id'] ?? 0);
         $mid = (int)($in['member_id'] ?? 0);
         $paid = (int)($in['paid'] ?? 1) ? 1 : 0;
         $amount = max(0, (int)($in['amount'] ?? 0));
+        $method = ($in['method'] ?? 'cash') === 'gcash' ? 'gcash' : 'cash';
+        $proof  = (string)($in['proof'] ?? '');
+
         $s = $pdo->prepare('SELECT * FROM group_cart_members WHERE group_cart_id=? AND user_id=?');
         $s->execute([$gid, $uid]);
         $me = $s->fetch();
@@ -731,8 +764,19 @@ switch ($action) {
         $tgt = $s->fetch();
         if (!$tgt) out(['error' => 'Member not found'], 404);
         if ($me['role'] !== 'host' && $tgt['user_id'] !== $uid) out(['error' => 'Not allowed'], 403);
-        $pdo->prepare('UPDATE group_cart_members SET paid=?, paid_amount=? WHERE id=?')
-            ->execute([$paid, $paid ? $amount : 0, $mid]);
+        
+        if ($paid) {
+            if ($method === 'gcash' && strlen($proof) < 50) {
+                out(['error' => 'I-upload muna ang GCash screenshot.'], 400);
+            }
+            // If host is the one marking, it auto-verifies.
+            $verify = ($me['role'] === 'host') ? 1 : 0;
+            $pdo->prepare('UPDATE group_cart_members SET paid=1, paid_amount=?, payment_method=?, payment_proof=?, payer_verified=? WHERE id=?')
+                ->execute([$amount, $method, $method === 'gcash' ? $proof : '', $verify, $mid]);
+        } else {
+            $pdo->prepare('UPDATE group_cart_members SET paid=0, paid_amount=0, payer_verified=0 WHERE id=?')
+                ->execute([$mid]);
+        }
         out(['ok' => true]);
 
     case 'group-member-pay':
@@ -803,6 +847,11 @@ switch ($action) {
         $s->execute([$gid, $uid]);
         $me = $s->fetch();
         if (!$me) out(['error' => 'Not approved'], 403);
+        $s = $pdo->prepare('SELECT COUNT(*) FROM group_cart_members WHERE group_cart_id=? AND paid=1');
+        $s->execute([$gid]);
+        if ((int)$s->fetchColumn() > 0) {
+            out(['error' => 'Hindi na mababago ang items: may nagbayad na. Kailangang i-unverify muna ang mga bayad.'], 400);
+        }
         $s = $pdo->prepare('SELECT * FROM group_cart_items WHERE id=? AND group_cart_id=?');
         $s->execute([$iid, $gid]);
         $it = $s->fetch();
@@ -826,6 +875,12 @@ switch ($action) {
         $s = $pdo->prepare('SELECT * FROM group_cart_members WHERE group_cart_id=? AND user_id=? AND role="host"');
         $s->execute([$gid, $uid]);
         if (!$s->fetch()) out(['error' => 'Only host'], 403);
+        $s = $pdo->prepare('SELECT COUNT(*) FROM group_cart_members WHERE group_cart_id=? AND status="approved"');
+        $s->execute([$gid]);
+        if ((int)$s->fetchColumn() < 2) {
+            out(['error' => 'Kailangan ng hindi bababa sa 2 miyembro para ma-confirm ang Bayanihan Cart.'], 400);
+        }
+
         if ($g['status'] !== 'open') out(['error' => 'Already processed'], 400);
         if (!$g['customer_name'] || !$g['phone'] || !$g['delivery_address']) {
             out(['error' => 'Kumpletuhin muna ang delivery details.'], 400);
@@ -982,6 +1037,83 @@ switch ($action) {
         $s->execute([$gid]);
         $g['items'] = $s->fetchAll();
         out($g); 
+
+    case 'request-refund':
+        $uid = (int)($_SESSION['user_id'] ?? 0);
+        if (!$uid) out(['error' => 'Not logged in'], 401);
+        
+        $oid = (int)($in['order_id'] ?? 0);
+        $reason = trim($in['reason'] ?? '');
+        $proof = (string)($in['proof'] ?? '');
+
+        if (!$oid || !$reason) out(['error' => 'Kulang ang detalye ng refund.'], 400);
+        if (strlen($proof) < 50) out(['error' => 'Kailangang mag-upload ng litrato bilang patunay.'], 400);
+
+        // Check if order exists, belongs to user, and is Delivered
+        $s = $pdo->prepare('SELECT status, refund_status FROM orders WHERE id=? AND user_id=?');
+        $s->execute([$oid, $uid]);
+        $order = $s->fetch();
+
+        if (!$order) out(['error' => 'Order not found.'], 404);
+        if ($order['status'] !== 'Delivered') out(['error' => 'Pwede lang mag-refund kapag Delivered na ang order.'], 400);
+        if ($order['refund_status'] !== 'none') out(['error' => 'May existing refund request na ang order na ito.'], 400);
+
+        $s = $pdo->prepare("
+            SELECT COUNT(*) FROM order_items oi 
+            INNER JOIN products p ON oi.product_id = p.id 
+            WHERE oi.order_id = ? AND p.category = 'paso'
+        ");
+        $s->execute([$oid]);
+        $hasPaso = (int)$s->fetchColumn() > 0;
+
+
+        $deliveryTime = $order['delivered_at'] ? strtotime($order['delivered_at']) : strtotime($order['created_at']);
+        $hoursElapsed = (time() - $deliveryTime) / 3600;
+
+        if ($hasPaso && $hoursElapsed > 24) {
+            out(['error' => 'Lumipas na ang 24-oras na refund window para sa PASO (pagkain) items.'], 400);
+        } elseif (!$hasPaso && $hoursElapsed > (24 * 7)) {
+            out(['error' => 'Lumipas na ang 7-araw na refund window para sa mga item na ito.'], 400);
+        }
+        
+        // Save the refund request
+        $pdo->prepare('UPDATE orders SET refund_status="requested", refund_reason=?, refund_proof=? WHERE id=?')
+            ->execute([$reason, $proof, $oid]);
+        
+        // Notify Admin (Optional, but good practice)
+        try {
+            $pdo->prepare('INSERT INTO notifications (user_id, order_id, message) VALUES (?,?,?)')
+                ->execute([1, $oid, "Refund Request: May nag-request ng refund sa Order #$oid."]);
+        } catch (Exception $e) {}
+
+        out(['ok' => true]);
+
+    case 'admin-handle-refund':
+        $oid = (int)($in['order_id'] ?? 0);
+        $action = $in['action'] ?? '';
+        
+        if (!in_array($action, ['approve', 'reject'], true)) {
+            out(['error' => 'Invalid action'], 400);
+        }
+
+        $newStatus = $action === 'approve' ? 'approved' : 'rejected';
+        
+        $pdo->prepare('UPDATE orders SET refund_status=? WHERE id=?')->execute([$newStatus, $oid]);
+
+        // Optional: Notify the user about the refund update
+        $s = $pdo->prepare('SELECT user_id FROM orders WHERE id=?');
+        $s->execute([$oid]);
+        if ($uid = $s->fetchColumn()) {
+            try {
+                $msg = $action === 'approve' 
+                    ? "Magandang balita! Na-approve na ang refund request mo para sa Order #$oid." 
+                    : "Paumanhin, pero na-reject ang refund request mo para sa Order #$oid. Kontakin kami kung may tanong ka.";
+                $pdo->prepare('INSERT INTO notifications (user_id, order_id, message) VALUES (?,?,?)')
+                    ->execute([$uid, $oid, $msg]);
+            } catch (Exception $e) {}
+        }
+        
+        out(['ok' => true]);
 }
 
 out(['error' => 'Unknown action'], 400);
