@@ -7,7 +7,7 @@ const app = {
         "San Pedro": { "Bagong Silang": 70, "Calendola": 42, "Chrysant": 46, "Cuyab": 18, "Estrella": 79, "Fatima": 15, "G.S.I.S.": 53, "Landayan": 23, "Langgam": 86, "Laram": 72, "Magsaysay": 48, "Maharlika": 32, "Narra": 68, "Nueva": 6, "Pacita 1": 29, "Pacita 2": 34, "Riverside": 66, "Rosario": 52, "Sampaguita Village": 46, "San Lorenzo Ruiz": 24, "San Roque": 11, "San Vicente": 79, "Santo Niño": 8, "United Bayanihan": 66, "United Better Living": 79 },
         "Santa Rosa": { "Aplaya": 50, "Balibago": 45, "Caingin": 30, "Dila": 25, "Dita": 40, "Don Jose": 70, "Ibaba": 15, "Kanluran": 15, "Labas": 25, "Macabling": 40, "Malitlit": 60, "Malusak": 10, "Market Area": 10, "Pooc": 30, "Pulong Santa Cruz": 60, "Santo Domingo": 50, "Sinalhan": 45, "Tagapo": 20 }
     },
-        async renderAdminUsers() {
+    async renderAdminUsers() {
         const grid = document.getElementById('admin-users-grid');
         if (!grid) return;
         grid.innerHTML = '<p style="text-align:center; color:var(--muted);">Loading users...</p>';
@@ -72,14 +72,13 @@ const app = {
             const res = await fetch(`api.php?action=admin-search-orders&q=${encodeURIComponent(q)}`);
             const orders = await res.json();
             
-            // Reuse your existing rendering logic by temporarily overriding this.orders
             const originalOrders = this.orders;
             this.orders = orders;
-            this.renderAdminOrders(); // Render using the API filtered results
-            this.orders = originalOrders; // Restore
+            this.renderAdminOrders(); 
+            this.orders = originalOrders; 
         } catch(e) { console.warn(e); }
     },
-    // Inside the app object, find tapPiliBot and replace it with this:
+
     tapPiliBot() {
         this.toggleBot();
 
@@ -87,10 +86,8 @@ const app = {
         const heartContainer = document.getElementById('pilibot-heart-container');
 
         if (btn) {
-            // Trigger leaf morph animation
             btn.classList.add('is-leaf');
 
-            // Spawn floating heart
             if (heartContainer) {
                 const heart = document.createElement('div');
                 heart.className = 'floating-heart';
@@ -99,7 +96,6 @@ const app = {
                 setTimeout(() => heart.remove(), 1000);
             }
 
-            // Revert back to robot icon after 1.5 seconds
             clearTimeout(this._piliLeafTimer);
             this._piliLeafTimer = setTimeout(() => {
                 btn.classList.remove('is-leaf');
@@ -165,7 +161,7 @@ const app = {
 
     carouselIndex: 0,
     carouselTimer: null,
-        departments: [
+    departments: [
         {
             name: "PASO",
             desc: "Taste the warmth of Lola's kitchen. Every bite is a memory of home, crafted with the love only a Filipino family knows.",
@@ -176,19 +172,19 @@ const app = {
             name: "NIPA",
             desc: "More than just a house, it's where the heart is. The iconic Tabo is the ultimate symbol of Filipino practical living.",
             featured: "Classic Plastic Tabo",
-            image: "https://placehold.co/600x338/1a2b1c/85b56d?text=Tabo"
+            image: "assets/nipa/Classic Plastic Tabo.png"
         },
         {
             name: "HABI",
             desc: "Woven with the threads of our ancestors. Wrap yourself with our indigenous woven scarves, carrying the soul of our tribes with you.",featured: "T'nalak Scarf",
             featured: "T'nalak Scarf",
-            image: "https://placehold.co/600x338/1a2b1c/85b56d?text=Indigenous+Scarf"
+            image: "assets/habi/Indigenous Woven Scarf.png"
         },
         {
             name: "APOLLO",
             desc: "Reach for the stars while keeping your feet on the ground. Because no Filipino gathering is complete without a Videoke session!",
             featured: "Mini Karaoke Machine",
-            image: "https://placehold.co/600x338/1a2b1c/85b56d?text=Mini+Karaoke"
+            image: "assets/apollo/minikaraokemachine.png"
         }
     ],
 
@@ -525,10 +521,8 @@ const app = {
         clearTimeout(this._toastTimer);
         this._toastTimer = setTimeout(() => t.classList.remove('show'), 3600);
     },
-        // --- LANDING PAGE INTERACTIONS ---
     
     initLandingPage() {
-        // 1. Typewriter Effect
         const text = "Tuloy ka, suki! Dito, ang bawat pili ay may kasamang init ng tahanan.";
         const el = document.getElementById('typewriter-text');
         if (el) {
@@ -538,20 +532,17 @@ const app = {
                 if (i < text.length) {
                     el.innerHTML = text.substring(0, i + 1) + '<span class="type-cursor"></span>';
                     i++;
-                    setTimeout(typeWriter, 40); // Speed of typing
+                    setTimeout(typeWriter, 40); 
                 }
             };
-            // Start typing after a tiny delay
             setTimeout(typeWriter, 500);
         }
 
-        // 2. Mouse Follow Glow (Lantern Effect)
         const landingScreen = document.getElementById('view-landing');
         const glow = document.getElementById('landing-glow');
         
         if (landingScreen && glow) {
             landingScreen.addEventListener('mousemove', (e) => {
-                // Only move if we are actually on the landing page
                 if (!landingScreen.classList.contains('hidden')) {
                     const rect = landingScreen.getBoundingClientRect();
                     const x = e.clientX - rect.left;
@@ -560,36 +551,28 @@ const app = {
                 }
             });
             
-            // Reset glow position when mouse leaves
             landingScreen.addEventListener('mouseleave', () => {
                 glow.style.transform = `translate(-50%, -50%)`;
             });
         }
     },
 
-    // 3. Cinematic Entry Transition
     enterStore() {
         const landing = document.getElementById('view-landing');
         if (!landing) return;
-        
-        // Add the zooming class
         landing.classList.add('is-entering');
-        
-        // Wait for the animation to finish before switching views
         setTimeout(() => {
             this.go('auth');
-            // Reset the class so it works again if they log out
             setTimeout(() => landing.classList.remove('is-entering'), 500);
-        }, 800); // Matches the CSS transition duration
+        }, 800); 
     },
-        // 1. Set up the mouse follower
+
     initLandingInteractions() {
         const landingScreen = document.getElementById('view-landing');
         const glow = document.getElementById('landing-glow');
         
         if (landingScreen && glow) {
             landingScreen.addEventListener('mousemove', (e) => {
-                // Only move if we are actually on the landing page
                 if (!landingScreen.classList.contains('hidden')) {
                     const rect = landingScreen.getBoundingClientRect();
                     const x = e.clientX - rect.left;
@@ -600,22 +583,16 @@ const app = {
         }
     },
 
-    // 2. The cinematic entry transition
     enterStore() {
         const landing = document.getElementById('view-landing');
         if (!landing) return;
-        
-        // Add the zooming class
         landing.classList.add('is-entering');
-        
-        // Wait for the 1.2s animation to finish before switching the view
         setTimeout(() => {
             this.go('auth');
-            
-            // Reset the class so it's ready for next time
             setTimeout(() => landing.classList.remove('is-entering'), 100);
-        }, 1200); // Must match the CSS transition time
+        }, 1200); 
     },
+
     handleAuth() {
         if (this.user) {
             fetch('api.php?action=logout').then(() => location.reload());
@@ -857,7 +834,6 @@ const app = {
             if (p.stock <= 0) stockClass = 'stock-out';
             else if (p.stock <= 10) stockClass = 'stock-low';
 
-            // NEW: Check if it's a best seller
             const isBestSeller = Number(p.best_seller) === 1;
             const bestSellerPill = isBestSeller ? `<span class="best-seller-pill">⭐ Suki's Choice</span>` : '';
 
@@ -929,7 +905,6 @@ const app = {
         const box = document.getElementById('add-confirm-item-box');
         if (!box) return;
 
-        // Parse Options
         let optionsHtml = '';
         if (p.options) {
             try {
@@ -960,12 +935,10 @@ const app = {
 
         box.innerHTML = `
             <div class="ci-horizontal-layout">
-                <!-- Left Column: Image -->
                 <div class="ci-left-col">
                     <img src="${this.esc(p.image || '')}" class="ci-hero-thumb" alt="${this.esc(p.name)}">
                 </div>
 
-                <!-- Right Column: Details & Options -->
                 <div class="ci-right-col">
                     <div class="ci-header">
                         <h3 class="ci-title">${this.esc(p.name)}</h3>
@@ -1007,7 +980,6 @@ const app = {
         if (!this.pendingCartItem) return;
         const p = this.pendingCartItem;
 
-        // Gather selected options
         const selectedOptions = [];
         document.querySelectorAll('#add-confirm-item-box input[type="radio"]:checked').forEach(input => {
             const groupName = input.name.replace('opt_', '');
@@ -1015,7 +987,6 @@ const app = {
         });
         const variationStr = selectedOptions.join(', ');
 
-        // Check if the exact product + variation is already in the cart
         const item = this.cart.find(x => x.id === p.id && (x.variation || '') === variationStr);
         
         if (item) {
@@ -1237,7 +1208,7 @@ const app = {
         this.renderCheckoutSummary();
     },
 
-        renderCheckoutSummary() {
+    renderCheckoutSummary() {
         const el = document.getElementById('checkout-summary');
         if (!el) return;
 
@@ -1695,13 +1666,12 @@ const app = {
         this.renderAdminInventory();
     },
 
-        switchAdminTab(tab, btn) {
+    switchAdminTab(tab, btn) {
         document.querySelectorAll('.admin-tab-btn').forEach(b => {
             b.className = 'btn btn-ghost admin-tab-btn';
         });
         btn.className = 'btn btn-brand admin-tab-btn';
         
-        // Updated to include the new tabs
         ['orders', 'stock', 'add', 'users', 'analytics'].forEach(t => {
             const el = document.getElementById('admin-' + t);
             if (el) el.classList.add('hidden');
@@ -1710,7 +1680,6 @@ const app = {
         const target = document.getElementById('admin-' + tab);
         if (target) target.classList.remove('hidden');
 
-        // Trigger data load for the specific tabs
         if (tab === 'users') this.renderAdminUsers();
         if (tab === 'analytics') this.renderAdminAnalytics();
     },
@@ -1871,7 +1840,7 @@ const app = {
         $('pe-image').value = p.image || '';
         $('pe-tags').value = p.tags || '';
         $('pe-bestseller').checked = Number(p.best_seller) === 1;
-        $('pe-options').value = p.options || ''; // NEW
+        $('pe-options').value = p.options || '';
 
         this.updateEditorPreview();
         document.getElementById('product-editor-modal').classList.remove('hidden');
@@ -1915,7 +1884,7 @@ const app = {
             image: v('pe-image'),
             tags: v('pe-tags'),
             best_seller: document.getElementById('pe-bestseller').checked ? 1 : 0,
-            options: v('pe-options') // NEW
+            options: v('pe-options')
         };
 
         try {
@@ -1992,7 +1961,7 @@ const app = {
             image: document.getElementById('add-image').value.trim(),
             tags: document.getElementById('add-tags').value.trim(),
             best_seller: document.getElementById('add-bestseller').checked ? 1 : 0,
-            options: document.getElementById('add-options').value.trim() // NEW
+            options: document.getElementById('add-options').value.trim()
         };
 
         try {
@@ -2016,19 +1985,31 @@ const app = {
 
     toggleTheme() {
         const html = document.documentElement;
-        const isSunset = html.getAttribute('data-theme') === 'sunset';
-        const nextTheme = isSunset ? 'day' : 'sunset';
-        html.setAttribute('data-theme', nextTheme);
-        localStorage.setItem('pk_theme', nextTheme);
-
-        const pillWrap = document.getElementById('nd-theme-pill').parentElement;
-        if (pillWrap) pillWrap.classList.toggle('is-sunset', !isSunset);
+        const next = html.getAttribute('data-theme') === 'sunset' ? 'day' : 'sunset';
+        
+        // 1. Enable smooth cross-fade
+        html.classList.add('theme-switching');
+        void html.offsetWidth; // Forces the browser to apply the transition rule immediately
+        
+        // 2. Apply the new theme
+        html.setAttribute('data-theme', next);
+        localStorage.setItem('pk_theme', next);
+        
+        // 3. Update the toggle pill UI
+        const pillWrap = document.getElementById('nd-theme-pill')?.parentElement;
+        if (pillWrap) pillWrap.classList.toggle('is-sunset', next === 'sunset');
+        
+        // 4. Remove the transition class ONLY after the 0.7s animation finishes
+        clearTimeout(this._themeTimeout);
+        this._themeTimeout = setTimeout(() => {
+            html.classList.remove('theme-switching');
+        }, 800); 
     },
 
     checkTheme() {
         const saved = localStorage.getItem('pk_theme') || 'day';
         document.documentElement.setAttribute('data-theme', saved);
-        const pillWrap = document.getElementById('nd-theme-pill').parentElement;
+        const pillWrap = document.getElementById('nd-theme-pill')?.parentElement;
         if (pillWrap) pillWrap.classList.toggle('is-sunset', saved === 'sunset');
     },
 
