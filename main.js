@@ -81,15 +81,6 @@ const app = {
         }
     },
 
-    lagunaData: {
-        "Biñan": { "Biñan (Poblacion)": 25, "Bungahan": 19, "Canlalay": 45, "Casile": 44, "De La Paz": 54, "Ganado": 47, "Langkiwa": 90, "Loma": 144, "Malaban": 43, "Malamig": 113, "Mampalasan": 58, "Platero": 20, "San Antonio": 40, "San Francisco": 52, "San Jose": 35, "San Vicente": 28, "Santo Domingo": 42, "Santo Niño": 28, "Soro-soro": 45, "Timbao": 50, "Tubigan": 35, "Zapote": 2 },
-        "Cabuyao": { "Baclaran": 86, "Banaybanay": 26, "Banlic": 55, "Barangay Dos": 12, "Barangay Tres": 8, "Barangay Uno": 10, "Bigaa": 19, "Butong": 44, "Casile": 90, "Diezmo": 77, "Gulod": 54, "Mamatid": 71, "Marinig": 31, "Niugan": 15, "Pittland": 70, "Pulo": 25, "Sala": 10, "San Isidro": 30 },
-        "Calamba": { "Bagong Kalsada": 35, "Banadero": 14, "Banlic": 47, "Barandal": 59, "Barangay 1": 15, "Barangay 2": 4, "Barangay 3": 8, "Barangay 4": 4, "Barangay 5": 5, "Barangay 6": 2, "Barangay 7": 8, "Batino": 44, "Bubuyan": 40, "Bucal": 30, "Bunggo": 80, "Burol": 60, "Camaligan": 70, "Canlubang": 100, "Halang": 25, "Hornalan": 90, "Kay-Anlog": 80, "La Mesa": 120, "Laguerta": 90, "Lawa": 60, "Lecheria": 15, "Lingga": 50, "Looc": 40, "Mabato": 100, "Majada Labas": 70, "Makiling": 70, "Mapagong": 50, "Masili": 30, "Maunong": 70, "Mayapa": 80, "Milagrosa": 80, "Paciano Rizal": 40, "Palingon": 40, "Palo-Alto": 120, "Pansol": 70, "Parian": 30, "Prinza": 70, "Punta": 60, "Puting Lupa": 80, "Real": 20, "Saimsim": 90, "Sampiruhan": 30, "San Cristobal": 50, "San Jose": 30, "San Juan": 20, "Sirang Lupa": 60, "Sucol": 80, "Turbina": 50, "Ulango": 90, "Uwisan": 40 },
-        "San Pablo": { "Atisan": 170, "Bagong Bayan II-A": 14, "Bagong Pook VI-C": 8, "Barangay I-A": 11, "Barangay I-B": 6, "Barangay II-A": 22, "Barangay II-B": 15, "Barangay II-C": 12, "Barangay II-D": 10, "Barangay II-E": 13, "Barangay II-F": 20, "Barangay III-A": 10, "Barangay III-B": 12, "Barangay III-C": 15, "Barangay III-D": 18, "Barangay III-E": 20, "Barangay III-F": 22, "Barangay IV-A": 10, "Barangay IV-B": 12, "Barangay IV-C": 15, "Barangay V-A": 22, "Barangay V-B": 25, "Barangay V-C": 28, "Barangay V-D": 10, "Barangay VI-A": 15, "Barangay VI-B": 18, "Barangay VI-D": 20, "Barangay VI-E": 22, "Barangay VII-A": 15, "Barangay VII-B": 18, "Barangay VII-C": 20, "Barangay VII-D": 22, "Barangay VII-E": 25, "Bautista": 130, "Concepcion": 23, "Del Remedio": 17, "Dolores": 36, "San Antonio 1": 83, "San Antonio 2": 110, "San Bartolome": 72, "San Buenaventura": 51, "San Crispin": 61, "San Cristobal": 130, "San Diego": 73, "San Francisco": 22, "San Gabriel": 25, "San Gregorio": 35, "San Ignacio": 44, "San Joaquin": 61, "San Jose": 93, "San Juan": 42, "San Lorenzo": 69, "San Lucas 1": 12, "San Lucas 2": 13, "San Marcos": 50, "San Mateo": 57, "San Miguel": 57, "San Nicolas": 36, "San Pedro": 29, "San Rafael": 23, "San Roque": 29, "San Vicente": 69, "Santa Ana": 91, "Santa Catalina": 69, "Santa Cruz": 80, "Santa Elena": 73, "Santa Felomina": 55, "Santa Isabel": 66, "Santa Maria": 66, "Santa Maria Magdalena": 45, "Santa Monica": 43, "Santa Veronica": 64, "Santiago I": 82, "Santiago II": 110, "Santisimo Rosario": 90, "Santo Angel": 73, "Santo Cristo": 20, "Santo Niño": 66, "Soledad": 42 },
-        "San Pedro": { "Bagong Silang": 70, "Calendola": 42, "Chrysant": 46, "Cuyab": 18, "Estrella": 79, "Fatima": 15, "G.S.I.S.": 53, "Landayan": 23, "Langgam": 86, "Laram": 72, "Magsaysay": 48, "Maharlika": 32, "Narra": 68, "Nueva": 6, "Pacita 1": 29, "Pacita 2": 34, "Riverside": 66, "Rosario": 52, "Sampaguita Village": 46, "San Lorenzo Ruiz": 24, "San Roque": 11, "San Vicente": 79, "Santo Niño": 8, "United Bayanihan": 66, "United Better Living": 79 },
-        "Santa Rosa": { "Aplaya": 50, "Balibago": 45, "Caingin": 30, "Dila": 25, "Dita": 40, "Don Jose": 70, "Ibaba": 15, "Kanluran": 15, "Labas": 25, "Macabling": 40, "Malitlit": 60, "Malusak": 10, "Market Area": 10, "Pooc": 30, "Pulong Santa Cruz": 60, "Santo Domingo": 50, "Sinalhan": 45, "Tagapo": 20 }
-    },
-
     async renderAdminUsers() {
         const grid = document.getElementById('admin-users-grid');
         if (!grid) return;
@@ -333,7 +324,7 @@ const app = {
     gcashBase64: '',
     selectedCategory: 'all',
     hoverTimeout: null,
-    adminOrderFilter: { search: '', status: 'all' },
+    adminOrderFilter: { search: '', status: 'all', dept: 'all', type: 'all' },
     editingProductId: null,
     protectionEnabled: false,
     bayanihan: { list: [], invites: [], current: null, activeGroupId: null },
@@ -358,6 +349,14 @@ const app = {
             this.products = data.products || [];
             this.orders = data.orders || [];
             this.fee = data.fee || 0;
+            this.deliveryFeesRaw = data.deliveryFees || []; 
+
+            this.lagunaData = {};
+            this.deliveryFeesRaw.forEach(f => {
+                if (!this.lagunaData[f.city]) this.lagunaData[f.city] = {};
+                this.lagunaData[f.city][f.barangay] = parseInt(f.fee);
+            });
+            this.updateFaqDeliveryInfo(); 
 
             if (this.user && this.user.address) {
                 try {
@@ -1838,10 +1837,102 @@ const app = {
             this.products = data.products || [];
             this.orders = data.orders || [];
             this.fee = data.fee || this.fee;
+            
+            this.deliveryFeesRaw = data.deliveryFees || [];
+            this.lagunaData = {};
+            this.deliveryFeesRaw.forEach(f => {
+                if (!this.lagunaData[f.city]) this.lagunaData[f.city] = {};
+                this.lagunaData[f.city][f.barangay] = parseInt(f.fee);
+            });
+
+            this.updateFaqDeliveryInfo();
             this.renderMenu();
             this.renderCart();
-            this.renderCarousel(); // 🟢 ADD THIS LINE
+            this.renderCarousel();
         } catch (e) { console.warn('Refresh failed', e); }
+    },
+
+    updateFaqDeliveryInfo() {
+        if (!this.deliveryFeesRaw || this.deliveryFeesRaw.length === 0) return;
+
+        // 1. Calculate Min and Max Fees
+        const fees = this.deliveryFeesRaw.map(f => parseInt(f.fee));
+        const minFee = Math.min(...fees);
+        const maxFee = Math.max(...fees);
+
+        // 2. Extract Unique Cities
+        const uniqueCities = [...new Set(this.deliveryFeesRaw.map(f => f.city))];
+        let citiesStr = '';
+        if (uniqueCities.length > 1) {
+            citiesStr = uniqueCities.slice(0, -1).join(', ') + ', at ' + uniqueCities[uniqueCities.length - 1];
+        } else if (uniqueCities.length === 1) {
+            citiesStr = uniqueCities[0];
+        }
+
+        // 3. Inject into the DOM
+        const minEl = document.getElementById('faq-min-fee');
+        const maxEl = document.getElementById('faq-max-fee');
+        const citiesEl = document.getElementById('faq-delivery-cities');
+
+        if (minEl) minEl.textContent = this.money(minFee);
+        if (maxEl) maxEl.textContent = this.money(maxFee);
+        if (citiesEl) citiesEl.textContent = citiesStr;
+
+        // 🟢 NEW: Show the toggle button only if user is logged in
+        const btn = document.getElementById('faq-toggle-fees-btn');
+        if (btn) {
+            btn.style.display = this.user ? 'inline-flex' : 'none';
+        }
+    },
+
+    toggleFaqFees(e) {
+        if (e) e.stopPropagation(); // Stop FAQ from closing when clicking the button
+        if (!this.user) return; // Security check
+
+        const container = document.getElementById('faq-fees-container');
+        const isOpening = container.classList.contains('hidden');
+
+        if (isOpening) {
+            this.renderFaqFeesTable();
+            container.classList.remove('hidden');
+        } else {
+            container.classList.add('hidden');
+        }
+
+        // Fix the accordion height so the table isn't cut off
+        const faqBody = container.closest('.faq-recipe-body');
+        if (faqBody && faqBody.parentElement.classList.contains('active')) {
+            setTimeout(() => { faqBody.style.maxHeight = faqBody.scrollHeight + 'px'; }, 50);
+        }
+    },
+
+    renderFaqFeesTable() {
+        const container = document.getElementById('faq-fees-container');
+        if (!container) return;
+
+        // Group by City
+        const grouped = {};
+        this.deliveryFeesRaw.forEach(f => {
+            if (!grouped[f.city]) grouped[f.city] = [];
+            grouped[f.city].push(f);
+        });
+
+        let html = '<table style="width:100%; border-collapse:collapse; font-size:13px;">';
+        html += '<thead><tr style="background:var(--surface2); color:var(--ink); position:sticky; top:0; z-index:10;"><th style="padding:8px 12px; text-align:left; border-bottom:2px solid var(--line);">Lungsod</th><th style="padding:8px 12px; text-align:left; border-bottom:2px solid var(--line);">Barangay</th><th style="padding:8px 12px; text-align:right; border-bottom:2px solid var(--line);">Fee</th></tr></thead><tbody>';
+
+        Object.keys(grouped).sort().forEach(city => {
+            const brgys = grouped[city].sort((a, b) => a.barangay.localeCompare(b.barangay));
+            brgys.forEach((b, index) => {
+                html += `<tr style="border-bottom:1px solid var(--line); background:${index % 2 === 0 ? 'transparent' : 'var(--surface2)'};">`;
+                html += `<td style="padding:8px 12px; font-weight:${index === 0 ? '800' : '400'}; color:${index === 0 ? 'var(--brand)' : 'var(--ink)'};">${index === 0 ? city : ''}</td>`;
+                html += `<td style="padding:8px 12px; color:var(--muted); font-weight:600;">${b.barangay}</td>`;
+                html += `<td style="padding:8px 12px; text-align:right; font-weight:800; color:var(--leaf);">${this.money(b.fee)}</td>`;
+                html += `</tr>`;
+            });
+        });
+
+        html += '</tbody></table>';
+        container.innerHTML = html;
     },
 
     async submitOrder() {
@@ -2029,15 +2120,23 @@ const app = {
 
                 <div class="order-body">
                     <div class="order-items-list">
-                        ${o.items.map(i => `
-                            <div class="order-item-row">
-                                <div class="order-item-info">
-                                    <span class="item-qty">${i.qty}x</span>
-                                    <span class="item-name">${this.esc(i.name)} ${i.variation ? `<small style="color:var(--brand); font-size:11px;">(${this.esc(i.variation)})</small>` : ''}</span>
+                        ${(() => {
+                            const grouped = {};
+                            o.items.forEach(i => {
+                                const key = i.product_id + '|' + (i.variation || '');
+                                if (!grouped[key]) grouped[key] = { ...i };
+                                else grouped[key].qty += i.qty;
+                            });
+                            return Object.values(grouped).map(i => `
+                                <div class="order-item-row">
+                                    <div class="order-item-info">
+                                        <span class="item-qty">${i.qty}x</span>
+                                        <span class="item-name">${this.esc(i.name)} ${i.variation ? `<small style="color:var(--brand); font-size:11px;">(${this.esc(i.variation)})</small>` : ''}</span>
+                                    </div>
+                                    <span class="item-total">${this.money(i.price * i.qty)}</span>
                                 </div>
-                                <span class="item-total">${this.money(i.price * i.qty)}</span>
-                            </div>
-                        `).join('')}
+                            `).join('');
+                        })()}
                     </div>
 
                     <div class="order-summary-row">
@@ -2252,7 +2351,8 @@ const app = {
         });
         btn.className = 'btn btn-brand admin-tab-btn';
         
-        ['orders', 'stock', 'add', 'users', 'analytics', 'bayanihan'].forEach(t => {
+        // 🟢 Added 'fees' to the array
+        ['orders', 'stock', 'add', 'users', 'analytics', 'bayanihan', 'fees'].forEach(t => {
             const el = document.getElementById('admin-' + t);
             if (el) el.classList.add('hidden');
         });
@@ -2263,11 +2363,20 @@ const app = {
         if (tab === 'users') this.renderAdminUsers();
         if (tab === 'analytics') this.renderAdminAnalytics();
         if (tab === 'bayanihan') this.renderAdminBayanihan();
+        // 🟢 Added this line
+        if (tab === 'fees') this.renderAdminFees(); 
+    },
+
+    toggleAdvancedFilters() {
+        const el = document.getElementById('admin-advanced-filters');
+        el.classList.toggle('hidden');
     },
 
     filterAdminOrders() {
         this.adminOrderFilter.search = document.getElementById('admin-order-search').value.toLowerCase();
         this.adminOrderFilter.status = document.getElementById('admin-order-status').value;
+        this.adminOrderFilter.dept = document.getElementById('admin-order-dept').value;
+        this.adminOrderFilter.type = document.getElementById('admin-order-type').value;
         this.renderAdminOrders();
     },
 
@@ -2284,8 +2393,19 @@ const app = {
                 (o.phone && o.phone.includes(this.adminOrderFilter.search));
 
             const statusMatch = this.adminOrderFilter.status === 'all' || o.status === this.adminOrderFilter.status;
+            
+            let typeMatch = true;
+            if (this.adminOrderFilter.type === 'bayanihan') typeMatch = !!o.is_group_order;
+            if (this.adminOrderFilter.type === 'individual') typeMatch = !o.is_group_order;
+            let deptMatch = true;
+            if (this.adminOrderFilter.dept !== 'all') {
+                deptMatch = o.items.some(i => {
+                    const p = this.products.find(x => x.id === i.product_id);
+                    return p && p.category === this.adminOrderFilter.dept;
+                });
+            }
 
-            return searchMatch && statusMatch;
+            return searchMatch && statusMatch && typeMatch && deptMatch;
         });
 
         grid.innerHTML = filteredOrders.map(o => {
@@ -2318,7 +2438,16 @@ const app = {
                 </div>
 
                 <div class="admin-order-items">
-                    ${o.items.map(i => `<div class="admin-item-row"><span>${i.qty}x ${this.esc(i.name)} ${i.variation ? `<small style="color:var(--brand);">(${this.esc(i.variation)})</small>` : ''}</span><span>${this.money(i.price * i.qty)}</span></div>`).join('')}
+                    ${(() => {
+                        // Group items by product ID and variation to prevent duplicates
+                        const grouped = {};
+                        o.items.forEach(i => {
+                            const key = i.product_id + '|' + (i.variation || '');
+                            if (!grouped[key]) grouped[key] = { ...i };
+                            else grouped[key].qty += i.qty;
+                        });
+                        return Object.values(grouped).map(i => `<div class="admin-item-row"><span>${i.qty}x ${this.esc(i.name)} ${i.variation ? `<small style="color:var(--brand);">(${this.esc(i.variation)})</small>` : ''}</span><span>${this.money(i.price * i.qty)}</span></div>`).join('');
+                    })()}
                 </div>
 
                 ${o.is_group_order ? `
@@ -3212,8 +3341,12 @@ const app = {
             }
         } catch(e) {}
         
+        const defaultRecipientName = g.customer_name || (hostMember ? hostMember.name : '');
+        const defaultMemberObj = approvedMembers.find(m => m.name === defaultRecipientName);
+        const defaultRecipientPhone = g.phone || (defaultMemberObj ? defaultMemberObj.phone : '');
+
         const memberOptions = approvedMembers.map(m => 
-            `<option value="${this.esc(m.name)}|${this.esc(m.phone || '')}" ${g.customer_name === m.name ? 'selected' : ''}>${this.esc(m.name)} (${this.esc(m.phone || 'No phone')})</option>`
+            `<option value="${this.esc(m.name)}|${this.esc(m.phone || '')}" ${defaultRecipientName === m.name ? 'selected' : ''}>${this.esc(m.name)} (${this.esc(m.phone || 'No phone')})</option>`
         ).join('');
 
         const cityOptions = Object.keys(this.lagunaData).map(c => 
@@ -3234,13 +3367,13 @@ const app = {
                     <div class="co-field">
                         <label>Recipient (Member)</label>
                         <select id="bg-member" class="input" ${editable ? '' : 'disabled'} onchange="app.updateGroupRecipient(this.value)">
-                            <option value="" disabled ${!g.customer_name ? 'selected' : ''}>Select member...</option>
+                            <option value="" disabled ${!defaultRecipientName ? 'selected' : ''}>Select member...</option>
                             ${memberOptions}
                         </select>
                     </div>
                     <div class="co-field">
                         <label>Contact Number</label>
-                        <input type="text" id="bg-phone" class="input" value="${this.esc(g.phone || '')}" ${editable ? '' : 'disabled'} placeholder="09171234567">
+                        <input type="text" id="bg-phone" class="input" value="${this.esc(defaultRecipientPhone || '')}" ${editable ? '' : 'disabled'} placeholder="Ilagay ang contact number">
                     </div>
                 </div>
                 <div class="co-row">
@@ -3503,13 +3636,30 @@ const app = {
 
         let mainContentHtml = '';
         if (isOrdered) {
-            mainContentHtml = `<div style="margin-bottom: 20px;">${splitBreakdownHtml}</div>`;
+            mainContentHtml = `
+                <div style="margin-bottom: 20px;">${splitBreakdownHtml}</div>
+                <div style="margin-bottom: 20px;">${itemsHtml}</div>
+            `;
         } else {
             mainContentHtml = `
-                <div style="display: grid; grid-template-columns: minmax(320px, 1fr) minmax(400px, 1.5fr); gap: 20px; margin-bottom: 20px; align-items: start;">
+                <!-- Top Row: Delivery & Split Breakdown -->
+                <div style="display: grid; grid-template-columns: minmax(320px, 1fr) minmax(400px, 1.5fr); gap: 20px; margin-bottom: 20px; align-items: stretch;">
+                    <!-- Left Column -->
+                    <div style="display: flex; flex-direction: column; gap: 20px;">
+                        ${splitSettings}
+                        ${deliveryHtml}
+                    </div>
+                    <!-- Right Column -->
+                    <div>
+                        ${splitBreakdownHtml}
+                    </div>
+                </div>
+                
+                <!-- Bottom Row: Items List -->
+                <div style="margin-bottom: 20px;">
                     ${itemsHtml}
-                    ${splitBreakdownHtml}
-                </div>`;
+                </div>
+            `;
         }
 
         body.innerHTML = `
@@ -3522,11 +3672,6 @@ const app = {
             ${topCards}
             ${actions}
             ${deliveredHighlight}
-            <div style="display: grid; grid-template-columns: ${isHost ? 'minmax(320px, 1fr) minmax(400px, 1.5fr)' : '1fr'}; gap: 20px; margin-bottom: 20px; align-items: stretch;">
-                ${splitSettings}
-                ${deliveryHtml}
-            </div>
-
             ${approvals}
             ${mainContentHtml}`;
 
@@ -3605,13 +3750,8 @@ const app = {
         const parts = val.split('|');
         const phoneInput = document.getElementById('bg-phone');
         phoneInput.value = parts[1] || '';
-        // If they have no phone, allow the host to type one manually
-        if (phoneInput.value === '') {
-            phoneInput.readOnly = false;
-            phoneInput.focus();
-        } else {
-            phoneInput.readOnly = true;
-        }
+        // Always allow the host to edit the number just in case
+        phoneInput.readOnly = false; 
     },
     
     updateGroupBrgyDropdown() {
@@ -3664,40 +3804,60 @@ const app = {
         if (!g) return;
         const approved = g.members.filter(m => m.status === 'approved');
         const alreadyPaid = approved.filter(m => m.paid == 1);
+        
+        const doChange = async () => {
+            await fetch('api.php?action=group-set-split', { method:'POST', headers:{'Content-Type':'application/json'},
+                body: JSON.stringify({ group_id: g.id, method, fixed_amount: g.fixed_amount || 0 }) });
+            this.openGroupDetail(g.id);
+        };
+
         if (alreadyPaid.length > 0) {
-            const msg = `Baguhin ang split to "${method.replace(/_/g,' ')}"?\n\n` +
-                `⚠️ ${alreadyPaid.length} member(s) already paid:\n` +
-                `• ${alreadyPaid.map(m => m.name).join('\n• ')}\n\n` +
+            const msg = `Baguhin ang split to <b>"${method.replace(/_/g,' ')}"</b>?<br><br>` +
+                `⚠️ <b>${alreadyPaid.length} member(s) already paid:</b><br>` +
+                `<div style="text-align: left; background: rgba(0,0,0,0.05); padding: 12px; border-radius: 8px; margin: 12px 0; line-height: 1.5;">` +
+                alreadyPaid.map(m => `• ${this.esc(m.name)}`).join('<br>') +
+                `</div>` +
                 `Ma-reset lahat ng bayad. Tuloy?`;
-            if (!confirm(msg)) return;
+            this.showConfirm('Change Split Method', msg, doChange, 'Tuloy');
+        } else {
+            doChange();
         }
-        await fetch('api.php?action=group-set-split', { method:'POST', headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({ group_id: g.id, method, fixed_amount: g.fixed_amount || 0 }) });
-        this.openGroupDetail(g.id);
     },
 
     async setGroupFixedAmount(val) {
         const g = this.bayanihan.current;
         const approved = g.members.filter(m => m.status === 'approved');
         const alreadyPaid = approved.filter(m => m.paid == 1);
+        
+        const doChange = async () => {
+            await fetch('api.php?action=group-set-split', { method:'POST', headers:{'Content-Type':'application/json'},
+                body: JSON.stringify({ group_id: g.id, method: g.split_method, fixed_amount: parseInt(val) || 0 }) });
+            this.openGroupDetail(g.id);
+        };
+
         if (alreadyPaid.length > 0) {
-            if (!confirm(`Baguhin ang fixed amount?\n\n⚠️ Ma-reset ang bayad ng ${alreadyPaid.length} member(s). Tuloy?`)) return;
+            this.showConfirm('Change Fixed Amount', `⚠️ Ma-reset ang bayad ng <b>${alreadyPaid.length}</b> member(s).<br><br>Tuloy?`, doChange, 'Tuloy');
+        } else {
+            doChange();
         }
-        await fetch('api.php?action=group-set-split', { method:'POST', headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({ group_id: g.id, method: g.split_method, fixed_amount: parseInt(val) || 0 }) });
-        this.openGroupDetail(g.id);
     },
 
     async setMemberFlag(memberId, field, value) {
         const g = this.bayanihan.current;
         const approved = g.members.filter(m => m.status === 'approved');
         const alreadyPaid = approved.filter(m => m.paid == 1);
+        
+        const doChange = async () => {
+            await fetch('api.php?action=group-set-member-flag', { method:'POST', headers:{'Content-Type':'application/json'},
+                body: JSON.stringify({ group_id: g.id, member_id: memberId, field, value: value ? 1 : 0 }) });
+            this.openGroupDetail(g.id);
+        };
+
         if (alreadyPaid.length > 0) {
-            if (!confirm(`Baguhin ang ${field.replace('is_','')} flag?\n\n⚠️ Ma-reset ang bayad ng ${alreadyPaid.length} member(s). Tuloy?`)) return;
+            this.showConfirm('Change Member Flag', `Baguhin ang <b>${field.replace('is_','')}</b> flag?<br><br>⚠️ Ma-reset ang bayad ng <b>${alreadyPaid.length}</b> member(s).<br><br>Tuloy?`, doChange, 'Tuloy');
+        } else {
+            doChange();
         }
-        await fetch('api.php?action=group-set-member-flag', { method:'POST', headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({ group_id: g.id, member_id: memberId, field, value: value ? 1 : 0 }) });
-        this.openGroupDetail(g.id);
     },
 
     async setMemberFixedAmount(memberId, val) {
@@ -4091,6 +4251,101 @@ const app = {
                 </div>`;
             this.go('admin-group-detail');
         } catch (e) { this.showToast('Error loading group'); }
+    },
+
+    // ============================================================
+    // ADMIN: Delivery Fees
+    // ============================================================
+    renderAdminFees() {
+        const grid = document.getElementById('admin-fees-grid');
+        if (!grid) return;
+
+        const query = (document.getElementById('admin-fee-search')?.value || '').toLowerCase();
+        const filtered = this.deliveryFeesRaw.filter(f => 
+            f.city.toLowerCase().includes(query) || f.barangay.toLowerCase().includes(query)
+        );
+
+        if (!filtered.length) {
+            grid.innerHTML = '<p style="text-align:center; color:var(--muted); grid-column:1/-1;">No locations found.</p>';
+            return;
+        }
+
+        grid.innerHTML = filtered.map(f => `
+            <div class="admin-inv-card" style="flex-direction:column; align-items:stretch; gap:12px;">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                    <div>
+                        <h4 style="color:var(--brand); font-size:15px; margin-bottom:2px;">${this.esc(f.barangay)}</h4>
+                        <div style="font-size:11px; color:var(--muted); font-weight:700;">${this.esc(f.city)}</div>
+                    </div>
+                    <button class="qty-circle-btn" style="color:#e5604d; border-color:rgba(229,96,77,0.3); width:28px; height:28px;" onclick="app.deleteFee(${f.id})" title="Delete">✕</button>
+                </div>
+                <div style="display:flex; gap:8px; align-items:center;">
+                    <span style="font-weight:800; color:var(--muted);">₱</span>
+                    <input type="number" class="input" style="padding:6px 10px; font-size:14px; font-weight:800;" value="${f.fee}" id="fee-input-${f.id}">
+                    <button class="btn btn-leaf" style="padding:6px 12px; font-size:12px;" onclick="app.saveFee(${f.id})">Save</button>
+                </div>
+            </div>
+        `).join('');
+    },
+
+    async saveFee(id) {
+        const fee = parseInt(document.getElementById(`fee-input-${id}`).value);
+        if (isNaN(fee) || fee < 0) return this.showToast('Invalid fee amount.');
+        
+        try {
+            const res = await fetch('api.php?action=admin-update-fee', {
+                method: 'POST', headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({ id, fee })
+            });
+            const data = await res.json();
+            if (data.ok) {
+                this.showToast('Fee updated!');
+                await this.refreshData(); // Syncs both admin and frontend data
+                this.renderAdminFees();
+            } else this.showToast(data.error || 'Failed');
+        } catch(e) { this.showToast('Connection error'); }
+    },
+
+    async deleteFee(id) {
+        this.showConfirm('Delete Location', 'Remove this delivery location?', async () => {
+            await fetch('api.php?action=admin-delete-fee', {
+                method: 'POST', headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({ id })
+            });
+            this.showToast('Location deleted.');
+            await this.refreshData();
+            this.renderAdminFees();
+        }, 'Delete');
+    },
+
+    openAddFeeModal() {
+        document.getElementById('new-fee-city').value = '';
+        document.getElementById('new-fee-brgy').value = '';
+        document.getElementById('new-fee-amount').value = '';
+        document.getElementById('add-fee-modal').classList.remove('hidden');
+    },
+
+    async submitAddFee() {
+        const city = document.getElementById('new-fee-city').value.trim();
+        const barangay = document.getElementById('new-fee-brgy').value.trim();
+        const fee = parseInt(document.getElementById('new-fee-amount').value);
+
+        if (!city || !barangay) return this.showToast('Fill in City and Barangay.');
+        if (isNaN(fee) || fee < 0) return this.showToast('Invalid fee amount.');
+
+        try {
+            const res = await fetch('api.php?action=admin-add-fee', {
+                method: 'POST', headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({ city, barangay, fee })
+            });
+            const data = await res.json();
+            if (data.ok) {
+                this.closeModal('add-fee-modal');
+                this.showToast('Location added!');
+                await this.refreshData();
+                this.renderAdminFees();
+            } else this.showToast(data.error || 'Failed');
+        } catch(e) { this.showToast('Connection error'); }
     },
 }
 
