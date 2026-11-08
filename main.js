@@ -281,32 +281,6 @@ const app = {
 
     carouselIndex: 0,
     carouselTimer: null,
-    departments: [
-        {
-            name: "PASO",
-            desc: "Taste the warmth of Lola's kitchen. Every bite is a memory of home, crafted with the love only a Filipino family knows.",
-            featured: "Chicken Adobo with Rice",
-            image: "assets/paso/Chicken Adobo with Rice.png"
-        },
-        {
-            name: "NIPA",
-            desc: "More than just a house, it's where the heart is. The iconic Tabo is the ultimate symbol of Filipino practical living.",
-            featured: "Classic Plastic Tabo",
-            image: "assets/nipa/Classic Plastic Tabo.png"
-        },
-        {
-            name: "HABI",
-            desc: "Woven with the threads of our ancestors. Wrap yourself with our indigenous woven scarves, carrying the soul of our tribes with you.",featured: "T'nalak Scarf",
-            featured: "T'nalak Scarf",
-            image: "assets/habi/Indigenous Woven Scarf.png"
-        },
-        {
-            name: "APOLLO",
-            desc: "Reach for the stars while keeping your feet on the ground. Because no Filipino gathering is complete without a Videoke session!",
-            featured: "Mini Karaoke Machine",
-            image: "assets/apollo/minikaraokemachine.png"
-        }
-    ],
 
     async init() {
         document.getElementById('main-content').style.display = 'block';
@@ -359,13 +333,17 @@ const app = {
         this.initLandingPage();
         this.initLandingInteractions();
 
-        if (this.carouselTimer) clearInterval(this.carouselTimer);
-        this.carouselTimer = setInterval(() => {
-            if (!document.getElementById('view-home').classList.contains('hidden')) {
-                this.carouselIndex = (this.carouselIndex + 1) % this.departments.length;
-                this.renderCarousel();
-            }
-        }, 7000);
+        this.resetCarouselTimer();
+
+        const carouselCol = document.querySelector('.home-carousel-col');
+        if (carouselCol) {
+            carouselCol.addEventListener('mouseenter', () => {
+                if (this.carouselTimer) clearInterval(this.carouselTimer);
+            });
+            carouselCol.addEventListener('mouseleave', () => {
+                this.resetCarouselTimer();
+            });
+        }
 
                 if (this._groupPollTimer) clearInterval(this._groupPollTimer);
         this._groupPollTimer = setInterval(async () => {
@@ -920,13 +898,63 @@ const app = {
         const container = document.getElementById('carousel-card-container');
         if (!container) return;
 
-        if (container.children.length === 0) {
-            container.innerHTML = this.departments.map((dept, index) => {
+        // 1. Get highlighted products (best_seller == 1)
+        let highlights = this.products.filter(p => Number(p.best_seller) === 1);
+        
+        // 2. Fallback/Padding: If less than 4 highlights, pad with other products to keep the 3D effect looking good
+        if (highlights.length < 4 && this.products.length > 0) {
+            const otherProducts = this.products.filter(p => Number(p.best_seller) !== 1);
+            let i = 0;
+            while (highlights.length < 4 && i < otherProducts.length) {
+                highlights.push(otherProducts[i]);
+                i++;
+            }
+        }
+
+        // If no products exist at all, stop here
+        if (highlights.length === 0) {
+            container.innerHTML = '';
+            return;
+        }
+
+        // 3. Map to the carousel format (Added catKey and icon)
+        this._carouselItems = highlights.map(p => {
+            const catKey = (p.category || 'paso').toLowerCase();
+            return {
+                id: p.id,
+                name: (p.category || 'ITEM').toUpperCase(),
+                catKey: catKey,                  // NEW: Used for coloring
+                icon: this.deptIcons[catKey] || '', // NEW: The SVG icon
+                desc: p.description || p.tagline || '',
+                featured: p.name,
+                image: p.image
+            };
+        });
+
+        // Ensure index is valid if the list size changed
+        if (this.carouselIndex >= this._carouselItems.length) {
+            this.carouselIndex = 0;
+        }
+
+        // 4. Render Dots dynamically
+        const dotsContainer = document.getElementById('carousel-dots');
+        if (dotsContainer) {
+            dotsContainer.innerHTML = this._carouselItems.map((_, i) => 
+                `<span class="dot ${i === this.carouselIndex ? 'active' : ''}" onclick="app.setCarouselSlide(${i})"></span>`
+            ).join('');
+        }
+
+        // 5. Render Cards (Only re-render if the products actually changed)
+        const sig = this._carouselItems.map(c => c.id).join(',');
+        if (container.dataset.sig !== sig) {
+            container.dataset.sig = sig;
+            container.innerHTML = this._carouselItems.map((dept, index) => {
                 return `
-                    <div class="carousel-card" id="carousel-card-${index}">
+                    <div class="carousel-card" id="carousel-card-${index}" onclick="app.handleCarouselClick(${index}, ${dept.id})">
                         <img src="${dept.image}" class="carousel-img" alt="${dept.name}">
                         <div class="carousel-glass-panel">
-                            <span class="carousel-badge">${dept.name}</span>
+                            <!-- UPDATED: Using the product menu's dept-badge class -->
+                            <span class="dept-badge ${dept.catKey}" style="margin-bottom: 12px;">${dept.icon} ${dept.name}</span>
                             <h3 class="carousel-title">${dept.featured}</h3>
                             <p class="carousel-desc">${dept.desc}</p>
                         </div>
@@ -935,13 +963,14 @@ const app = {
             }).join('');
         }
 
-        this.departments.forEach((_, index) => {
+        // 6. Apply 3D positioning classes
+        this._carouselItems.forEach((_, index) => {
             const card = document.getElementById(`carousel-card-${index}`);
             if (!card) return;
 
             card.classList.remove('active', 'prev', 'next', 'hidden');
 
-            const len = this.departments.length;
+            const len = this._carouselItems.length;
             if (index === this.carouselIndex) {
                 card.classList.add('active');
             } else if (index === (this.carouselIndex - 1 + len) % len) {
@@ -952,8 +981,51 @@ const app = {
                 card.classList.add('hidden');
             }
         });
+    },
 
-        document.querySelectorAll('.dot').forEach((dot, idx) => dot.classList.toggle('active', idx === this.carouselIndex));
+    // 🟢 NEW: Handle carousel card clicks
+    handleCarouselClick(index, productId) {
+        if (index !== this.carouselIndex) {
+            // If they click a background card (prev/next), just bring it to the front
+            this.setCarouselSlide(index);
+            return;
+        }
+        
+        // If they click the active card, add it to cart
+        if (productId && productId !== 'null') {
+            this.addToCart(productId);
+        } else {
+            this.showToast('Sorry, hindi mahanap ang item na ito sa menu.');
+        }
+    },
+
+    prevCarouselSlide() {
+        const len = this._carouselItems ? this._carouselItems.length : 0;
+        if (len === 0) return;
+        this.carouselIndex = (this.carouselIndex - 1 + len) % len;
+        this.renderCarousel();
+        this.resetCarouselTimer();
+    },
+
+    nextCarouselSlide() {
+        const len = this._carouselItems ? this._carouselItems.length : 0;
+        if (len === 0) return;
+        this.carouselIndex = (this.carouselIndex + 1) % len;
+        this.renderCarousel();
+        this.resetCarouselTimer();
+    },
+
+    resetCarouselTimer() {
+        if (this.carouselTimer) clearInterval(this.carouselTimer);
+        this.carouselTimer = setInterval(() => {
+            if (!document.getElementById('view-home').classList.contains('hidden')) {
+                const len = this._carouselItems ? this._carouselItems.length : 0;
+                if (len > 0) {
+                    this.carouselIndex = (this.carouselIndex + 1) % len;
+                    this.renderCarousel();
+                }
+            }
+        }, 7000);
     },
 
     setCarouselSlide(idx) {
@@ -1226,6 +1298,7 @@ const app = {
 
         const itemsDiv = document.getElementById('cart-items');
         const foot = document.getElementById('cart-foot');
+        
         if (itemsDiv) {
             itemsDiv.innerHTML = this.cart.map((c, i) => `
                 <div class="cart-row-card" style="animation-delay:${i * 80}ms">
@@ -1243,7 +1316,15 @@ const app = {
                 </div>
             `).join('') || this.emptyState('cart', 'Ay, bakante pa ang cart mo!', 'Mukhang wala pang laman ang iyong cart. Mamili na ng paborito mo!', 'Tingnan ang Menu', 'app.toggleCart(); app.scrollToMenu();');
         }
+        
+        // Hide totals if empty, but keep the Bayanihan suggestion visible
         if (foot) foot.style.display = this.cart.length ? '' : 'none';
+
+        // 🟢 Update Bayanihan button text based on cart status
+        const bayBtn = document.getElementById('btn-cart-bayanihan');
+        if (bayBtn) {
+            bayBtn.innerHTML = this.cart.length > 0 ? 'Convert to Bayanihan Cart 🏘️' : 'Create a Bayanihan Cart 🏘️';
+        }
 
         const subtotal = this.cart.reduce((s, x) => s + x.price * x.qty, 0);
         const feeSet   = this.feeSet;
@@ -1261,6 +1342,107 @@ const app = {
             setHTML('cart-fee',   '<span style="color:var(--muted); font-style:italic; font-weight:700;">Soon</span>');
             setHTML('cart-total', this.money(subtotal) +
                 ' <small style="font-size:10px; color:var(--muted); font-weight:600; font-family:\'Nunito\',sans-serif;">+ shipping</small>');
+        }
+    },
+
+    async promptBayanihanFromCart() {
+        if (!this.user) {
+            this.toggleCart(true);
+            this.showToast('Mag-login muna para makagawa ng Bayanihan Cart.');
+            this.go('auth');
+            return;
+        }
+
+        if (this.cart.length === 0) {
+            this.toggleCart(true);
+            this.go('bayanihan'); // Just take them to the page to create one
+            return;
+        }
+
+        await this.loadGroups();
+        const openGroups = this.bayanihan.list.filter(g => g.status === 'open' && g.my_status === 'approved');
+
+        const listEl = document.getElementById('existing-groups-list');
+        if (openGroups.length > 0) {
+            listEl.innerHTML = `
+                <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">
+                    <div style="flex:1; height:1px; background:var(--line);"></div>
+                    <span style="font-size:11px; font-weight:800; color:var(--muted); text-transform:uppercase;">Or add to existing</span>
+                    <div style="flex:1; height:1px; background:var(--line);"></div>
+                </div>
+                ${openGroups.map(g => `
+                    <button class="btn btn-ghost btn-block" style="margin-bottom:8px; justify-content:space-between; border-color:var(--line); text-align:left; padding:12px 16px;" onclick="app.addCartToExistingBayanihan(${g.id})">
+                        <div>
+                            <b style="color:var(--ink); font-size:14px;">${this.esc(g.name)}</b><br>
+                            <small style="color:var(--muted); font-size:11px;">Code: ${g.code} · ${g.member_count} member(s)</small>
+                        </div>
+                        <span style="color:var(--brand); font-weight:800; font-size:18px;">→</span>
+                    </button>
+                `).join('')}
+            `;
+        } else {
+            listEl.innerHTML = '';
+        }
+
+        this.toggleCart(true);
+        document.getElementById('bayanihan-convert-modal').classList.remove('hidden');
+    },
+
+    async createBayanihanFromCart() {
+        this.closeModal('bayanihan-convert-modal');
+        const name = `Bayanihan Order (${this.user.name.split(' ')[0]})`;
+        
+        try {
+            const res = await fetch('api.php?action=group-create', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name })
+            });
+            const data = await res.json();
+            if (!data.ok) return this.showToast(data.error || 'Failed to create cart');
+
+            const gid = data.id;
+            let successCount = 0;
+
+            for (const item of this.cart) {
+                const addRes = await fetch('api.php?action=group-add-item', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ group_id: gid, product_id: item.id, qty: item.qty, variation: item.variation || '' })
+                });
+                const addData = await addRes.json();
+                if (addData.ok) successCount++;
+            }
+
+            this.cart = [];
+            this.saveCart();
+
+            this.showToast(`Converted ${successCount} item(s) to new Bayanihan Cart!`);
+            this.openGroupDetail(gid);
+        } catch (e) {
+            this.showToast('Connection error');
+        }
+    },
+
+    async addCartToExistingBayanihan(gid) {
+        this.closeModal('bayanihan-convert-modal');
+        
+        try {
+            let successCount = 0;
+            for (const item of this.cart) {
+                const addRes = await fetch('api.php?action=group-add-item', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ group_id: gid, product_id: item.id, qty: item.qty, variation: item.variation || '' })
+                });
+                const addData = await addRes.json();
+                if (addData.ok) successCount++;
+            }
+
+            this.cart = [];
+            this.saveCart();
+
+            this.showToast(`Added ${successCount} item(s) to the Bayanihan Cart!`);
+            this.openGroupDetail(gid);
+        } catch (e) {
+            this.showToast('Connection error');
         }
     },
 
@@ -1542,6 +1724,7 @@ const app = {
             this.fee = data.fee || this.fee;
             this.renderMenu();
             this.renderCart();
+            this.renderCarousel(); // 🟢 ADD THIS LINE
         } catch (e) { console.warn('Refresh failed', e); }
     },
 

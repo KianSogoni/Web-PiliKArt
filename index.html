@@ -85,9 +85,19 @@
                 <div class="home-carousel-col">
                     <div class="featured-label glass-pill">where you can choose to your heart's desires</div>
                     <div class="carousel-3d-container">
+                        <!-- NEW: Left Arrow -->
+                        <button class="carousel-nav-btn prev" onclick="app.prevCarouselSlide()" aria-label="Previous">
+                            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                        </button>
+
                         <div class="carousel-stage" id="carousel-card-container">
                             <!-- Populated dynamically via JS -->
                         </div>
+
+                        <!-- NEW: Right Arrow -->
+                        <button class="carousel-nav-btn next" onclick="app.nextCarouselSlide()" aria-label="Next">
+                            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                        </button>
                     </div>
                     <div class="carousel-dots" id="carousel-dots">
                         <span class="dot active" onclick="app.setCarouselSlide(0)"></span>
@@ -1195,19 +1205,21 @@
                 <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </button>
         </div>
-        <div id="cart-items" class="cart-items"></div>
-        <div class="cart-foot" id="cart-foot">
-            <div class="sum-row"><span>Subtotal</span><span id="cart-subtotal">&#8369;0.00</span></div>
-            <div class="sum-row"><span>Shipping fee</span><span id="cart-fee">Soon</span></div>
-            <div class="sum-row total"><span>Kabuuan</span><span id="cart-total">&#8369;0.00</span></div>
-            <button class="btn btn-brand btn-block btn-large cart-checkout-btn" onclick="app.go('checkout'); app.toggleCart();">Checkout Na &rarr;</button>
-            <a class="cart-link" onclick="app.toggleCart(true); app.go('cart');">Buksan ang buong cart page</a>
+            <div id="cart-items" class="cart-items"></div>
             
-            <!-- 🟢 NEW BAYANIHAN SUGGESTION -->
-            <div style="margin-top:15px; text-align:center; border-top:1px dashed var(--line); padding-top:15px;">
+            <div class="cart-foot" id="cart-foot">
+                <div class="sum-row"><span>Subtotal</span><span id="cart-subtotal">&#8369;0.00</span></div>
+                <div class="sum-row"><span>Shipping fee</span><span id="cart-fee">Soon</span></div>
+                <div class="sum-row total"><span>Kabuuan</span><span id="cart-total">&#8369;0.00</span></div>
+                <button class="btn btn-brand btn-block btn-large cart-checkout-btn" onclick="app.go('checkout'); app.toggleCart();">Checkout Na &rarr;</button>
+                <a class="cart-link" onclick="app.toggleCart(true); app.go('cart');">Buksan ang buong cart page</a>
+            </div>
+
+            <!-- 🟢 NEW BAYANIHAN SUGGESTION (Always visible) -->
+            <div id="cart-bayanihan-suggestion" style="margin-top:15px; text-align:center; border-top:1px dashed var(--line); padding-top:15px; flex-shrink: 0;">
                 <p style="font-size:12px; color:var(--muted); margin-bottom:8px;">Gusto mo bang mag-order kasama ang tropa?</p>
-                <button class="btn btn-ghost btn-block" style="border-color:var(--leaf); color:var(--leaf);" onclick="app.toggleCart(true); app.go('bayanihan');">
-                    Try Bayanihan Cart 🏘️
+                <button class="btn btn-ghost btn-block" id="btn-cart-bayanihan" style="border-color:var(--leaf); color:var(--leaf);" onclick="app.promptBayanihanFromCart()">
+                    Convert to Bayanihan Cart 🏘️
                 </button>
             </div>
         </div>
@@ -1615,6 +1627,22 @@
             <input type="file" id="bg-share-file" accept="image/*" hidden onchange="app.handleShareProof(event)">
         </div>
         <button class="btn btn-brand btn-block btn-large" style="margin-top:16px;" onclick="app.submitSharePayment()">Submit Payment</button>
+    </div>
+</div>
+
+<div id="bayanihan-convert-modal" class="modal hidden" onclick="if (event.target === this) app.closeModal('bayanihan-convert-modal')">
+    <div class="modal-content" style="max-width:420px; padding:28px;">
+        <button class="modal-close-btn" onclick="app.closeModal('bayanihan-convert-modal')">✕</button>
+        <h2 style="font-family:'Baloo 2'; font-size:24px; margin-bottom:6px;">Convert to Bayanihan</h2>
+        <p style="color:var(--muted); font-size:13px; font-weight:600; margin-bottom:20px;">
+            Ilipat ang mga item sa cart mo para hatiin ang bayad kasama ang tropa.
+        </p>
+        
+        <button class="btn btn-brand btn-block btn-large" style="margin-bottom:16px;" onclick="app.createBayanihanFromCart()">
+            + Create New Bayanihan Cart
+        </button>
+        
+        <div id="existing-groups-list"></div>
     </div>
 </div>
 
