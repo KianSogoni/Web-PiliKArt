@@ -30,7 +30,7 @@ switch ($action) {
             $user = $stmt->fetch();
         }
         
-        $products = $pdo->query("SELECT * FROM products WHERE is_archived=0 ORDER BY category, id")->fetchAll();
+        $products = $pdo->query("SELECT * FROM products WHERE is_archived=0 ORDER BY RAND()")->fetchAll();
         
         $imageMap = [
             'Chicken Adobo with Rice' => 'assets/paso/Chicken Adobo with Rice.png',
@@ -53,7 +53,7 @@ switch ($action) {
         unset($p);
 
         $fee = (int)$pdo->query("SELECT `value` FROM settings WHERE `key`='delivery_fee'")->fetchColumn();
-        
+        $deliveryFees = $pdo->query("SELECT id, city, barangay, fee FROM delivery_fees ORDER BY city, barangay")->fetchAll();
         $orders = [];
         $notifs = [];
         if ($user) {
@@ -99,7 +99,7 @@ switch ($action) {
             } catch (Exception $e) { $groups = []; }
         }
         out(['user' => $user, 'products' => $products, 'orders' => $orders,
-             'fee' => $fee, 'notifications' => $notifs, 'groups' => $groups]);
+             'fee' => $fee, 'notifications' => $notifs, 'groups' => $groups, 'deliveryFees' => $deliveryFees]);
  
     case 'signup':
         $name  = trim($in['name'] ?? '');
@@ -484,7 +484,7 @@ switch ($action) {
         $me = $s->fetch();
         if (!$me) out(['error' => 'Not a member'], 403);
         $s = $pdo->prepare("
-            SELECT m.*, u.name, u.email
+            SELECT m.*, u.name, u.email, u.phone
             FROM group_cart_members m
             INNER JOIN users u ON m.user_id = u.id
             WHERE m.group_cart_id=?
@@ -932,6 +932,16 @@ switch ($action) {
         $s->execute([$gid]);
         $contribs = $s->fetchAll();
         
+        $aggregatedItems = [];
+        foreach ($items as $it) {
+            $key = $it['product_id'] . '|' . $it['variation'];
+            if (!isset($aggregatedItems[$key])) {
+                $aggregatedItems[$key] = $it;
+            } else {
+                $aggregatedItems[$key]['qty'] += $it['qty'];
+            }
+        }
+
         $pdo->beginTransaction();
         try {
             $pdo->prepare('INSERT INTO orders (user_id, customer_name, phone, address, payment, payment_proof, subtotal, delivery_fee, protection_fee, total, is_group_order, group_cart_id, group_contributors, status) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)')
@@ -942,7 +952,8 @@ switch ($action) {
             
             $oi = $pdo->prepare('INSERT INTO order_items (order_id,product_id,name,price,qty,variation) VALUES (?,?,?,?,?,?)');
             $up = $pdo->prepare('UPDATE products SET stock=stock-?, sold_out=(stock<=0) WHERE id=?');
-            foreach ($items as $it) {
+            // Loop through the aggregated items instead of the raw $items array
+            foreach ($aggregatedItems as $it) {
                 $oi->execute([$oid, $it['product_id'], $it['name'], $it['price'], $it['qty'], $it['variation']]);
                 $up->execute([$it['qty'], $it['product_id']]);
             }
@@ -1075,7 +1086,7 @@ switch ($action) {
         } elseif (!$hasPaso && $hoursElapsed > (24 * 7)) {
             out(['error' => 'Lumipas na ang 7-araw na refund window para sa mga item na ito.'], 400);
         }
-        
+
         // Save the refund request
         $pdo->prepare('UPDATE orders SET refund_status="requested", refund_reason=?, refund_proof=? WHERE id=?')
             ->execute([$reason, $proof, $oid]);
@@ -1114,6 +1125,25 @@ switch ($action) {
         }
         
         out(['ok' => true]);
+
+    case 'admin-update-fee':
+        $stmt = $pdo->prepare('UPDATE delivery_fees SET fee=? WHERE id=?');
+        $stmt->execute([$in['fee'], $in['id']]);
+        out(['ok' => true]);
+
+    case 'admin-add-fee':
+        try {
+            $stmt = $pdo->prepare('INSERT INTO delivery_fees (city, barangay, fee) VALUES (?,?,?)');
+            $stmt->execute([$in['city'], $in['barangay'], $in['fee']]);
+            out(['ok' => true]);
+        } catch(Exception $e) {
+            out(['error' => 'Location already exists or DB error.'], 400);
+        }
+
+    case 'admin-delete-fee':
+        $pdo->prepare('DELETE FROM delivery_fees WHERE id=?')->execute([$in['id']]);
+        out(['ok' => true]);
+
 }
 
 out(['error' => 'Unknown action'], 400);
