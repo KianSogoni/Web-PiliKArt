@@ -15,6 +15,72 @@ const app = {
         document.getElementById('custom-confirm-modal').classList.remove('hidden');
     },
 
+    _refundOrderId: null,
+    _refundProof: '',
+    openRefundModal(orderId) {
+        this._refundOrderId = orderId;
+        this._refundProof = '';
+        document.getElementById('refund-reason').value = '';
+        const prev = document.getElementById('refund-preview');
+        prev.src = ''; prev.style.display = 'none';
+        document.getElementById('refund-drop').classList.remove('has-file');
+        document.getElementById('refund-drop-title').textContent = 'I-upload ang litrato';
+        document.getElementById('refund-drop-sub').textContent = 'I-click para pumili ng file';
+        document.getElementById('refund-modal').classList.remove('hidden');
+    },
+
+    handleRefundProof(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        if (file.size > 10 * 1024 * 1024) { this.showToast('Max 10MB lang.'); e.target.value = ''; return; }
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            const img = new Image();
+            img.onload = () => {
+                const c = document.createElement('canvas');
+                const scale = Math.min(1, 800 / Math.max(img.width, img.height));
+                c.width = img.width * scale; c.height = img.height * scale;
+                c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+                this._refundProof = c.toDataURL('image/jpeg', 0.7);
+                
+                const prev = document.getElementById('refund-preview');
+                prev.src = this._refundProof; prev.style.display = 'block';
+                document.getElementById('refund-drop').classList.add('has-file');
+                document.getElementById('refund-drop-title').textContent = 'Litrato attached ✓';
+            };
+            img.src = ev.target.result;
+        };
+        reader.readAsDataURL(file);
+    },
+
+    async submitRefund() {
+        const reason = document.getElementById('refund-reason').value.trim();
+        if (!reason) return this.showToast('Ilagay ang dahilan ng refund.');
+        if (!this._refundProof) return this.showToast('I-upload ang litrato bilang patunay.');
+
+        try {
+            const res = await fetch('api.php?action=request-refund', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    order_id: this._refundOrderId, 
+                    reason: reason, 
+                    proof: this._refundProof 
+                })
+            });
+            const data = await res.json();
+            if (data.ok) {
+                this.closeModal('refund-modal');
+                this.showToast('Refund request submitted! Hintayin ang approval.');
+                await this.refreshData();
+                this.renderOrders();
+            } else {
+                this.showToast(data.error || 'Failed to submit refund.');
+            }
+        } catch (e) {
+            this.showToast('Connection error');
+        }
+    },
+
     lagunaData: {
         "Biñan": { "Biñan (Poblacion)": 25, "Bungahan": 19, "Canlalay": 45, "Casile": 44, "De La Paz": 54, "Ganado": 47, "Langkiwa": 90, "Loma": 144, "Malaban": 43, "Malamig": 113, "Mampalasan": 58, "Platero": 20, "San Antonio": 40, "San Francisco": 52, "San Jose": 35, "San Vicente": 28, "Santo Domingo": 42, "Santo Niño": 28, "Soro-soro": 45, "Timbao": 50, "Tubigan": 35, "Zapote": 2 },
         "Cabuyao": { "Baclaran": 86, "Banaybanay": 26, "Banlic": 55, "Barangay Dos": 12, "Barangay Tres": 8, "Barangay Uno": 10, "Bigaa": 19, "Butong": 44, "Casile": 90, "Diezmo": 77, "Gulod": 54, "Mamatid": 71, "Marinig": 31, "Niugan": 15, "Pittland": 70, "Pulo": 25, "Sala": 10, "San Isidro": 30 },
@@ -634,6 +700,7 @@ const app = {
         const ordersTitle = document.getElementById('nav-orders-title');
         const ordersSub = document.getElementById('nav-orders-sub');
         const ordersIcon = document.getElementById('nav-orders-icon');
+        const adminMyOrdersLink = document.getElementById('nav-admin-my-orders'); // 🟢 ADD THIS
 
         if (this.user) {
             btnLabel.textContent = 'Logout';
@@ -644,19 +711,21 @@ const app = {
                 ordersSub.textContent = 'Manage Store';
                 ordersLink.setAttribute('onclick', "app.navTo('admin')");
                 ordersIcon.innerHTML = '<path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>';
+                
+                // 🟢 SHOW ADMIN MY ORDERS LINK
+                if (adminMyOrdersLink) adminMyOrdersLink.classList.remove('hidden');
             } else {
                 ordersTitle.textContent = 'My Orders';
                 ordersSub.textContent = 'Kasaysayan ng Order';
                 ordersLink.setAttribute('onclick', "app.navTo('orders')");
                 ordersIcon.innerHTML = '<path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/>';
+                
+                // 🟢 HIDE ADMIN MY ORDERS LINK
+                if (adminMyOrdersLink) adminMyOrdersLink.classList.add('hidden');
             }
         } else {
-            btnLabel.textContent = 'Sign In / Sign Up';
-            accountSub.textContent = 'Profile & Settings';
-            ordersTitle.textContent = 'My Orders';
-            ordersSub.textContent = 'Kasaysayan ng Order';
-            ordersLink.setAttribute('onclick', "app.navTo('orders')");
-            ordersIcon.innerHTML = '<path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/>';
+            // ... (rest of guest logic)
+            if (adminMyOrdersLink) adminMyOrdersLink.classList.add('hidden');
         }
     },
 
@@ -1138,18 +1207,21 @@ const app = {
 
         this.pendingCartItem = p;
         this.pendingQty = 1;
-        this.renderAddConfirmModal();
+        this.renderAddConfirmModal(); // 🟢 Note: This is now async
 
         const modal = document.getElementById('add-confirm-modal');
         if (modal) modal.classList.remove('hidden');
     },
 
-    renderAddConfirmModal() {
+    async renderAddConfirmModal() {
         const p = this.pendingCartItem;
         if (!p) return;
 
         const box = document.getElementById('add-confirm-item-box');
+        const bayanihanContainer = document.getElementById('bayanihan-options-container');
         if (!box) return;
+        
+        if (bayanihanContainer) bayanihanContainer.innerHTML = '';
 
         let optionsHtml = '';
         if (p.options) {
@@ -1184,17 +1256,13 @@ const app = {
                 <div class="ci-left-col">
                     <img src="${this.esc(p.image || '')}" class="ci-hero-thumb" alt="${this.esc(p.name)}">
                 </div>
-
                 <div class="ci-right-col">
                     <div class="ci-header">
                         <h3 class="ci-title">${this.esc(p.name)}</h3>
                         ${p.tagline ? `<p class="ci-tagline">${this.esc(p.tagline)}</p>` : ''}
                     </div>
-                    
                     <p class="ci-desc">${this.esc(p.description || '')}</p>
-                    
                     ${optionsHtml ? `<div class="ci-options-container">${optionsHtml}</div>` : ''}
-
                     <div class="ci-bottom-controls">
                         <div class="qty-stepper-wrap">
                             <span class="ci-control-label">Quantity</span>
@@ -1204,7 +1272,6 @@ const app = {
                                 <button class="qty-step-btn" onclick="app.adjustPendingQty(1)">+</button>
                             </div>
                         </div>
-                        
                         <div class="ci-price-wrap">
                             <span class="ci-stock-text">${p.stock} available &bull; ₱${formattedUnit} each</span>
                             <span class="ci-total-text">Total: <b>₱${formattedTotal}</b></span>
@@ -1214,16 +1281,25 @@ const app = {
             </div>
         `;
 
-        const btnBay = document.getElementById('btn-add-bayanihan');
-        if (btnBay) {
-            const gid = this.bayanihan.activeGroupId;
-            const grp = gid ? this.bayanihan.list.find(x => x.id === gid) : null;
-            if (grp) {
-                btnBay.classList.remove('hidden');
-                btnBay.textContent = `+ Add to Bayanihan: ${grp.name}`;
-            } else {
-                btnBay.classList.add('hidden');
-            }
+        // 🟢 Dynamically load available Bayanihan Carts right after creation/removal
+        if (this.user && bayanihanContainer) {
+            try {
+                await this.loadGroups(); // Refreshes the list every time modal opens
+                const openGroups = this.bayanihan.list.filter(g => g.status === 'open' && g.my_status === 'approved');
+                if (openGroups.length > 0) {
+                    bayanihanContainer.innerHTML = `
+                        <div style="margin-top:15px; border-top:1px dashed var(--line); padding-top:15px;">
+                            <p style="font-size:12px; font-weight:800; color:var(--muted); margin-bottom:8px; text-align:center;">O idagdag sa Bayanihan Cart:</p>
+                            <div style="display:flex; gap:8px;">
+                                <select id="add-to-bayanihan-select" class="input" style="flex:1; padding:10px; font-size:13px;">
+                                    ${openGroups.map(g => `<option value="${g.id}" ${g.id == this._lastGroupId ? 'selected' : ''}>${this.esc(g.name)}</option>`).join('')}
+                                </select>
+                                <button class="btn btn-leaf" style="padding:0 20px; border-radius:14px; font-size:14px;" onclick="app.confirmAddToBayanihanNew()">Add</button>
+                            </div>
+                        </div>
+                    `;
+                }
+            } catch(e) { console.warn(e); }
         }
     },
 
@@ -1355,7 +1431,7 @@ const app = {
 
         if (this.cart.length === 0) {
             this.toggleCart(true);
-            this.go('bayanihan'); // Just take them to the page to create one
+            this.go('bayanihan');
             return;
         }
 
@@ -1384,8 +1460,48 @@ const app = {
             listEl.innerHTML = '';
         }
 
+        // 🟢 Populate the new name input with a default value
+        document.getElementById('convert-group-name').value = `Bayanihan Order (${this.user.name.split(' ')[0]})`;
+        
         this.toggleCart(true);
         document.getElementById('bayanihan-convert-modal').classList.remove('hidden');
+    },
+
+    async createBayanihanFromCart() {
+        // 🟢 Read the name from the input
+        const nameInput = document.getElementById('convert-group-name');
+        const name = nameInput.value.trim() || `Bayanihan Order (${this.user.name.split(' ')[0]})`;
+        
+        this.closeModal('bayanihan-convert-modal');
+        
+        try {
+            const res = await fetch('api.php?action=group-create', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name })
+            });
+            const data = await res.json();
+            if (!data.ok) return this.showToast(data.error || 'Failed to create cart');
+
+            const gid = data.id;
+            let successCount = 0;
+
+            for (const item of this.cart) {
+                const addRes = await fetch('api.php?action=group-add-item', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ group_id: gid, product_id: item.id, qty: item.qty, variation: item.variation || '' })
+                });
+                const addData = await addRes.json();
+                if (addData.ok) successCount++;
+            }
+
+            this.cart = [];
+            this.saveCart();
+
+            this.showToast(`Converted ${successCount} item(s) to new Bayanihan Cart!`);
+            this.openGroupDetail(gid);
+        } catch (e) {
+            this.showToast('Connection error');
+        }
     },
 
     async createBayanihanFromCart() {
@@ -1882,7 +1998,11 @@ const app = {
             return;
         }
 
-        list.innerHTML = this.orders.map(o => {
+        const displayOrders = this.user.role === 'admin' 
+            ? this.orders.filter(o => o.user_id === this.user.id) 
+            : this.orders;
+
+        list.innerHTML = displayOrders.map(o => {
             let statusClass = 'status-pending';
             if (o.status === 'Shipping') statusClass = 'status-shipping';
             if (o.status === 'Out for Delivery') statusClass = 'status-out';
@@ -1945,9 +2065,49 @@ const app = {
                     </div>
                 </div>` : ''}
 
-                <div class="order-footer">
-                    <span class="footer-label">Kabuuan</span>
-                    <span class="footer-total">${this.money(o.total)}</span>
+                ${o.refund_status === 'requested' ? `
+                <div style="padding:12px; background:rgba(240,169,59,0.15); border:1px solid rgba(240,169,59,0.4); border-radius:8px; font-size:12px;">
+                    <div style="font-weight:800; color:#d98c1d; text-transform:uppercase; margin-bottom:6px;">⏳ Refund Pending</div>
+                    <div style="color:var(--ink); font-weight:600; margin-bottom:8px;"><b>Reason:</b> ${this.esc(o.refund_reason || 'N/A')}</div>
+                    ${o.refund_proof ? `<button class="btn btn-ghost" style="padding:4px 8px; font-size:11px;" onclick="app.viewProof('${o.refund_proof}')">View Proof</button>` : ''}
+                </div>` : ''}
+                ${o.refund_status === 'approved' ? `<div style="padding:8px; background:rgba(63,122,69,0.1); color:var(--leaf); border-radius:8px; font-size:11px; font-weight:800; text-align:center;">✓ Refund Approved</div>` : ''}
+                ${o.refund_status === 'rejected' ? `<div style="padding:8px; background:rgba(229,96,77,0.1); color:#e5604d; border-radius:8px; font-size:11px; font-weight:800; text-align:center;">✕ Refund Rejected</div>` : ''}
+
+                <div class="order-footer" style="flex-wrap: wrap; gap: 10px;">
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <span class="footer-label">Kabuuan</span>
+                        <span class="footer-total">${this.money(o.total)}</span>
+                    </div>
+                    
+                    <!-- REFUND LOGIC -->
+                    ${o.status === 'Delivered' ? `
+                        ${(() => {
+                            // Calculate if refund is still allowed
+                            const deliveryTime = o.delivered_at ? new Date(o.delivered_at).getTime() : new Date(o.created_at).getTime();
+                            const hoursElapsed = (Date.now() - deliveryTime) / (1000 * 60 * 60);
+                            
+                            // Check if any item is PASO
+                            const hasPaso = o.items.some(i => {
+                                const p = this.products.find(x => x.id === i.product_id);
+                                return p && p.category === 'paso';
+                            });
+                            
+                            const isExpired = hasPaso ? hoursElapsed > 24 : hoursElapsed > (24 * 7);
+
+                            if (o.refund_status === 'requested') {
+                                return '<span style="background:rgba(240,169,59,0.15); color:#d98c1d; padding:6px 12px; border-radius:99px; font-size:12px; font-weight:800; border:1px solid rgba(240,169,59,0.4);">⏳ Refund Pending</span>';
+                            } else if (o.refund_status === 'approved') {
+                                return '<span style="background:rgba(63,122,69,0.15); color:var(--leaf); padding:6px 12px; border-radius:99px; font-size:12px; font-weight:800; border:1px solid rgba(63,122,69,0.4);">✓ Refund Approved</span>';
+                            } else if (o.refund_status === 'rejected') {
+                                return '<span style="background:rgba(229,96,77,0.15); color:#e5604d; padding:6px 12px; border-radius:99px; font-size:12px; font-weight:800; border:1px solid rgba(229,96,77,0.4);">✕ Refund Rejected</span>';
+                            } else if (isExpired) {
+                                return '<span style="color:var(--muted); font-size:12px; font-weight:700; padding:6px 12px;">Refund period expired</span>';
+                            } else {
+                                return `<button class="btn btn-ghost" style="padding:6px 12px; font-size:12px; border-color:#e5604d; color:#e5604d;" onclick="app.openRefundModal(${o.id})">Request Refund</button>`;
+                            }
+                        })()}`
+                    : ''}
                 </div>
             </div>
             `;
@@ -2168,6 +2328,19 @@ const app = {
                         ${(o.contributors || []).map(c => `${this.esc(c.name)}${c.paid_amount ? ` (${this.money(c.paid_amount)})` : ''}`).join(' · ') || 'N/A'}
                     </div>
                 </div>` : ''}
+
+                ${o.refund_status === 'requested' ? `
+                <div style="padding:12px; background:rgba(229,96,77,0.1); border:1px solid rgba(229,96,77,0.3); border-radius:8px; font-size:12px;">
+                    <div style="font-weight:800; color:#e5604d; text-transform:uppercase; margin-bottom:6px;">⚠️ Refund Requested</div>
+                    <div style="color:var(--ink); font-weight:600; margin-bottom:8px;"><b>Reason:</b> ${this.esc(o.refund_reason || 'N/A')}</div>
+                    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                        ${o.refund_proof ? `<button class="btn btn-ghost" style="padding:4px 8px; font-size:11px;" onclick="app.viewProof('${o.refund_proof}')">View Proof</button>` : ''}
+                        <button class="btn btn-leaf" style="padding:4px 8px; font-size:11px;" onclick="app.handleAdminRefund(${o.id}, 'approve')">Approve</button>
+                        <button class="btn btn-danger" style="padding:4px 8px; font-size:11px;" onclick="app.handleAdminRefund(${o.id}, 'reject')">Reject</button>
+                    </div>
+                </div>` : ''}
+                ${o.refund_status === 'approved' ? `<div style="padding:8px; background:rgba(63,122,69,0.1); color:var(--leaf); border-radius:8px; font-size:11px; font-weight:800; text-align:center;">✓ Refund Approved</div>` : ''}
+                ${o.refund_status === 'rejected' ? `<div style="padding:8px; background:rgba(229,96,77,0.1); color:#e5604d; border-radius:8px; font-size:11px; font-weight:800; text-align:center;">✕ Refund Rejected</div>` : ''}
 
                 <div class="admin-order-footer">
                     <div class="admin-order-total">
@@ -2433,6 +2606,31 @@ const app = {
             },
             'Delete'
         );
+    },
+
+    async handleAdminRefund(orderId, action) {
+        const actionText = action === 'approve' ? 'I-APPROVE' : 'I-REJECT';
+        const btnColor = action === 'approve' ? 'var(--leaf)' : '#e5604d';
+        
+        if (!confirm(`Sigurado ka bang ${actionText} ang refund para sa Order #${orderId}?`)) return;
+
+        try {
+            const res = await fetch('api.php?action=admin-handle-refund', {
+                method: 'POST', 
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ order_id: orderId, action })
+            });
+            const data = await res.json();
+            
+            if (data.ok) {
+                this.showToast(`Refund ${action === 'approve' ? 'approved' : 'rejected'}.`);
+                await this.reloadAdminData();
+            } else {
+                this.showToast(data.error || 'Failed to process refund.');
+            }
+        } catch (e) {
+            this.showToast('Connection error.');
+        }
     },
 
     async saveProduct(id) {
@@ -2811,19 +3009,34 @@ const app = {
             result.forEach(r => r.amount = (userSub[r.userId] || 0) + feePer);
             for (let i = 0; i < feeRem; i++) result[i % n].amount += 1;
         } else if (method === 'fixed_contribution') {
-            const fixed = result.filter(r => r.isFixed);
-            const reg = result.filter(r => !r.isFixed);
-            if (!fixed.length) {
+            const fixed = result.filter(r => {
+                const m = g.members.find(mm => mm.user_id === r.userId);
+                return (parseInt(m.fixed_share_amount) || 0) > 0;
+            });
+            const unfixed = result.filter(r => {
+                const m = g.members.find(mm => mm.user_id === r.userId);
+                return (parseInt(m.fixed_share_amount) || 0) <= 0;
+            });
+
+            let sumFixed = 0;
+            fixed.forEach(r => {
+                const m = g.members.find(mm => mm.user_id === r.userId);
+                r.amount = parseInt(m.fixed_share_amount) || 0;
+                sumFixed += r.amount;
+            });
+
+            if (fixed.length === 0) {
                 const per = Math.floor(total / n); let rem = total - per * n;
                 result.forEach(r => r.amount = per);
                 for (let i = 0; i < rem; i++) result[i % n].amount += 1;
-            } else {
-                fixed.forEach(r => r.amount = fixedAmount);
-                const remainder = Math.max(0, total - fixedAmount * fixed.length);
-                if (!reg.length) { if (remainder > 0) fixed[0].amount += remainder; }
-                else {
-                    const per = Math.floor(remainder / reg.length); let rem = remainder - per * reg.length;
-                    reg.forEach((r, i) => r.amount = per + (i < rem ? 1 : 0));
+            } else if (unfixed.length > 0) {
+                const remainder = total - sumFixed;
+                if (remainder > 0) {
+                    const per = Math.floor(remainder / unfixed.length);
+                    let rem = remainder - per * unfixed.length;
+                    unfixed.forEach((r, i) => r.amount = per + (i < rem ? 1 : 0));
+                } else if (remainder < 0) {
+                    unfixed.forEach(r => r.amount = 0); // Fix for overpaying
                 }
             }
         } else if (method === 'one_payer') {
@@ -2847,7 +3060,8 @@ const app = {
         if (!body || !g || !this.user) return;
         const me = g.members.find(m => m.user_id === this.user.id);
         if (!me) { body.innerHTML = '<p>Access denied.</p>'; return; }
-        if (me.status !== 'approved') {
+        // Only block 'pending' users. 'invited' users can see the page.
+        if (me.status === 'pending') {
             body.innerHTML = `
                 <div class="page-head">
                     <button class="btn btn-ghost" style="margin-bottom:12px; padding:6px 14px; font-size:13px;" onclick="app.go('bayanihan')">← Back</button>
@@ -2861,6 +3075,7 @@ const app = {
             return;
         }
 
+        const isReadOnly = me.status === 'invited';
         const isHost = me.role === 'host';
         const subtotal = g.items.reduce((s, it) => s + it.price * it.qty, 0);
         const approvedMembers = g.members.filter(m => m.status === 'approved');
@@ -2870,6 +3085,10 @@ const app = {
         const deliveryFee = parseInt(g.delivery_fee) || 0;
         const total = subtotal + deliveryFee;
         const split = this.computeGroupSplit(g, subtotal, deliveryFee);
+        
+        // 🟢 ADD THESE TWO LINES HERE:
+        const totalFixed = approvedMembers.reduce((s, m) => s + (parseInt(m.fixed_share_amount) || 0), 0);
+        const hasUnfixed = approvedMembers.some(m => (parseInt(m.fixed_share_amount) || 0) <= 0);
         const sumPaid = split.reduce((s, r) => {
             const m = g.members.find(mm => mm.user_id === r.userId);
             return s + (m && m.paid ? m.paid_amount : 0);
@@ -2905,17 +3124,34 @@ const app = {
 
         // ACTION BUTTONS AT THE TOP
         let actions = '';
-                if (isHost && g.status === 'open') {
+        if (isReadOnly) {
+            actions = `
+                <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:20px;">
+                    <div style="flex:1; padding:14px; background:rgba(240, 169, 59, 0.15); border:1px solid var(--amber); border-radius:14px; text-align:center; color:var(--ink); font-weight:700;">
+                        📬 You are invited to this cart. Accept to join and split the bill.
+                    </div>
+                    <button class="btn btn-leaf btn-large" onclick="app.acceptInvite(${g.id})">✓ Accept Invite</button>
+                    <button class="btn btn-ghost btn-large" onclick="app.declineInvite(${g.id})">Decline</button>
+                </div>`;
+        } else if (isHost && g.status === 'open') {
             const isDeliverySet = g.customer_name && g.phone && g.delivery_address;
-            const canConfirm = allPaid && shortfall <= 0 && g.items.length > 0 && isDeliverySet;
+            
+            // 🟢 Checks if everyone is fixed but the sum doesn't equal the exact bill
+            const isFixedMismatch = g.split_method === 'fixed_contribution' && !hasUnfixed && totalFixed !== total;
+            const isOverTotal = g.split_method === 'fixed_contribution' && totalFixed > total;
+
+            const canConfirm = allPaid && shortfall <= 0 && g.items.length > 0 && isDeliverySet && approvedMembers.length >= 2 && !isOverTotal && !isFixedMismatch;
             const byAdderBlocked = g.split_method === 'by_adder' && !g.all_have_items;
 
             let statusMsg = '';
             let isError = false;
 
             if (!g.items.length) statusMsg = 'Walang laman pa ang cart.';
+            else if (approvedMembers.length < 2) { statusMsg = 'Kailangan ng hindi bababa sa 2 miyembro para ma-confirm.'; isError = true; }
             else if (byAdderBlocked) { statusMsg = 'Cannot confirm: "By Items" split is chosen but someone has not added any items yet.'; isError = true; }
             else if (!isDeliverySet) statusMsg = 'Kumpletuhin muna ang delivery details.';
+            else if (isOverTotal) { statusMsg = 'Lumalampas ang fixed amounts sa total bill! Bawasan ang ilan.'; isError = true; }
+            else if (isFixedMismatch) { statusMsg = 'Kulang ang kabuuang fixed amounts. Kailangang eksaktong magtugma ito sa Total Bill.'; isError = true; }
             else if (shortfall > 0) statusMsg = `Kulang ang bayad ng ${this.money(shortfall)}.`;
             else if (!allPaid) statusMsg = 'Hintayin munang magbayad at ma-verify ang lahat.';
 
@@ -2966,7 +3202,7 @@ const app = {
         }
 
         // DELIVERY DETAILS
-        const editable = isHost && g.status === 'open';
+        const editable = isHost && g.status === 'open' && !isReadOnly;
         let currentAddr = { city: '', brgy: '', street: '' };
         try {
             if (g.delivery_address && g.delivery_address.trim().startsWith('{')) {
@@ -2992,7 +3228,7 @@ const app = {
         }
 
         const deliveryHtml = `
-            <div class="co-card" style="margin-bottom:20px;">
+            <div class="co-card" style="margin-bottom:0;">
                 <h3>📍 Delivery Details ${!editable ? '<small style="color:var(--muted); font-weight:600; font-size:11px;">(locked)</small>' : ''}</h3>
                 <div class="co-row">
                     <div class="co-field">
@@ -3042,6 +3278,8 @@ const app = {
             </div>`;
 
         // ITEMS LIST
+        const hasPaidMembers = approvedMembers.some(m => m.paid == 1);
+
         const itemsHtml = `
             <div class="co-card" style="margin-bottom:0; height: 100%;">
                 <h3>🛒 Items (${g.items.length})</h3>
@@ -3059,13 +3297,13 @@ const app = {
                                     </div>
                                     <div style="display:flex; align-items:center; gap:10px;">
                                         <div style="font-family:'Baloo 2'; font-weight:800;">${this.money(it.price * it.qty)}</div>
-                                        ${(g.status === 'open' && (it.user_id === this.user.id || isHost)) ? `
-                                            <button class="btn btn-ghost" style="padding:4px 10px; font-size:11px; border-radius:6px;" onclick='app.openEditGroupItem(${JSON.stringify(it).replace(/'/g, "&#39;")})'>Edit</button>
-                                        ` : ''}
+                                        ${(g.status === 'open' && (it.user_id === this.user.id || isHost) && !isReadOnly) ? `
+                                        <button class="btn btn-ghost" style="padding:4px 10px; font-size:11px; border-radius:6px;" onclick='app.openEditGroupItem(${JSON.stringify(it).replace(/'/g, "&#39;")})'>Edit</button>
+                                    ` : ''}
                                     </div>
                                 </div>`).join('')}
                         </div>`).join('')}
-                ${(g.status === 'open' && me.status === 'approved') ? `
+                ${(g.status === 'open' && me.status === 'approved' && !isReadOnly) ? `
                     <button class="btn btn-brand" style="margin-top:10px; width:100%;" onclick="app.addMoreToGroup()">+ Add More Items from Menu</button>
                 ` : ''}
             </div>`;
@@ -3074,25 +3312,21 @@ const app = {
         let splitSettings = '';
         if (isHost && g.status === 'open') {
             splitSettings = `
-                <div class="co-card" style="margin-bottom:20px;">
+                <div class="co-card" style="margin-bottom:0; height: 100%; display: flex; flex-direction: column;">
                     <h3>⚖️ Split Method</h3>
-                    <div class="pay-grid" style="grid-template-columns:1fr 1fr;">
+                    <!-- Changed to 1fr so they stack vertically (one per line) -->
+                    <div class="pay-grid" style="grid-template-columns: 1fr; gap: 12px; flex: 1;">
                         ${[
                             ['equal', '👥 Equal', 'Pare-pareho ang bayad.'],
                             ['by_adder', '🛒 By Items', 'Bayaran ang idinagdag + equal delivery.'],
                             ['fixed_contribution', '📌 Fixed + Equal', 'Fixed amount sa may marka; rest split.'],
                             ['one_payer', '💳 One Payer', 'Ang designated payer(s) ang sasagot.']
                         ].map(([v, l, d]) => `
-                            <button type="button" class="pay-opt ${g.split_method === v ? 'active' : ''}" onclick="app.setGroupSplit('${v}')">
-                                <b>${l}</b><small>${d}</small>
+                            <button type="button" class="pay-opt ${g.split_method === v ? 'active' : ''}" onclick="app.setGroupSplit('${v}')" style="padding: 16px; text-align: left; display: flex; flex-direction: column; gap: 4px;">
+                                <b style="font-size: 16px;">${l}</b>
+                                <small style="font-size: 12px; color: var(--muted);">${d}</small>
                             </button>`).join('')}
                     </div>
-                    ${g.split_method === 'fixed_contribution' ? `
-                        <div class="form-group" style="margin-top:14px;">
-                            <label>Fixed amount per marked member (₱)</label>
-                            <input type="number" class="input" value="${g.fixed_amount || 0}"
-                                   onchange="app.setGroupFixedAmount(this.value)">
-                        </div>` : ''}
                 </div>`;
         }
 
@@ -3120,73 +3354,150 @@ const app = {
         const splitRows = split.map(s => {
             const m = g.members.find(mm => mm.user_id === s.userId);
             const isMine = s.userId === this.user.id;
-            const methodLabel = m.payment_method === 'gcash' ? '📱 GCash' : m.payment_method === 'cash' ? '💵 Cash' : '';
             const verified = !!m.payer_verified;
-            const canPaySelf = isMine && !m.paid && g.status === 'open' && s.amount > 0;
-            const canVerify   = isHost && m.paid && !verified && g.status === 'open';
-            const badge = !m.paid
-                ? '<span style="color:var(--muted); font-weight:800; font-size:11px;">UNPAID</span>'
-                : verified
-                    ? '<span style="color:var(--leaf); font-weight:800; font-size:11px;">✓ VERIFIED</span>'
-                    : '<span style="color:var(--amber); font-weight:800; font-size:11px;">⏳ AWAITING VERIFY</span>';
+            
+            // 🟢 Generate Avatar Initials
+            const initials = s.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+            const avatarBg = isMine ? 'var(--brand)' : (m.role === 'host' ? 'var(--leaf)' : 'var(--wood)');
+
+            // 🟢 Modern Status Pills
+            let statusBadge = '';
+            if (!m.paid) {
+                statusBadge = '<span style="background: rgba(240, 169, 59, 0.15); color: #d98c1d; border: 1px solid rgba(240, 169, 59, 0.4); padding: 2px 8px; border-radius: 99px; font-size: 10px; font-weight: 800; text-transform: uppercase;">Unpaid</span>';
+            } else if (verified) {
+                statusBadge = '<span style="background: rgba(63, 122, 69, 0.15); color: var(--leaf); border: 1px solid rgba(63, 122, 69, 0.4); padding: 2px 8px; border-radius: 99px; font-size: 10px; font-weight: 800; text-transform: uppercase;">✓ Verified</span>';
+            } else {
+                statusBadge = '<span style="background: rgba(47, 140, 255, 0.15); color: #2f8cff; border: 1px solid rgba(47, 140, 255, 0.4); padding: 2px 8px; border-radius: 99px; font-size: 10px; font-weight: 800; text-transform: uppercase;">Awaiting Verify</span>';
+            }
+
+            // 🟢 Payment Method Icon
+            const methodLabel = m.payment_method === 'gcash' ? '📱 GCash' : m.payment_method === 'cash' ? '💵 Cash' : '';
+
+            // Controls (Flags)
             let flagCtrl = '';
             if (isHost && g.status === 'open') {
                 if (g.split_method === 'fixed_contribution') {
-                    flagCtrl = `<label style="display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:800; margin-left:8px;"><input type="checkbox" ${m.is_fixed ? 'checked' : ''} onchange="app.setMemberFlag(${m.id}, 'is_fixed', this.checked)"> Fixed</label>`;
+                    flagCtrl = `
+                        <div style="display:flex; align-items:center; gap:6px; margin-top:6px;">
+                            <span style="font-size:10px; font-weight:800; color:var(--muted);">₱ Fixed:</span>
+                            <input type="number" class="input" style="width:60px; padding:2px 6px; font-size:11px; font-weight:800; border-radius:6px; border:1px solid var(--brand); background:var(--bg);" 
+                                   value="${m.fixed_share_amount || 0}" min="0">
+                            <button type="button" class="btn btn-leaf" style="padding: 4px 10px; font-size: 10px; border-radius: 6px; line-height: 1.2; box-shadow: none;" 
+                                    onclick="app.setMemberFixedAmount(${m.id}, this.previousElementSibling.value)">Save</button>
+                        </div>`;
                 } else if (g.split_method === 'one_payer') {
-                    flagCtrl = `<label style="display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:800; margin-left:8px;"><input type="checkbox" ${m.is_payer ? 'checked' : ''} onchange="app.setMemberFlag(${m.id}, 'is_payer', this.checked)"> Payer</label>`;
+                    flagCtrl = `
+                        <label class="switch" style="transform:scale(0.6); margin-left:-5px; margin-top:6px;">
+                            <input type="checkbox" ${m.is_payer ? 'checked' : ''} onchange="app.setMemberFlag(${m.id}, 'is_payer', this.checked)">
+                            <span class="slider round"></span>
+                        </label>
+                        <span style="font-size:10px; font-weight:800; color:var(--muted); margin-left:-4px;">Payer</span>`;
                 }
             }
+
+            // Action Buttons
+            const canPaySelf = isMine && !m.paid && g.status === 'open' && s.amount > 0 && !isReadOnly;
+            const canVerify   = isHost && m.paid && !verified && g.status === 'open' && !isReadOnly;
+            const canHostMark = isHost && !m.paid && g.status === 'open' && !isReadOnly;
+            
             let actions = '';
             if (canPaySelf) {
-                actions = `<button class="btn btn-leaf" style="padding:6px 12px; font-size:12px;" onclick="app.openPayShareModal(${m.id}, ${s.amount})">Pay ${this.money(s.amount)}</button>`;
+                actions = `<button class="btn btn-brand" style="padding:6px 16px; font-size:12px; border-radius:99px; box-shadow:0 4px 10px rgba(217,91,51,0.3);" onclick="app.openPayShareModal(${m.id}, ${s.amount}, false)">Pay ${this.money(s.amount)}</button>`;
             } else if (canVerify) {
-                if (m.payment_method === 'gcash' && m.payment_proof) {
-                    actions += `<button class="btn btn-ghost" style="padding:6px 10px; font-size:11px;" onclick="app.viewProof('${m.payment_proof}')">View Proof</button>`;
-                }
-                actions += `<button class="btn btn-leaf" style="padding:6px 10px; font-size:11px;" onclick="app.verifyPayment(${m.id}, true)">Verify ✓</button>`;
-            } else if (isHost && verified && g.status === 'open') {
-                actions += `<button class="btn btn-ghost" style="padding:4px 10px; font-size:11px;" onclick="app.verifyPayment(${m.id}, false)">Unverify</button>`;
+                actions = `<div style="display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end;">
+                    ${m.payment_method === 'gcash' && m.payment_proof ? `<button class="btn btn-ghost" style="padding:6px 10px; font-size:11px; border-radius:99px;" onclick="app.viewProof('${m.payment_proof}')">View Proof</button>` : ''}
+                    <button class="btn btn-leaf" style="padding:6px 12px; font-size:11px; border-radius:99px;" onclick="app.verifyPayment(${m.id}, true)">Verify ✓</button>
+                </div>`;
+            } else if (canHostMark) {
+                actions = `<button class="btn btn-leaf" style="padding:6px 12px; font-size:11px; border-radius:99px;" onclick="app.openPayShareModal(${m.id}, ${s.amount}, true)">Mark Paid</button>`;
+            } else if (isHost && verified && g.status === 'open' && !isReadOnly) {
+                actions = `<div style="display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end;">
+                    ${m.payment_method === 'gcash' && m.payment_proof ? `<button class="btn btn-ghost" style="padding:6px 10px; font-size:11px; border-radius:99px;" onclick="app.viewProof('${m.payment_proof}')">View Proof</button>` : ''}
+                    <button class="btn btn-ghost" style="padding:4px 10px; font-size:10px; border-radius:99px;" onclick="app.verifyPayment(${m.id}, false)">Unverify</button>
+                </div>`;
             }
-            if (isHost && m.role !== 'host' && g.status === 'open') {
+
+            if (isHost && m.role !== 'host' && g.status === 'open' && !isReadOnly) {
                 const gcashLocked = m.paid == 1 && m.payment_method === 'gcash';
-                actions += ` <button class="btn btn-danger group-remove-btn" data-member-id="${m.id}" data-member-name="${this.esc(s.name)}" data-gcash-locked="${gcashLocked ? '1' : '0'}" style="padding:4px 10px; font-size:11px; ${gcashLocked ? 'opacity:0.5; cursor:not-allowed;' : ''}" title="${gcashLocked ? 'Hindi ma-remove: nagbayad via GCash' : 'Remove member'}">Remove</button>`;
+                actions += ` <button class="btn btn-danger group-remove-btn" data-member-id="${m.id}" data-member-name="${this.esc(s.name)}" data-gcash-locked="${gcashLocked ? '1' : '0'}" style="padding:4px 10px; font-size:10px; border-radius:99px; ${gcashLocked ? 'opacity:0.5; cursor:not-allowed;' : ''}" title="${gcashLocked ? 'Locked: Paid via GCash' : 'Remove member'}">✕</button>`;
             }
+
             return `
-                <div style="display:flex; justify-content:space-between; align-items:center; padding:12px; background:var(--surface2); border-radius:12px; margin-bottom:8px; gap:10px; flex-wrap:wrap;">
-                    <div style="flex:1;">
-                        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-                            <b>${this.esc(s.name)}</b>
-                            ${isMine ? '<span style="font-size:10px; color:var(--brand); font-weight:800;">(You)</span>' : ''}
-                            ${m.role === 'host' ? '<span style="font-size:10px; color:var(--leaf); font-weight:800;">HOST</span>' : ''}
-                            ${badge} ${methodLabel ? `<span style="font-size:11px; color:var(--muted); font-weight:700;">${methodLabel}</span>` : ''} ${flagCtrl}
+                <div style="display:flex; align-items:center; gap:12px; padding:12px; background:var(--bg); border-radius:14px; margin-bottom:10px; border:1px solid var(--line); flex-wrap:wrap;">
+                    
+                    <!-- Avatar & Info -->
+                    <div style="display:flex; align-items:center; gap:10px; flex:1; min-width:150px;">
+                        <div style="width:36px; height:36px; border-radius:50%; background:${avatarBg}; color:#fff; display:flex; align-items:center; justify-content:center; font-family:'Baloo 2'; font-weight:800; font-size:14px; flex-shrink:0;">
+                            ${initials}
+                        </div>
+                        <div>
+                            <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                                <b style="font-size:14px; color:var(--ink);">${this.esc(s.name)}</b>
+                                ${isMine ? '<span style="font-size:9px; color:var(--brand); font-weight:800; background:rgba(217,91,51,0.1); padding:1px 6px; border-radius:4px;">YOU</span>' : ''}
+                                ${m.role === 'host' ? '<span style="font-size:9px; color:var(--leaf); font-weight:800; background:rgba(63,122,69,0.1); padding:1px 6px; border-radius:4px;">HOST</span>' : ''}
+                            </div>
+                            <div style="display:flex; align-items:center; gap:6px; margin-top:4px; flex-wrap:wrap;">
+                                ${statusBadge}
+                                ${methodLabel ? `<span style="font-size:10px; color:var(--muted); font-weight:700;">${methodLabel}</span>` : ''}
+                                ${flagCtrl}
+                            </div>
                         </div>
                     </div>
-                    <div style="text-align:right; display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-                        <div style="font-family:'Baloo 2'; font-size:18px; font-weight:800; color:var(--brand);">${this.money(s.amount)}</div>
-                        ${actions}
+
+                    <!-- Amount & Actions -->
+                    <div style="text-align:right; display:flex; align-items:center; gap:12px; margin-left:auto;">
+                        <div style="font-family:'Baloo 2'; font-size:20px; font-weight:800; color:var(--brand); line-height:1;">
+                            ${this.money(s.amount)}
+                        </div>
+                        <div style="display:flex; flex-direction:column; gap:4px; align-items:flex-end;">
+                            ${actions}
+                        </div>
                     </div>
+
                 </div>`;
         }).join('');
 
         const splitBreakdownHtml = `
-            <div class="co-card" style="margin-bottom:0; height: 100%;">
-                <h3>💰 Split Breakdown</h3>
-                <div style="font-size:12px; color:var(--muted); margin-bottom:12px; font-weight:600;">
-                    Method: <b>${g.split_method === 'equal' ? 'Equal' : g.split_method === 'by_adder' ? 'By Items Added' : g.split_method === 'fixed_contribution' ? 'Fixed + Equal' : 'One/Multi Payer'}</b>
-                    · Subtotal: <b>${this.money(subtotal)}</b> · Delivery: <b>${this.money(deliveryFee)}</b>
+            <div class="co-card" style="margin-bottom:0; height: 100%; display: flex; flex-direction: column;">
+                <h3 style="margin-bottom: 16px;">💰 Split Breakdown</h3>
+                
+                <!-- 🟢 NEW: Cleaner Summary Stats -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 20px; background: var(--bg); padding: 12px; border-radius: 14px; border: 1px solid var(--line); text-align: center;">
+                    <div>
+                        <div style="font-size: 10px; font-weight: 800; color: var(--muted); text-transform: uppercase;">Method</div>
+                        <div style="font-size: 13px; font-weight: 800; color: var(--ink);">${g.split_method === 'equal' ? 'Equal' : g.split_method === 'by_adder' ? 'By Items' : g.split_method === 'fixed_contribution' ? 'Fixed + Equal' : 'One Payer'}</div>
+                    </div>
+                    <div style="border-left: 1px solid var(--line); border-right: 1px solid var(--line);">
+                        <div style="font-size: 10px; font-weight: 800; color: var(--muted); text-transform: uppercase;">Subtotal</div>
+                        <div style="font-size: 13px; font-weight: 800; color: var(--ink);">${this.money(subtotal)}</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 10px; font-weight: 800; color: var(--muted); text-transform: uppercase;">Delivery</div>
+                        <div style="font-size: 13px; font-weight: 800; color: var(--ink);">${this.money(deliveryFee)}</div>
+                    </div>
                 </div>
-                ${splitRows}
-                <div class="sum-totals" style="margin-top:16px;">
-                    <div class="sum-row total"><span>TOTAL</span><span>${this.money(total)}</span></div>
+
+                <div style="flex: 1;">
+                    ${splitRows}
                 </div>
+
+                <!-- 🟢 NEW: Bold Total Footer -->
+                <div style="margin-top: 20px; padding-top: 16px; border-top: 2px dashed var(--line); display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-family: 'Baloo 2'; font-size: 20px; font-weight: 800; color: var(--ink);">TOTAL</span>
+                    <span style="font-family: 'Baloo 2'; font-size: 26px; font-weight: 800; color: var(--brand);">${this.money(total)}</span>
+                </div>
+
+                <!-- Status Messages -->
                 ${!allPaid && g.status === 'open'
-                    ? '<p style="font-size:11px; color:var(--amber); font-weight:700; margin-top:12px; text-align:center;">Hindi pa bayad/verified ang lahat.</p>'
+                    ? '<div style="margin-top: 16px; padding: 10px; background: rgba(240, 169, 59, 0.1); border: 1px solid rgba(240, 169, 59, 0.3); border-radius: 8px; text-align: center; font-size: 12px; color: #d98c1d; font-weight: 800;">⏳ Hintayin munang magbayad at ma-verify ang lahat.</div>'
                     : (allPaid && g.status === 'open'
-                        ? '<p style="font-size:11px; color:var(--leaf); font-weight:700; margin-top:12px; text-align:center;">✓ Lahat ay bayad at verified na! Ready for host confirmation.</p>'
+                        ? '<div style="margin-top: 16px; padding: 10px; background: rgba(63, 122, 69, 0.1); border: 1px solid rgba(63, 122, 69, 0.3); border-radius: 8px; text-align: center; font-size: 12px; color: var(--leaf); font-weight: 800;">✓ Lahat ay bayad at verified na!</div>'
                         : '')}
                 ${shortfall > 0 && allPaid && g.status === 'open'
-                    ? `<p style="font-size:11px; color:#e5604d; font-weight:700; margin-top:6px; text-align:center;">⚠️ Kulang ng ${this.money(shortfall)} sa total.</p>`
+                    ? `<div style="margin-top: 8px; padding: 10px; background: rgba(229, 96, 77, 0.1); border: 1px solid rgba(229, 96, 77, 0.3); border-radius: 8px; text-align: center; font-size: 12px; color: #e5604d; font-weight: 800;">⚠️ Kulang ng ${this.money(shortfall)} sa total.</div>`
+                    : ''}
+                ${g.split_method === 'fixed_contribution' && approvedMembers.every(m => (parseInt(m.fixed_share_amount) || 0) > 0) && totalFixed !== total
+                    ? `<div style="margin-top: 8px; padding: 10px; background: rgba(229, 96, 77, 0.1); border: 1px solid rgba(229, 96, 77, 0.3); border-radius: 8px; text-align: center; font-size: 12px; color: #e5604d; font-weight: 800;">⚠️ Paalala: Ang total ng fixed amounts ay ${this.money(totalFixed)}, pero ang bill ay ${this.money(total)}. Kailangang magtugma ito.</div>`
                     : ''}
             </div>`;
 
@@ -3195,7 +3506,7 @@ const app = {
             mainContentHtml = `<div style="margin-bottom: 20px;">${splitBreakdownHtml}</div>`;
         } else {
             mainContentHtml = `
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 20px; margin-bottom: 20px; align-items: start;">
+                <div style="display: grid; grid-template-columns: minmax(320px, 1fr) minmax(400px, 1.5fr); gap: 20px; margin-bottom: 20px; align-items: start;">
                     ${itemsHtml}
                     ${splitBreakdownHtml}
                 </div>`;
@@ -3211,9 +3522,12 @@ const app = {
             ${topCards}
             ${actions}
             ${deliveredHighlight}
-            ${splitSettings}
+            <div style="display: grid; grid-template-columns: ${isHost ? 'minmax(320px, 1fr) minmax(400px, 1.5fr)' : '1fr'}; gap: 20px; margin-bottom: 20px; align-items: stretch;">
+                ${splitSettings}
+                ${deliveryHtml}
+            </div>
+
             ${approvals}
-            ${deliveryHtml}
             ${mainContentHtml}`;
 
         document.querySelectorAll('.group-remove-btn').forEach(btn => {
@@ -3386,6 +3700,18 @@ const app = {
         this.openGroupDetail(g.id);
     },
 
+    async setMemberFixedAmount(memberId, val) {
+        const g = this.bayanihan.current;
+        const approved = g.members.filter(m => m.status === 'approved');
+        const alreadyPaid = approved.filter(m => m.paid == 1);
+        if (alreadyPaid.length > 0) {
+            if (!confirm(`Baguhin ang fixed amount?\n\n⚠️ Ma-reset ang bayad ng ${alreadyPaid.length} member(s). Tuloy?`)) return;
+        }
+        await fetch('api.php?action=group-set-member-fixed-amount', { method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ group_id: g.id, member_id: memberId, amount: parseInt(val) || 0 }) });
+        this.openGroupDetail(g.id);
+    },
+
     async groupUpdateQty(itemId, delta) {
         const g = this.bayanihan.current;
         await fetch('api.php?action=group-update-qty', { method:'POST', headers:{'Content-Type':'application/json'},
@@ -3405,17 +3731,19 @@ const app = {
         this.openGroupDetail(g.id);
     },
 
-    openPayShareModal(memberId, amount) {
+    openPayShareModal(memberId, amount, isHostMarking = false) {
         this._payMemberId = memberId;
         this._payAmount = amount;
+        this._isHostMarking = isHostMarking;
         this._shareProof = '';
-        document.getElementById('bg-pay-amount').textContent = `Amount: ${this.money(amount)}`;
+        document.getElementById('bg-pay-amount').textContent = isHostMarking ? `Mark as Paid: ${this.money(amount)}` : `Amount: ${this.money(amount)}`;
         document.getElementById('bg-share-preview').style.display = 'none';
         document.getElementById('bg-share-title').textContent = 'Upload GCash screenshot';
         document.getElementById('bg-share-drop').classList.remove('has-file');
         this.selectShareMethod('cash');
         document.getElementById('bayanihan-pay-modal').classList.remove('hidden');
     },
+
     selectShareMethod(method) {
         document.getElementById('bg-pay-cash').classList.toggle('active', method === 'cash');
         document.getElementById('bg-pay-gcash').classList.toggle('active', method === 'gcash');
@@ -3450,16 +3778,23 @@ const app = {
         if (this._shareMethod === 'gcash' && !this._shareProof) {
             return this.showToast('I-upload muna ang GCash screenshot.');
         }
-        const res = await fetch('api.php?action=group-member-pay', {
+        
+        const action = this._isHostMarking ? 'group-mark-paid' : 'group-member-pay';
+        const payload = this._isHostMarking
+            ? { group_id: g.id, member_id: this._payMemberId, paid: 1, amount: this._payAmount, method: this._shareMethod, proof: this._shareProof }
+            : { group_id: g.id, method: this._shareMethod, proof: this._shareProof, amount: this._payAmount };
+
+        const res = await fetch(`api.php?action=${action}`, {
             method:'POST', headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({ group_id: g.id, method: this._shareMethod, proof: this._shareProof, amount: this._payAmount })
+            body: JSON.stringify(payload)
         });
         const data = await res.json();
+        
         if (data.ok) {
             this.closeModal('bayanihan-pay-modal');
-            this.showToast(this._shareMethod === 'gcash'
-                ? 'Payment submitted! Hintayin ang verification ng host.'
-                : 'Marked as cash. Host will verify.');
+            this.showToast(this._isHostMarking 
+                ? 'Payment marked as paid and verified!' 
+                : (this._shareMethod === 'gcash' ? 'Payment submitted! Hintayin ang verification ng host.' : 'Marked as cash. Host will verify.'));
             this.openGroupDetail(g.id);
         } else this.showToast(data.error || 'Failed');
     },
@@ -3509,7 +3844,7 @@ const app = {
     addMoreToGroup() {
         const g = this.bayanihan.current;
         if (!g) return;
-        this.bayanihan.activeGroupId = g.id;
+        this._lastGroupId = g.id; // 🟢 Sets the default selection for the dropdown
         this.showToast(`Adding items to: ${g.name}`);
         this.go('home');
         setTimeout(() => this.scrollToMenu(), 200);
@@ -3590,36 +3925,30 @@ const app = {
         );
     },
 
-    async confirmAddToBayanihan() {
-        if (!this.pendingCartItem || !this.bayanihan.activeGroupId) return;
+    async confirmAddToBayanihanNew() {
+        const gid = document.getElementById('add-to-bayanihan-select').value;
+        if (!gid || !this.pendingCartItem) return;
         const p = this.pendingCartItem;
-        const gid = this.bayanihan.activeGroupId;
-        const grp = this.bayanihan.list.find(x => x.id === gid);
+        const grp = this.bayanihan.list.find(x => x.id == gid);
         const grpName = grp ? grp.name : 'Bayanihan Cart';
         
-        this.showConfirm(
-            'Add to Bayanihan?',
-            `Add ${p.name} (×${this.pendingQty}) to "${grpName}"?\n\nMakikita ito ng lahat at ikaw ang sisingilin sa split.`,
-            async () => {
-                const opts = [];
-                document.querySelectorAll('#add-confirm-item-box input[type="radio"]:checked').forEach(inp => {
-                    opts.push(`${inp.name.replace('opt_', '')}: ${inp.value}`);
-                });
-                const variation = opts.join(', ');
-                try {
-                    const res = await fetch('api.php?action=group-add-item', {
-                        method:'POST', headers:{'Content-Type':'application/json'},
-                        body: JSON.stringify({ group_id: gid, product_id: p.id, qty: this.pendingQty, variation })
-                    });
-                    const data = await res.json();
-                    if (data.ok) {
-                        this.showToast(`${p.name} added to ${grpName}!`);
-                        this.closeAddModal();
-                    } else this.showToast(data.error || 'Failed');
-                } catch (e) { this.showToast('Connection error'); }
-            },
-            'Add Item'
-        );
+        const opts = [];
+        document.querySelectorAll('#add-confirm-item-box input[type="radio"]:checked').forEach(inp => {
+            opts.push(`${inp.name.replace('opt_', '')}: ${inp.value}`);
+        });
+        const variation = opts.join(', ');
+
+        try {
+            const res = await fetch('api.php?action=group-add-item', {
+                method:'POST', headers:{'Content-Type':'application/json'},
+                body: JSON.stringify({ group_id: gid, product_id: p.id, qty: this.pendingQty, variation })
+            });
+            const data = await res.json();
+            if (data.ok) {
+                this.showToast(`${p.name} added to ${grpName}!`);
+                this.closeAddModal();
+            } else this.showToast(data.error || 'Failed');
+        } catch (e) { this.showToast('Connection error'); }
     },
 
     // ============================================================

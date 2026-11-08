@@ -719,7 +719,63 @@ th { background: var(--surface2); font-weight: 800; text-transform: uppercase; f
 [data-theme="sunset"] .leaf-green-light { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12,2 C5,8 2,14 12,22 C22,14 19,8 12,2 Z' fill='%23e2e8f0'/%3E%3C/svg%3E"); }
 @keyframes fall { 0% { transform: translateY(-10vh) rotate(0deg); } 100% { transform: translateY(110vh) rotate(360deg); } }
 @keyframes sway { 0%, 100% { margin-left: 0px; } 50% { margin-left: 50px; } }
-select.input { appearance: none; -webkit-appearance: none; -moz-appearance: none; background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%237b5d44%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E"); background-repeat: no-repeat; background-position: right 1rem top 50%; background-size: 0.65rem auto; }
+/* =========================================
+   CUSTOM SELECT DROPDOWNS
+   ========================================= */
+select.input {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url("data:image/svg+xml;charset=US-ASCII,...%3Cpath%20fill%3D%22%237b5d44%22...");
+    background-repeat: no-repeat;
+    background-position: right 1rem center;
+    background-size: 0.65rem auto;
+    padding-right: 2.5rem;
+    cursor: pointer;
+    font-weight: 700;
+    transition:
+        border-color var(--dur-mid) var(--ease-smooth),
+        box-shadow    var(--dur-mid) var(--ease-smooth),
+        background-color var(--dur-mid) var(--ease-smooth);
+}
+
+select.input:hover,
+select.input:focus {
+    background-image: url("data:image/svg+xml;charset=US-ASCII,...%3Cpath%20fill%3D%22%237b5d44%22..."); /* same SVG */
+    background-position: right 1rem center;
+    background-size: 0.65rem auto;
+}
+
+/* Style the actual dropdown options */
+select.input option {
+    background-color: var(--surface);
+    color: var(--ink);
+    font-weight: 600;
+    padding: 12px;
+    font-family: "Nunito", sans-serif;
+}
+
+/* Specifically style the disabled/placeholder option */
+select.input option:disabled {
+    color: var(--muted);
+    font-style: italic;
+    background-color: var(--bg);
+}
+
+[data-theme="sunset"] select.input {
+    /* Swap the arrow color for dark mode */
+    background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23d9c4a0%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
+}
+
+[data-theme="sunset"] select.input option {
+    background-color: var(--surface);
+    color: var(--ink);
+}
+
+[data-theme="sunset"] select.input option:disabled {
+    background-color: var(--bg);
+    color: var(--muted);
+}
 .co-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .co-field label { display: block; font-size: 11px; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: 0.6px; }
 .co-field .input { width: 100%; }
