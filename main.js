@@ -7,7 +7,78 @@ const app = {
         "San Pedro": { "Bagong Silang": 70, "Calendola": 42, "Chrysant": 46, "Cuyab": 18, "Estrella": 79, "Fatima": 15, "G.S.I.S.": 53, "Landayan": 23, "Langgam": 86, "Laram": 72, "Magsaysay": 48, "Maharlika": 32, "Narra": 68, "Nueva": 6, "Pacita 1": 29, "Pacita 2": 34, "Riverside": 66, "Rosario": 52, "Sampaguita Village": 46, "San Lorenzo Ruiz": 24, "San Roque": 11, "San Vicente": 79, "Santo Niño": 8, "United Bayanihan": 66, "United Better Living": 79 },
         "Santa Rosa": { "Aplaya": 50, "Balibago": 45, "Caingin": 30, "Dila": 25, "Dita": 40, "Don Jose": 70, "Ibaba": 15, "Kanluran": 15, "Labas": 25, "Macabling": 40, "Malitlit": 60, "Malusak": 10, "Market Area": 10, "Pooc": 30, "Pulong Santa Cruz": 60, "Santo Domingo": 50, "Sinalhan": 45, "Tagapo": 20 }
     },
+        async renderAdminUsers() {
+        const grid = document.getElementById('admin-users-grid');
+        if (!grid) return;
+        grid.innerHTML = '<p style="text-align:center; color:var(--muted);">Loading users...</p>';
 
+        try {
+            const res = await fetch('api.php?action=admin-get-users');
+            const users = await res.json();
+            
+            grid.innerHTML = users.map(u => `
+                <div class="admin-inv-card" style="flex-direction: column; align-items: flex-start; gap: 8px;">
+                    <div style="display:flex; justify-content:space-between; width:100%; align-items:center;">
+                        <h4 style="font-size:16px;">${this.esc(u.name)}</h4>
+                        <span class="meta-chip stock-high" style="font-size: 11px;">${u.order_count} Order(s)</span>
+                    </div>
+                    <p style="font-size: 13px; color: var(--muted); font-weight: 600;">${this.esc(u.email)}</p>
+                </div>
+            `).join('');
+        } catch (e) {
+            grid.innerHTML = '<p>Error loading users.</p>';
+        }
+    },
+
+    async renderAdminAnalytics() {
+        const grid = document.getElementById('admin-analytics-grid');
+        if (!grid) return;
+        grid.innerHTML = '<p style="text-align:center; color:var(--muted);">Loading analytics...</p>';
+
+        try {
+            const res = await fetch('api.php?action=admin-get-analytics');
+            const data = await res.json();
+
+            if (data.length === 0) {
+                grid.innerHTML = '<p style="text-align:center; color:var(--muted);">No sales data yet. Place some orders first!</p>';
+                return;
+            }
+
+            grid.innerHTML = data.map((item, index) => `
+                <div style="display:flex; align-items:center; gap: 16px; background: var(--bg); padding: 16px; border-radius: 16px; border: 1px solid var(--line);">
+                    <div style="width: 40px; height: 40px; border-radius: 50%; background: var(--brand); color: #fff; display: flex; align-items: center; justify-content: center; font-family: 'Baloo 2'; font-weight: 800; font-size: 18px;">
+                        #${index + 1}
+                    </div>
+                    <div style="flex: 1;">
+                        <h4 style="font-size: 16px; font-weight: 800; color: var(--ink);">${this.esc(item.name)}</h4>
+                        <p style="font-size: 13px; color: var(--muted); font-weight: 700;">Total Sold: <span style="color: var(--brand);">${item.total_sold}</span> units</p>
+                    </div>
+                    <div style="text-align: right; font-family: 'Baloo 2'; font-size: 20px; color: var(--leaf); font-weight: 800;">
+                        ${this.money(item.total_revenue)}
+                    </div>
+                </div>
+            `).join('');
+        } catch (e) {
+            grid.innerHTML = '<p>Error loading analytics.</p>';
+        }
+    },
+
+    async fetchAdminOrdersAPI() {
+        const q = document.getElementById('admin-order-search').value;
+        const grid = document.getElementById('admin-orders-grid');
+        if (!grid) return;
+
+        try {
+            const res = await fetch(`api.php?action=admin-search-orders&q=${encodeURIComponent(q)}`);
+            const orders = await res.json();
+            
+            // Reuse your existing rendering logic by temporarily overriding this.orders
+            const originalOrders = this.orders;
+            this.orders = orders;
+            this.renderAdminOrders(); // Render using the API filtered results
+            this.orders = originalOrders; // Restore
+        } catch(e) { console.warn(e); }
+    },
     // Inside the app object, find tapPiliBot and replace it with this:
     tapPiliBot() {
         this.toggleBot();
@@ -109,9 +180,9 @@ const app = {
         },
         {
             name: "HABI",
-            desc: "Woven with the threads of our ancestors. Wear your heritage proudly with the elegant Baro't Saya, a true Filipiniana classic.",
-            featured: "Baro't Saya",
-            image: "https://placehold.co/600x338/1a2b1c/85b56d?text=Baro't+Saya"
+            desc: "Woven with the threads of our ancestors. Wrap yourself with our indigenous woven scarves, carrying the soul of our tribes with you.",featured: "T'nalak Scarf",
+            featured: "T'nalak Scarf",
+            image: "https://placehold.co/600x338/1a2b1c/85b56d?text=Indigenous+Scarf"
         },
         {
             name: "APOLLO",
@@ -811,7 +882,11 @@ const app = {
                             <p class="prod-desc">${p.description}</p>
                             <div class="prod-meta">
                                 <div class="tags-wrap">
-                                    ${p.tags ? p.tags.split(',').map(t => `<span class="meta-chip tag">${this.esc(t.trim())}</span>`).join('') : '<span class="meta-chip tag">Local Find</span>'}
+                                    ${p.specs ? `<div class="specs-list" style="margin-top: 8px; display:flex; flex-wrap:wrap; gap:4px;">${
+                                        Object.entries(JSON.parse(p.specs)).map(([key, val]) => 
+                                            `<span style="font-size:10px; background:var(--surface2); padding:2px 6px; border-radius:4px; border:1px solid var(--line); color:var(--muted);">${key}: ${val}</span>`
+                                        ).join('')
+                                    }</div>` : ''}
                                 </div>
                                 <span class="meta-chip stock ${stockClass}"><strong>${p.stock}</strong><span>in stock</span></span>
                             </div>
@@ -1620,13 +1695,24 @@ const app = {
         this.renderAdminInventory();
     },
 
-    switchAdminTab(tab, btn) {
+        switchAdminTab(tab, btn) {
         document.querySelectorAll('.admin-tab-btn').forEach(b => {
             b.className = 'btn btn-ghost admin-tab-btn';
         });
         btn.className = 'btn btn-brand admin-tab-btn';
-        ['orders', 'stock', 'add'].forEach(t => document.getElementById('admin-' + t).classList.add('hidden'));
-        document.getElementById('admin-' + tab).classList.remove('hidden');
+        
+        // Updated to include the new tabs
+        ['orders', 'stock', 'add', 'users', 'analytics'].forEach(t => {
+            const el = document.getElementById('admin-' + t);
+            if (el) el.classList.add('hidden');
+        });
+        
+        const target = document.getElementById('admin-' + tab);
+        if (target) target.classList.remove('hidden');
+
+        // Trigger data load for the specific tabs
+        if (tab === 'users') this.renderAdminUsers();
+        if (tab === 'analytics') this.renderAdminAnalytics();
     },
 
     filterAdminOrders() {
