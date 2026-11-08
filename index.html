@@ -115,6 +115,17 @@
                 <p>Dahan-dahan lang sa pagpili &mdash; lahat ng narito ay gawa ng Pilipino, para sa tahanan mo.</p>
             </div>
 
+            <div style="text-align: center; margin-bottom: 25px;">
+                <div class="card" style="display:inline-flex; align-items:center; gap:15px; background:var(--surface); border-color:var(--leaf); padding:12px 24px; cursor:pointer;" onclick="app.go('bayanihan')">
+                    <div style="font-size:24px;">🏘️</div>
+                    <div style="text-align:left;">
+                        <h4 style="color:var(--ink); margin:0; font-size:16px; font-family:'Baloo 2';">Bayanihan Cart</h4>
+                        <p style="color:var(--muted); margin:0; font-size:12px; font-weight:600;">Order together with friends & split the bill!</p>
+                    </div>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                </div>
+            </div>
+
             <!-- Department Filtering Pill Bar -->
             <div class="dept-filter-bar" id="dept-filter-bar">
                 <button class="dept-pill active" onclick="app.filterDepartment('all', this)">All Finds</button>
@@ -787,6 +798,44 @@
         <div id="orders-list" class="orders-list"></div>
     </div>
 
+    <!-- BAYANIHAN LIST -->
+    <div id="view-bayanihan" class="hidden max-w page-wrap">
+        <div class="page-head">
+            <h1>
+                <span class="head-ic" style="background:linear-gradient(135deg, #85b56d, #3f7a45); color:#f0fce0;">
+                    <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                </span>
+                Bayanihan Cart
+            </h1>
+            <p>Order together, split fairly — like a true <em>bayanihan</em>.</p>
+        </div>
+        <div style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:24px;">
+            <button class="btn btn-brand btn-large" onclick="app.openCreateGroupModal()">+ Create Bayanihan Cart</button>
+            <button class="btn btn-ghost btn-large" onclick="app.openJoinGroupModal()">🔗 Join via Code</button>
+        </div>
+        
+        <div id="bayanihan-invites"></div>
+
+        <!-- 🟢 NEW: TABS -->
+        <div class="admin-tabs" style="display:flex; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
+            <button class="btn btn-brand admin-tab-btn active" id="btn-tab-active" onclick="app.switchBayanihanTab('active', this)">Active Carts</button>
+            <button class="btn btn-ghost admin-tab-btn" id="btn-tab-history" onclick="app.switchBayanihanTab('history', this)">Order History</button>
+        </div>
+
+        <div id="bayanihan-active-list"></div>
+        <div id="bayanihan-history-list" class="hidden"></div>
+    </div>
+
+    <!-- BAYANIHAN DETAIL -->
+    <div id="view-bayanihan-detail" class="hidden max-w page-wrap">
+        <div id="bayanihan-detail-body"></div>
+    </div>
+
+    <!-- ADMIN: Bayanihan read-only detail -->
+    <div id="view-admin-group-detail" class="hidden max-w page-wrap">
+        <div id="admin-group-detail-body"></div>
+    </div>
+
     <!-- ACCOUNT VIEW -->
     <div id="view-account" class="hidden max-w page-wrap">
         <div class="page-head">
@@ -913,6 +962,7 @@
             <button class="btn btn-ghost admin-tab-btn" onclick="app.switchAdminTab('add', this)">Add Item</button>
             <button class="btn btn-ghost admin-tab-btn" onclick="app.switchAdminTab('users', this)">Users</button>
             <button class="btn btn-ghost admin-tab-btn" onclick="app.switchAdminTab('analytics', this)">Analytics</button>
+            <button class="btn btn-ghost admin-tab-btn" onclick="app.switchAdminTab('bayanihan', this)">Bayanihan Carts</button>
         </div>
         
         <!-- Orders Tab -->
@@ -1032,10 +1082,61 @@
         <div id="admin-analytics" class="hidden">
             <div class="admin-add-form-wrap" style="max-width: 100%; padding: 0; background: transparent; border: none; box-shadow: none;">
                 <div class="admin-inventory-section">
-                    <div class="admin-inv-header">
-                        <h3><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg> Top 5 Best Selling Products</h3>
+                    
+                    <!-- Filters -->
+                    <div style="display:flex; flex-direction:column; gap:15px; margin-bottom:25px;">
+                        <!-- Limit Tabs -->
+                        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                            <button class="btn btn-brand admin-tab-btn" onclick="app.setAnalyticsLimit(5, this)">Top 5</button>
+                            <button class="btn btn-ghost admin-tab-btn" onclick="app.setAnalyticsLimit(10, this)">Top 10</button>
+                            <button class="btn btn-ghost admin-tab-btn" onclick="app.setAnalyticsLimit(20, this)">Top 20</button>
+                            <button class="btn btn-ghost admin-tab-btn" onclick="app.setAnalyticsLimit('all', this)">Show All</button>
+                        </div>
+                        
+                        <!-- Sort Toggles -->
+                        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                            <button class="btn btn-brand sort-btn active" onclick="app.setAnalyticsSort('total_sold', this)">Best Selling (Quantity)</button>
+                            <button class="btn btn-ghost sort-btn" onclick="app.setAnalyticsSort('total_revenue', this)">Best Sold by Price (₱)</button>
+                        </div>
                     </div>
-                    <div id="admin-analytics-grid" style="display: flex; flex-direction: column; gap: 15px;"></div>
+
+                    <div class="admin-inv-header">
+                        <h3><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg> Product Performance</h3>
+                    </div>
+                    <div id="admin-analytics-grid" style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 40px;"></div>
+
+                    <div class="admin-inv-header">
+                        <h3><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg> Top Departments</h3>
+                    </div>
+                    <div id="admin-analytics-depts" style="display: flex; gap: 20px; flex-wrap: wrap; align-items: center; justify-content: center; margin-bottom: 40px;"></div>
+
+                    <div class="admin-inv-header">
+                        <h3><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg> Top Locations</h3>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                        <div id="admin-analytics-cities"></div>
+                        <div id="admin-analytics-brgys"></div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <div id="admin-bayanihan" class="hidden">
+            <div class="admin-add-form-wrap" style="max-width:100%; padding:0; background:transparent; border:none; box-shadow:none;">
+                <div class="admin-inventory-section">
+                    <div class="admin-inv-header">
+                        <h3><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> Bayanihan Carts</h3>
+                    </div>
+                    <div class="admin-filter-bar" style="margin-top:0; margin-bottom:20px;">
+                        <select id="admin-group-status" class="input" onchange="app.renderAdminBayanihan()" style="width:220px;">
+                            <option value="all">All Statuses</option>
+                            <option value="open">Open</option>
+                            <option value="ordered">Ordered</option>
+                            <option value="cancelled">Cancelled</option>
+                        </select>
+                    </div>
+                    <div id="admin-groups-grid" class="admin-orders-grid"></div>
                 </div>
             </div>
         </div>
@@ -1097,10 +1198,18 @@
         <div id="cart-items" class="cart-items"></div>
         <div class="cart-foot" id="cart-foot">
             <div class="sum-row"><span>Subtotal</span><span id="cart-subtotal">&#8369;0.00</span></div>
-            <div class="sum-row"><span>Shipping fee</span><span id="cart-fee">&#8369;50.00</span></div>
+            <div class="sum-row"><span>Shipping fee</span><span id="cart-fee">Soon</span></div>
             <div class="sum-row total"><span>Kabuuan</span><span id="cart-total">&#8369;0.00</span></div>
             <button class="btn btn-brand btn-block btn-large cart-checkout-btn" onclick="app.go('checkout'); app.toggleCart();">Checkout Na &rarr;</button>
             <a class="cart-link" onclick="app.toggleCart(true); app.go('cart');">Buksan ang buong cart page</a>
+            
+            <!-- 🟢 NEW BAYANIHAN SUGGESTION -->
+            <div style="margin-top:15px; text-align:center; border-top:1px dashed var(--line); padding-top:15px;">
+                <p style="font-size:12px; color:var(--muted); margin-bottom:8px;">Gusto mo bang mag-order kasama ang tropa?</p>
+                <button class="btn btn-ghost btn-block" style="border-color:var(--leaf); color:var(--leaf);" onclick="app.toggleCart(true); app.go('bayanihan');">
+                    Try Bayanihan Cart 🏘️
+                </button>
+            </div>
         </div>
     </div>
 </div>
@@ -1150,6 +1259,13 @@
             <div>
                 <strong>My Account</strong>
                 <small id="nav-account-sub">Profile & Settings</small>
+            </div>
+        </a>
+        <a href="#" onclick="app.navTo('bayanihan')">
+            <svg class="nd-icon" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            <div>
+                <strong>Bayanihan Cart</strong>
+                <small>Sama-sama sa order</small>
             </div>
         </a>
         
@@ -1307,6 +1423,12 @@
             <button class="btn btn-ghost btn-cancel-custom" onclick="app.closeAddModal()">✕ Cancel</button>
             <button class="btn btn-brand btn-add-custom" onclick="app.confirmAddToCart()">+ Add Item</button>
         </div>
+
+        <button id="btn-add-bayanihan" class="btn btn-leaf hidden"
+                style="width:100%; margin-top:10px; padding:11px; border-radius:99px; font-size:13px;"
+                onclick="app.confirmAddToBayanihan()">
+            + Add to Bayanihan Cart
+        </button>
     </div>
 </div> 
 
@@ -1374,10 +1496,15 @@
                 </div>
             </div>
 
-            <!-- NEW OPTIONS FIELD -->
+            <!-- 🟢 NEW DYNAMIC OPTIONS UI -->
             <div class="form-group">
-                <label>Options (JSON Format)</label>
-                <input type="text" id="pe-options" class="input" placeholder='e.g. {"Spice Level": ["Mild", "Spicy"], "Size": ["Regular", "Large"]}'>
+                <label>Product Options (e.g. Size, Spice Level)</label>
+                <div id="pe-options-container" style="display:flex; flex-direction:column; gap:12px; margin-bottom:12px;">
+                    <!-- Dynamically populated via JS -->
+                </div>
+                <button type="button" class="btn btn-ghost" style="width:100%; border-style:dashed; font-size:13px; padding:10px;" onclick="app.addPeOptionGroup()">
+                    + Add Option Group
+                </button>
             </div>
 
             <div class="form-group">
@@ -1390,11 +1517,135 @@
                 <input type="text" id="pe-tags" class="input">
             </div>
 
-            <div class="pe-actions">
-                <button type="button" class="btn btn-ghost" onclick="app.closeProductEditor()">Cancel</button>
-                <button type="submit" class="btn btn-brand">Save Changes</button>
+            <div class="pe-actions" style="justify-content: space-between; width: 100%; display: flex;">
+                <button type="button" class="btn btn-danger" id="pe-delete-btn" onclick="app.deleteProductEditor()" style="display: none;">Delete</button>
+                <div style="display: flex; gap: 12px; margin-left: auto;">
+                    <button type="button" class="btn btn-ghost" onclick="app.closeProductEditor()">Cancel</button>
+                    <button type="submit" class="btn btn-brand">Save Changes</button>
+                </div>
             </div>
         </form>
+    </div>
+</div>
+
+<div id="bayanihan-create-modal" class="modal hidden" onclick="if (event.target === this) app.closeModal('bayanihan-create-modal')">
+    <div class="modal-content" style="max-width:420px; padding:28px;">
+        <button class="modal-close-btn" onclick="app.closeModal('bayanihan-create-modal')">✕</button>
+        <h2 class="pe-title" style="padding-right:0;">Create Bayanihan Cart</h2>
+        <p style="color:var(--muted); font-weight:600; font-size:13px; margin-bottom:16px;">Ikaw ang magiging host. Bibigyan ka ng 6-character code para makasali ang iba.</p>
+        <div class="form-group">
+            <label>Cart Name</label>
+            <input type="text" id="bg-create-name" class="input" placeholder="Hal. Office Lunch Friday" maxlength="60">
+        </div>
+        <button class="btn btn-brand btn-block btn-large" onclick="app.submitCreateGroup()">Create Bayanihan Cart</button>
+    </div>
+</div>
+
+<div id="bayanihan-join-modal" class="modal hidden" onclick="if (event.target === this) app.closeModal('bayanihan-join-modal')">
+    <div class="modal-content" style="max-width:420px; padding:28px;">
+        <button class="modal-close-btn" onclick="app.closeModal('bayanihan-join-modal')">✕</button>
+        <h2 class="pe-title" style="padding-right:0;">Join a Bayanihan Cart</h2>
+        <p style="color:var(--muted); font-weight:600; font-size:13px; margin-bottom:16px;">Ilagay ang 6-character code na ibinigay ng host.</p>
+        <div class="form-group">
+            <label>Cart Code</label>
+            <input type="text" id="bg-join-code" class="input" placeholder="ABC123" maxlength="6"
+                   oninput="this.value = this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')"
+                   style="letter-spacing:4px; font-size:18px; font-weight:800; text-align:center;">
+        </div>
+        <button class="btn btn-brand btn-block btn-large" onclick="app.submitJoinGroup()">Send Join Request</button>
+    </div>
+</div>
+
+<div id="bayanihan-invite-modal" class="modal hidden" onclick="if (event.target === this) app.closeModal('bayanihan-invite-modal')">
+    <div class="modal-content" style="max-width:420px; padding:28px;">
+        <button class="modal-close-btn" onclick="app.closeModal('bayanihan-invite-modal')">✕</button>
+        <h2 class="pe-title" style="padding-right:0;">Invite by Email</h2>
+        <p style="color:var(--muted); font-weight:600; font-size:13px; margin-bottom:16px;">Yung ini-invite mo ay kailangang may PiliKart account.</p>
+        <div class="form-group">
+            <label>Email Address</label>
+            <input type="email" id="bg-invite-email" class="input" placeholder="friend@example.com">
+        </div>
+        <button class="btn btn-brand btn-block btn-large" onclick="app.submitInvite()">Send Invite</button>
+    </div>
+</div>
+
+<div id="bayanihan-code-modal" class="modal hidden" onclick="if (event.target === this) app.closeModal('bayanihan-code-modal')">
+    <div class="modal-content" style="max-width:420px; padding:32px; text-align:center;">
+        <button class="modal-close-btn" onclick="app.closeModal('bayanihan-code-modal')">✕</button>
+        <div style="font-size:42px; margin-bottom:8px;">🎉</div>
+        <h2 style="font-family:'Baloo 2'; font-size:24px; margin-bottom:6px;">Bayanihan Cart Created!</h2>
+        <p style="color:var(--muted); font-size:13px; font-weight:600; margin-bottom:22px;">
+            I-share ang code na ito para makasali sila sa <b id="bg-code-group-name"></b>.
+        </p>
+        <div style="background:var(--surface2); border:2px dashed var(--brand); border-radius:16px; padding:20px; margin-bottom:20px;">
+            <div style="font-size:10px; font-weight:800; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:6px;">Cart Code</div>
+            <div id="bg-code-display" style="font-family:'Baloo 2'; font-size:38px; font-weight:900; letter-spacing:8px; color:var(--brand);"></div>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+            <button class="btn btn-ghost" onclick="app.copyGroupCode()">📋 Copy</button>
+            <button class="btn btn-leaf" onclick="app.shareGroupCode()">📤 Share</button>
+        </div>
+        <button class="btn btn-brand btn-block" style="margin-top:14px;"
+                onclick="app.closeModal('bayanihan-code-modal'); app.openGroupDetail(app._newGroupId);">
+            Go to My Bayanihan Cart →
+        </button>
+    </div>
+</div>
+
+<div id="bayanihan-pay-modal" class="modal hidden" onclick="if (event.target === this) app.closeModal('bayanihan-pay-modal')">
+    <div class="modal-content" style="max-width:460px; padding:28px;">
+        <button class="modal-close-btn" onclick="app.closeModal('bayanihan-pay-modal')">✕</button>
+        <h2 class="pe-title" style="padding-right:0;">Pay My Share</h2>
+        <p id="bg-pay-amount" style="color:var(--brand); font-family:'Baloo 2'; font-size:24px; font-weight:800; margin-bottom:16px;"></p>
+        <div class="pay-grid" style="grid-template-columns:1fr 1fr;">
+            <button type="button" class="pay-opt active" id="bg-pay-cash" onclick="app.selectShareMethod('cash')">
+                <b>💵 Cash</b><small>Ibigay sa host. Host ang mag-verify.</small>
+            </button>
+            <button type="button" class="pay-opt" id="bg-pay-gcash" onclick="app.selectShareMethod('gcash')">
+                <b>📱 GCash</b><small>Mag-send sa host, i-upload ang proof.</small>
+            </button>
+        </div>
+        <div id="bg-gcash-box" class="hidden" style="margin-top:16px;">
+            <label class="dropzone" for="bg-share-file" id="bg-share-drop">
+                <span class="up-ic"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4"/><path d="m7 9 5-5 5 5"/><path d="M5 20h14"/></svg></span>
+                <b id="bg-share-title">Upload GCash screenshot</b>
+                <span class="drop-sub" id="bg-share-sub">Proof you sent to the host</span>
+                <img id="bg-share-preview" style="display:none;">
+            </label>
+            <input type="file" id="bg-share-file" accept="image/*" hidden onchange="app.handleShareProof(event)">
+        </div>
+        <button class="btn btn-brand btn-block btn-large" style="margin-top:16px;" onclick="app.submitSharePayment()">Submit Payment</button>
+    </div>
+</div>
+
+<div id="custom-confirm-modal" class="modal hidden" onclick="if (event.target === this) app.closeModal('custom-confirm-modal')">
+    <div class="modal-content" style="max-width:400px; padding:28px; text-align:center;">
+        <h2 id="cc-title" style="font-family:'Baloo 2'; font-size:22px; margin-bottom:12px; color:var(--ink);"></h2>
+        <p id="cc-message" style="color:var(--muted); font-weight:600; font-size:14px; margin-bottom:24px; line-height:1.5;"></p>
+        <div style="display:flex; gap:12px;">
+            <button class="btn btn-ghost" style="flex:1;" onclick="app.closeModal('custom-confirm-modal')">Cancel</button>
+            <button class="btn btn-danger" style="flex:1;" id="cc-confirm-btn">Confirm</button>
+        </div>
+    </div>
+</div>
+
+<div id="edit-group-item-modal" class="modal hidden" onclick="if (event.target === this) app.closeModal('edit-group-item-modal')">
+    <div class="modal-content" style="max-width:400px; padding:28px;">
+        <button class="modal-close-btn" onclick="app.closeModal('edit-group-item-modal')">✕</button>
+        <h2 style="font-family:'Baloo 2'; font-size:22px; margin-bottom:6px; color:var(--ink);">Edit Item</h2>
+        <p id="egi-name" style="color:var(--brand); font-weight:800; margin-bottom:20px;"></p>
+        
+        <div id="egi-options-wrap" class="form-group hidden" style="margin-bottom:20px;">
+            <label style="font-size:12px; font-weight:800; color:var(--muted); text-transform:uppercase;">Options</label>
+            <div id="egi-options-container"></div>
+        </div>
+
+        <div class="form-group" style="margin-bottom:24px;">
+            <label style="font-size:12px; font-weight:800; color:var(--muted); text-transform:uppercase;">Quantity (0 to remove)</label>
+            <input type="number" id="egi-qty" class="input" min="0" style="font-size:18px; font-weight:800;">
+        </div>
+
+        <button class="btn btn-brand btn-block btn-large" onclick="app.saveGroupItemEdit()">Save Changes</button>
     </div>
 </div>
 

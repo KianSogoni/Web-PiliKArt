@@ -11,6 +11,11 @@ function out($data, $code = 200) {
     echo json_encode($data);
     exit;
 }
+
+function resetGroupPayments($pdo, $gid) {
+    $pdo->prepare('UPDATE group_cart_members SET paid=0, paid_amount=0, payer_verified=0 WHERE group_cart_id=?')
+        ->execute([$gid]);
+}
  
 if (strpos($action, 'admin-') === 0 && ($_SESSION['role'] ?? '') !== 'admin') {
     out(['error' => 'Admins only'], 403);
@@ -63,6 +68,10 @@ switch ($action) {
                 $stmt = $pdo->prepare('SELECT * FROM order_items WHERE order_id=?');
                 $stmt->execute([$o['id']]);
                 $o['items'] = $stmt->fetchAll();
+                if (!empty($o['group_contributors'])) {
+                    try { $o['contributors'] = json_decode($o['group_contributors'], true) ?: []; }
+                    catch (Exception $e) { $o['contributors'] = []; }
+                }
             }
             unset($o);
             
@@ -74,7 +83,23 @@ switch ($action) {
                 $notifs = []; 
             }
         }
-        out(['user' => $user, 'products' => $products, 'orders' => $orders, 'fee' => $fee, 'notifications' => $notifs]);
+        $groups = [];
+        if ($user) {
+            try {
+                $stmt = $pdo->prepare("
+                    SELECT gc.id, gc.name, gc.code, gc.status, gc.host_id,
+                           m.role AS my_role, m.status AS my_status
+                    FROM group_carts gc
+                    INNER JOIN group_cart_members m ON m.group_cart_id = gc.id AND m.user_id = ?
+                    WHERE gc.status IN ('open','locked','ordered')
+                    ORDER BY gc.created_at DESC LIMIT 20
+                ");
+                $stmt->execute([$user['id']]);
+                $groups = $stmt->fetchAll();
+            } catch (Exception $e) { $groups = []; }
+        }
+        out(['user' => $user, 'products' => $products, 'orders' => $orders,
+             'fee' => $fee, 'notifications' => $notifs, 'groups' => $groups]);
  
     case 'signup':
         $name  = trim($in['name'] ?? '');
@@ -322,16 +347,32 @@ switch ($action) {
         ]);
         out(['ok' => true]);
     
-        case 'admin-get-analytics':
-        // Uses: INNER JOIN, SUM(), GROUP BY, HAVING, ORDER BY, LIMIT, and Aliases (AS)
+    case 'admin-get-analytics':
+        $limit = $_GET['limit'] ?? 5;
+        $sort = $_GET['sort'] ?? 'total_sold';
+        
+        if ($sort !== 'total_revenue') $sort = 'total_sold';
+        $limitClause = ($limit === 'all') ? '' : "LIMIT " . (int)$limit;
+
         $stmt = $pdo->query("
             SELECT p.name, SUM(oi.qty) AS total_sold, SUM(oi.qty * oi.price) AS total_revenue
             FROM order_items oi
             INNER JOIN products p ON oi.product_id = p.id
             GROUP BY p.id, p.name
             HAVING total_sold > 0
-            ORDER BY total_sold DESC
-            LIMIT 5
+            ORDER BY $sort DESC
+            $limitClause
+        ");
+        out($stmt->fetchAll());
+    
+    case 'admin-get-dept-analytics':
+        $stmt = $pdo->query("
+            SELECT p.category AS name, 
+                   SUM(oi.qty) AS total_sold, 
+                   SUM(oi.qty * oi.price) AS total_revenue
+            FROM order_items oi
+            INNER JOIN products p ON oi.product_id = p.id
+            GROUP BY p.category
         ");
         out($stmt->fetchAll());
 
@@ -355,12 +396,12 @@ switch ($action) {
         out($orders);
 
     case 'admin-get-users':
-        // Uses: LEFT JOIN, COUNT(), GROUP BY
         $stmt = $pdo->query("
-            SELECT u.name, u.email, COUNT(o.id) AS order_count
+            SELECT u.name, u.email, u.phone, u.address, u.role, u.created_at, COUNT(o.id) AS order_count
             FROM users u
             LEFT JOIN orders o ON u.id = o.user_id
             GROUP BY u.id
+            ORDER BY u.id ASC
         ");
         out($stmt->fetchAll());
         
@@ -371,7 +412,577 @@ switch ($action) {
             } catch (Exception $e) {}
         }
         out(['ok' => true]);
+    
+    // ============================================================
+    // BAYANIHAN CART
+    // ============================================================
+    case 'group-list':
+        $uid = (int)($_SESSION['user_id'] ?? 0);
+        if (!$uid) out(['error' => 'Not logged in'], 401);
+        $stmt = $pdo->prepare("
+            SELECT gc.*, u.name AS host_name, m.role AS my_role, m.status AS my_status,
+                   m.paid AS my_paid, m.paid_amount AS my_paid_amount, m.payer_verified AS my_verified,
+                   o.status AS order_status
+            FROM group_carts gc
+            INNER JOIN users u ON gc.host_id = u.id
+            INNER JOIN group_cart_members m ON m.group_cart_id = gc.id AND m.user_id = ?
+            LEFT JOIN orders o ON gc.order_id = o.id
+            WHERE gc.status != 'cancelled'
+            ORDER BY gc.created_at DESC
+        ");
+        $stmt->execute([$uid]);
+        $groups = $stmt->fetchAll();
+        foreach ($groups as &$g) {
+            $s = $pdo->prepare('SELECT COUNT(*) FROM group_cart_members WHERE group_cart_id=? AND status="approved"');
+            $s->execute([$g['id']]);
+            $g['member_count'] = (int)$s->fetchColumn();
+            $s = $pdo->prepare('SELECT COALESCE(SUM(price*qty),0) FROM group_cart_items WHERE group_cart_id=?');
+            $s->execute([$g['id']]);
+            $g['subtotal'] = (int)$s->fetchColumn();
+        }
+        unset($g);
+        out($groups);
+
+    case 'group-create':
+        $uid = (int)($_SESSION['user_id'] ?? 0);
+        if (!$uid) out(['error' => 'Not logged in'], 401);
+        $name = trim($in['name'] ?? '') ?: 'Bayanihan Cart';
+        $chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+        $code = '';
+        for ($attempt = 0; $attempt < 25; $attempt++) {
+            $code = '';
+            for ($i = 0; $i < 6; $i++) $code .= $chars[random_int(0, strlen($chars)-1)];
+            $s = $pdo->prepare('SELECT id FROM group_carts WHERE code=?');
+            $s->execute([$code]);
+            if (!$s->fetch()) break;
+        }
+        $pdo->beginTransaction();
+        $pdo->prepare('INSERT INTO group_carts (host_id, code, name, status) VALUES (?,?,?,?)')
+            ->execute([$uid, $code, $name, 'open']);
+        $gid = (int)$pdo->lastInsertId();
+        $pdo->prepare('INSERT INTO group_cart_members (group_cart_id, user_id, role, status) VALUES (?,?,?,?)')
+            ->execute([$gid, $uid, 'host', 'approved']);
+        $pdo->commit();
+        out(['ok' => true, 'id' => $gid, 'code' => $code, 'name' => $name]);
+
+    case 'group-get':
+        $uid = (int)($_SESSION['user_id'] ?? 0);
+        if (!$uid) out(['error' => 'Not logged in'], 401);
+        $gid = (int)($in['id'] ?? $_GET['id'] ?? 0);
+        $s = $pdo->prepare('SELECT * FROM group_carts WHERE id=?');
+        $s->execute([$gid]);
+        $g = $s->fetch();
+        if (!$g) out(['error' => 'Not found'], 404);
+        $s = $pdo->prepare('SELECT * FROM group_cart_members WHERE group_cart_id=? AND user_id=?');
+        $s->execute([$gid, $uid]);
+        $me = $s->fetch();
+        if (!$me) out(['error' => 'Not a member'], 403);
+        $s = $pdo->prepare("
+            SELECT m.*, u.name, u.email
+            FROM group_cart_members m
+            INNER JOIN users u ON m.user_id = u.id
+            WHERE m.group_cart_id=?
+            ORDER BY FIELD(m.role,'host','member'), m.joined_at ASC
+        ");
+        $s->execute([$gid]);
+        $g['members'] = $s->fetchAll();
+        $s = $pdo->prepare("
+            SELECT i.*, u.name AS user_name
+            FROM group_cart_items i
+            INNER JOIN users u ON i.user_id = u.id
+            WHERE i.group_cart_id=?
+            ORDER BY i.added_at ASC
+        ");
+        $s->execute([$gid]);
+        $g['items'] = $s->fetchAll();
+
+        // Calculate order status
+        $g['order_status'] = null;
+        if ($g['order_id']) {
+            $s = $pdo->prepare('SELECT status FROM orders WHERE id=?');
+            $s->execute([$g['order_id']]);
+            $g['order_status'] = $s->fetchColumn();
+        }
+
+        // Determine Payment Summary
+        $s = $pdo->prepare('SELECT DISTINCT payment_method FROM group_cart_members WHERE group_cart_id=? AND paid=1');
+        $s->execute([$gid]);
+        $methods = $s->fetchAll(PDO::FETCH_COLUMN);
+        if (count($methods) === 0) $g['payment_summary'] = 'Unpaid';
+        elseif (count($methods) > 1) $g['payment_summary'] = 'Mixed';
+        else $g['payment_summary'] = strtoupper($methods[0]);
+
+        // Check if everyone has at least 1 item (for 'by_adder' validation)
+        $g['all_have_items'] = true;
+        $approved = array_filter($g['members'], fn($m) => $m['status'] === 'approved');
+        foreach ($approved as $m) {
+            $hasItem = false;
+            foreach ($g['items'] as $it) {
+                if ($it['user_id'] == $m['user_id']) { $hasItem = true; break; }
+            }
+            if (!$hasItem) { $g['all_have_items'] = false; break; }
+        }
+        out($g);
+
+    case 'group-join-request':
+        $uid = (int)($_SESSION['user_id'] ?? 0);
+        if (!$uid) out(['error' => 'Not logged in'], 401);
+        $code = strtoupper(trim($in['code'] ?? ''));
+        if (strlen($code) !== 6) out(['error' => 'Kailangan ng 6-character code.'], 400);
+        $s = $pdo->prepare('SELECT * FROM group_carts WHERE code=?');
+        $s->execute([$code]);
+        $g = $s->fetch();
+        if (!$g) out(['error' => 'Walang Bayanihan Cart na may ganitong code. Check mo ulit.'], 404);
+        if ($g['status'] !== 'open') out(['error' => 'Sarado na ang Bayanihan Cart na ito.'], 409);
+        $s = $pdo->prepare('SELECT * FROM group_cart_members WHERE group_cart_id=? AND user_id=?');
+        $s->execute([$g['id'], $uid]);
+        $ex = $s->fetch();
+        if ($ex) {
+            if ($ex['status'] === 'pending')  out(['error' => 'Pending na ang request mo.'], 409);
+            if ($ex['status'] === 'approved') out(['error' => 'Miyembro ka na ng cart na ito.'], 409);
+            if ($ex['status'] === 'invited')  out(['error' => 'Ini-invite ka na ng host! Tingnan ang invitations.'], 409);
+            $pdo->prepare('UPDATE group_cart_members SET status="pending" WHERE id=?')->execute([$ex['id']]);
+        } else {
+            $pdo->prepare('INSERT INTO group_cart_members (group_cart_id, user_id, role, status) VALUES (?,?,?,?)')
+                ->execute([$g['id'], $uid, 'member', 'pending']);
+        }
+        out(['ok' => true, 'id' => (int)$g['id']]);
+
+    case 'group-approve-member':
+        $uid = (int)($_SESSION['user_id'] ?? 0);
+        $gid = (int)($in['group_id'] ?? 0);
+        $mid = (int)($in['member_id'] ?? 0);
+        $s = $pdo->prepare('SELECT * FROM group_cart_members WHERE group_cart_id=? AND user_id=? AND role="host"');
+        $s->execute([$gid, $uid]);
+        if (!$s->fetch()) out(['error' => 'Only host'], 403);
+        $pdo->prepare('UPDATE group_cart_members SET status="approved" WHERE id=? AND group_cart_id=?')
+            ->execute([$mid, $gid]);
+        resetGroupPayments($pdo, $gid);
+        out(['ok' => true]);
+
+    case 'group-reject-member':
+        $uid = (int)($_SESSION['user_id'] ?? 0);
+        $gid = (int)($in['group_id'] ?? 0);
+        $mid = (int)($in['member_id'] ?? 0);
+        $s = $pdo->prepare('SELECT * FROM group_cart_members WHERE group_cart_id=? AND user_id=? AND role="host"');
+        $s->execute([$gid, $uid]);
+        if (!$s->fetch()) out(['error' => 'Only host'], 403);
+        $s = $pdo->prepare('SELECT * FROM group_cart_members WHERE id=? AND group_cart_id=?');
+        $s->execute([$mid, $gid]);
+        $tgt = $s->fetch();
+        if (!$tgt) out(['error' => 'Member not found'], 404);
+        if ($tgt['role'] === 'host') out(['error' => 'Cannot remove host'], 400);
+        if ($tgt['status'] === 'approved') {
+            if ($tgt['paid'] == 1 && $tgt['payment_method'] === 'gcash') {
+                out(['error' => 'Hindi ma-remove: nagbayad na via GCash. Kailangang i-refund muna.'], 400);
+            }
+            $pdo->prepare('DELETE FROM group_cart_items WHERE group_cart_id=? AND user_id=?')
+                ->execute([$gid, $tgt['user_id']]);
+            resetGroupPayments($pdo, $gid);
+        }
+        $pdo->prepare('DELETE FROM group_cart_members WHERE id=? AND group_cart_id=?')
+            ->execute([$mid, $gid]);
+        out(['ok' => true]);
+
+    case 'group-invite':
+        $uid = (int)($_SESSION['user_id'] ?? 0);
+        $gid = (int)($in['group_id'] ?? 0);
+        $email = trim(strtolower($in['email'] ?? ''));
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) out(['error' => 'Invalid email'], 400);
+        $s = $pdo->prepare('SELECT * FROM group_cart_members WHERE group_cart_id=? AND user_id=? AND role="host"');
+        $s->execute([$gid, $uid]);
+        if (!$s->fetch()) out(['error' => 'Only host'], 403);
+        $s = $pdo->prepare('SELECT id FROM users WHERE email=? AND is_archived=0');
+        $s->execute([$email]);
+        $target = $s->fetchColumn();
+        if (!$target) out(['error' => 'Walang account na may ganitong email.'], 404);
+        $target = (int)$target;
+        if ($target === $uid) out(['error' => 'Cannot invite yourself'], 400);
+        $s = $pdo->prepare('SELECT * FROM group_cart_members WHERE group_cart_id=? AND user_id=?');
+        $s->execute([$gid, $target]);
+        $ex = $s->fetch();
+        if ($ex && $ex['status'] !== 'rejected') out(['error' => 'User already a member or invited.'], 409);
+        if ($ex) {
+            $pdo->prepare('UPDATE group_cart_members SET status="invited" WHERE id=?')->execute([$ex['id']]);
+        } else {
+            $pdo->prepare('INSERT INTO group_cart_members (group_cart_id, user_id, role, status) VALUES (?,?,?,?)')
+                ->execute([$gid, $target, 'member', 'invited']);
+        }
+        out(['ok' => true]);
+
+    case 'group-my-invites':
+        $uid = (int)($_SESSION['user_id'] ?? 0);
+        if (!$uid) out([]);
+        $s = $pdo->prepare("
+            SELECT gc.id AS group_id, gc.name AS group_name, gc.code, u.name AS host_name
+            FROM group_cart_members m
+            INNER JOIN group_carts gc ON m.group_cart_id = gc.id
+            INNER JOIN users u ON gc.host_id = u.id
+            WHERE m.user_id=? AND m.status='invited' AND gc.status='open'
+        ");
+        $s->execute([$uid]);
+        out($s->fetchAll());
+
+    case 'group-accept-invite':
+        $uid = (int)($_SESSION['user_id'] ?? 0);
+        $gid = (int)($in['group_id'] ?? 0);
+        $pdo->prepare('UPDATE group_cart_members SET status="approved" WHERE group_cart_id=? AND user_id=? AND status="invited"')
+            ->execute([$gid, $uid]);
+        resetGroupPayments($pdo, $gid);
+        out(['ok' => true]);
+
+    case 'group-decline-invite':
+        $uid = (int)($_SESSION['user_id'] ?? 0);
+        $gid = (int)($in['group_id'] ?? 0);
+        $pdo->prepare('DELETE FROM group_cart_members WHERE group_cart_id=? AND user_id=? AND status="invited"')
+            ->execute([$gid, $uid]);
+        out(['ok' => true]);
+
+    case 'group-add-item':
+        $uid = (int)($_SESSION['user_id'] ?? 0);
+        $gid = (int)($in['group_id'] ?? 0);
+        $s = $pdo->prepare('SELECT * FROM group_cart_members WHERE group_cart_id=? AND user_id=? AND status="approved"');
+        $s->execute([$gid, $uid]);
+        if (!$s->fetch()) out(['error' => 'Not approved'], 403);
+        $s = $pdo->prepare('SELECT status FROM group_carts WHERE id=?');
+        $s->execute([$gid]);
+        if ($s->fetchColumn() !== 'open') out(['error' => 'Cart locked'], 400);
+        $pid = (int)($in['product_id'] ?? 0);
+        $qty = max(1, (int)($in['qty'] ?? 1));
+        $var = trim($in['variation'] ?? '');
+        $s = $pdo->prepare('SELECT * FROM products WHERE id=? AND is_archived=0');
+        $s->execute([$pid]);
+        $p = $s->fetch();
+        if (!$p) out(['error' => 'Product not found'], 404);
+        if ($p['sold_out'] || $p['stock'] < $qty) out(['error' => 'Kulang ang stock'], 400);
+        $s = $pdo->prepare('SELECT id FROM group_cart_items WHERE group_cart_id=? AND user_id=? AND product_id=? AND variation=?');
+        $s->execute([$gid, $uid, $pid, $var]);
+        $exId = $s->fetchColumn();
+        if ($exId) {
+            $pdo->prepare('UPDATE group_cart_items SET qty=qty+? WHERE id=?')->execute([$qty, $exId]);
+        } else {
+            $pdo->prepare('INSERT INTO group_cart_items (group_cart_id,user_id,product_id,name,price,qty,variation) VALUES (?,?,?,?,?,?,?)')
+                ->execute([$gid, $uid, $pid, $p['name'], $p['price'], $qty, $var]);
+        }
+        out(['ok' => true]);
+
+    case 'group-update-qty':
+        $uid = (int)($_SESSION['user_id'] ?? 0);
+        $gid = (int)($in['group_id'] ?? 0);
+        $iid = (int)($in['item_id'] ?? 0);
+        $delta = (int)($in['delta'] ?? 0);
+        $s = $pdo->prepare('SELECT * FROM group_cart_members WHERE group_cart_id=? AND user_id=? AND status="approved"');
+        $s->execute([$gid, $uid]);
+        $me = $s->fetch();
+        if (!$me) out(['error' => 'Not approved'], 403);
+        $s = $pdo->prepare('SELECT * FROM group_cart_items WHERE id=? AND group_cart_id=?');
+        $s->execute([$iid, $gid]);
+        $it = $s->fetch();
+        if (!$it) out(['error' => 'Item not found'], 404);
+        if ($it['user_id'] != $uid && $me['role'] !== 'host') out(['error' => 'Not allowed'], 403);
+        $new = $it['qty'] + $delta;
+        if ($new <= 0) {
+            $pdo->prepare('DELETE FROM group_cart_items WHERE id=?')->execute([$iid]);
+        } else {
+            $pdo->prepare('UPDATE group_cart_items SET qty=? WHERE id=?')->execute([$new, $iid]);
+        }
+        out(['ok' => true]);
+
+    case 'group-set-split':
+        $uid = (int)($_SESSION['user_id'] ?? 0);
+        $gid = (int)($in['group_id'] ?? 0);
+        $s = $pdo->prepare('SELECT * FROM group_cart_members WHERE group_cart_id=? AND user_id=? AND role="host"');
+        $s->execute([$gid, $uid]);
+        if (!$s->fetch()) out(['error' => 'Only host'], 403);
+        $m = $in['method'] ?? 'equal';
+        if (!in_array($m, ['equal','by_adder','fixed_contribution','one_payer'], true)) $m = 'equal';
+        $fa = max(0, (int)($in['fixed_amount'] ?? 0));
+        $pdo->prepare('UPDATE group_carts SET split_method=?, fixed_amount=? WHERE id=?')->execute([$m, $fa, $gid]);
+        resetGroupPayments($pdo, $gid);
+        out(['ok' => true]);
+
+    case 'group-set-member-flag':
+        $uid = (int)($_SESSION['user_id'] ?? 0);
+        $gid = (int)($in['group_id'] ?? 0);
+        $s = $pdo->prepare('SELECT * FROM group_cart_members WHERE group_cart_id=? AND user_id=? AND role="host"');
+        $s->execute([$gid, $uid]);
+        if (!$s->fetch()) out(['error' => 'Only host'], 403);
+        $mid = (int)($in['member_id'] ?? 0);
+        $field = $in['field'] ?? '';
+        if (!in_array($field, ['is_fixed','is_payer'], true)) out(['error' => 'Invalid field'], 400);
+        $val = (int)($in['value'] ?? 0) ? 1 : 0;
+        $pdo->prepare("UPDATE group_cart_members SET $field=? WHERE id=? AND group_cart_id=?")
+            ->execute([$val, $mid, $gid]);
+        resetGroupPayments($pdo, $gid);
+        out(['ok' => true]);
+
+    case 'group-mark-paid':
+        $uid = (int)($_SESSION['user_id'] ?? 0);
+        $gid = (int)($in['group_id'] ?? 0);
+        $mid = (int)($in['member_id'] ?? 0);
+        $paid = (int)($in['paid'] ?? 1) ? 1 : 0;
+        $amount = max(0, (int)($in['amount'] ?? 0));
+        $s = $pdo->prepare('SELECT * FROM group_cart_members WHERE group_cart_id=? AND user_id=?');
+        $s->execute([$gid, $uid]);
+        $me = $s->fetch();
+        if (!$me) out(['error' => 'Not a member'], 403);
+        $s = $pdo->prepare('SELECT * FROM group_cart_members WHERE id=? AND group_cart_id=?');
+        $s->execute([$mid, $gid]);
+        $tgt = $s->fetch();
+        if (!$tgt) out(['error' => 'Member not found'], 404);
+        if ($me['role'] !== 'host' && $tgt['user_id'] !== $uid) out(['error' => 'Not allowed'], 403);
+        $pdo->prepare('UPDATE group_cart_members SET paid=?, paid_amount=? WHERE id=?')
+            ->execute([$paid, $paid ? $amount : 0, $mid]);
+        out(['ok' => true]);
+
+    case 'group-member-pay':
+        $uid = (int)($_SESSION['user_id'] ?? 0);
+        $gid = (int)($in['group_id'] ?? 0);
+        $method = ($in['method'] ?? 'cash') === 'gcash' ? 'gcash' : 'cash';
+        $proof  = (string)($in['proof'] ?? '');
+        $amount = max(0, (int)($in['amount'] ?? 0));
+        $s = $pdo->prepare('SELECT * FROM group_cart_members WHERE group_cart_id=? AND user_id=? AND status="approved"');
+        $s->execute([$gid, $uid]);
+        $me = $s->fetch();
+        if (!$me) out(['error' => 'Not approved'], 403);
+        if ($method === 'gcash' && strlen($proof) < 50) {
+            out(['error' => 'I-upload muna ang GCash screenshot.'], 400);
+        }
+        
+        $verified = ($me['role'] === 'host') ? 1 : 0;
+        
+        $pdo->prepare('UPDATE group_cart_members SET payment_method=?, payment_proof=?, paid=1, paid_amount=?, payer_verified=? WHERE group_cart_id=? AND user_id=?')
+            ->execute([$method, $method === 'gcash' ? $proof : '', $amount, $verified, $gid, $uid]);
+        out(['ok' => true]);
+
+    case 'group-verify-payment':
+        $uid = (int)($_SESSION['user_id'] ?? 0);
+        $gid = (int)($in['group_id'] ?? 0);
+        $mid = (int)($in['member_id'] ?? 0);
+        $verify = (int)($in['verify'] ?? 1) ? 1 : 0;
+        $s = $pdo->prepare('SELECT * FROM group_cart_members WHERE group_cart_id=? AND user_id=? AND role="host"');
+        $s->execute([$gid, $uid]);
+        if (!$s->fetch()) out(['error' => 'Only host'], 403);
+        $s = $pdo->prepare('SELECT paid FROM group_cart_members WHERE id=? AND group_cart_id=?');
+        $s->execute([$mid, $gid]);
+        if (!$s->fetch()) out(['error' => 'Member not found'], 404);
+        $pdo->prepare('UPDATE group_cart_members SET payer_verified=?, paid=? WHERE id=?')
+            ->execute([$verify, $verify ? 1 : 0, $mid]);
+        out(['ok' => true]);
+
+    case 'group-set-delivery':
+        $uid = (int)($_SESSION['user_id'] ?? 0);
+        $gid = (int)($in['group_id'] ?? 0);
+        $s = $pdo->prepare('SELECT * FROM group_carts WHERE id=?');
+        $s->execute([$gid]);
+        $g = $s->fetch();
+        if (!$g) out(['error' => 'Not found'], 404);
+        $s = $pdo->prepare('SELECT * FROM group_cart_members WHERE group_cart_id=? AND user_id=? AND role="host"');
+        $s->execute([$gid, $uid]);
+        if (!$s->fetch()) out(['error' => 'Only host'], 403);
+        
+        $name = trim($in['name'] ?? '');
+        $phone = trim(str_replace([' ','-'], '', $in['phone'] ?? ''));
+        $addr = trim($in['address'] ?? '');
+        $fee = max(0, (int)($in['fee'] ?? 0));
+        $oldFee = (int)$g['delivery_fee'];
+        
+        $pdo->prepare('UPDATE group_carts SET customer_name=?, phone=?, delivery_address=?, delivery_fee=? WHERE id=?')
+            ->execute([$name, $phone, $addr, $fee, $gid]);
+        if ($fee !== $oldFee) resetGroupPayments($pdo, $gid);
+        out(['ok' => true]);
+
+    case 'group-edit-item':
+        $uid = (int)($_SESSION['user_id'] ?? 0);
+        $gid = (int)($in['group_id'] ?? 0);
+        $iid = (int)($in['item_id'] ?? 0);
+        $qty = (int)($in['qty'] ?? 1);
+        $var = trim($in['variation'] ?? '');
+        
+        $s = $pdo->prepare('SELECT * FROM group_cart_members WHERE group_cart_id=? AND user_id=? AND status="approved"');
+        $s->execute([$gid, $uid]);
+        $me = $s->fetch();
+        if (!$me) out(['error' => 'Not approved'], 403);
+        $s = $pdo->prepare('SELECT * FROM group_cart_items WHERE id=? AND group_cart_id=?');
+        $s->execute([$iid, $gid]);
+        $it = $s->fetch();
+        if (!$it) out(['error' => 'Item not found'], 404);
+        if ($it['user_id'] != $uid && $me['role'] !== 'host') out(['error' => 'Not allowed'], 403);
+
+        if ($qty <= 0) {
+            $pdo->prepare('DELETE FROM group_cart_items WHERE id=?')->execute([$iid]);
+        } else {
+            $pdo->prepare('UPDATE group_cart_items SET qty=?, variation=? WHERE id=?')->execute([$qty, $var, $iid]);
+        }
+        out(['ok' => true]);
+
+    case 'group-confirm-order':
+        $uid = (int)($_SESSION['user_id'] ?? 0);
+        $gid = (int)($in['group_id'] ?? 0);
+        $s = $pdo->prepare('SELECT * FROM group_carts WHERE id=?');
+        $s->execute([$gid]);
+        $g = $s->fetch();
+        if (!$g) out(['error' => 'Not found'], 404);
+        $s = $pdo->prepare('SELECT * FROM group_cart_members WHERE group_cart_id=? AND user_id=? AND role="host"');
+        $s->execute([$gid, $uid]);
+        if (!$s->fetch()) out(['error' => 'Only host'], 403);
+        if ($g['status'] !== 'open') out(['error' => 'Already processed'], 400);
+        if (!$g['customer_name'] || !$g['phone'] || !$g['delivery_address']) {
+            out(['error' => 'Kumpletuhin muna ang delivery details.'], 400);
+        }
+        $s = $pdo->prepare('SELECT * FROM group_cart_items WHERE group_cart_id=?');
+        $s->execute([$gid]);
+        $items = $s->fetchAll();
+        if (!$items) out(['error' => 'Walang laman ang cart'], 400);
+        
+        $subtotal = 0; $pids = [];
+        foreach ($items as $it) { $subtotal += $it['price'] * $it['qty']; $pids[] = $it['product_id']; }
+        
+        $fee = (int)$g['delivery_fee'];
+        $total = $subtotal + $fee;
+        $s = $pdo->prepare('SELECT COUNT(*) FROM group_cart_members WHERE group_cart_id=? AND status="approved" AND (paid=0 OR payer_verified=0)');
+        $s->execute([$gid]);
+        if ((int)$s->fetchColumn() > 0) out(['error' => 'May hindi pa bayad o hindi pa na-verify ng host.'], 400);
+        
+        $s = $pdo->prepare('SELECT COALESCE(SUM(paid_amount),0) FROM group_cart_members WHERE group_cart_id=? AND status="approved"');
+        $s->execute([$gid]);
+        $sumPaid = (int)$s->fetchColumn();
+        if ($sumPaid < $total) out(['error' => 'Kulang ang bayad ng grupo ng ₱' . ($total - $sumPaid) . '.'], 400);
+
+        // 🟢 "By Items" restriction check
+        if ($g['split_method'] === 'by_adder') {
+            $s = $pdo->prepare('SELECT user_id FROM group_cart_members WHERE group_cart_id=? AND status="approved"');
+            $s->execute([$gid]);
+            $approvedUids = $s->fetchAll(PDO::FETCH_COLUMN);
+            $itemUids = array_unique(array_column($items, 'user_id'));
+            if (count(array_diff($approvedUids, $itemUids)) > 0) {
+                out(['error' => 'Cannot confirm: "By Items" split is chosen but someone has not added any items yet.'], 400);
+            }
+        }
+
+        // 🟢 Determine dynamic payment method
+        $s = $pdo->prepare('SELECT DISTINCT payment_method FROM group_cart_members WHERE group_cart_id=? AND paid=1');
+        $s->execute([$gid]);
+        $methods = $s->fetchAll(PDO::FETCH_COLUMN);
+        $finalPayment = 'cod';
+        if (count($methods) > 1) $finalPayment = 'mixed';
+        elseif (count($methods) === 1) $finalPayment = $methods[0] === 'gcash' ? 'gcash' : 'cod';
+
+        $s = $pdo->prepare("
+            SELECT m.user_id, u.name, m.paid_amount, m.role, m.payment_method
+            FROM group_cart_members m
+            INNER JOIN users u ON m.user_id = u.id
+            WHERE m.group_cart_id=? AND m.status='approved'
+        ");
+        $s->execute([$gid]);
+        $contribs = $s->fetchAll();
+        
+        $pdo->beginTransaction();
+        try {
+            $pdo->prepare('INSERT INTO orders (user_id, customer_name, phone, address, payment, payment_proof, subtotal, delivery_fee, protection_fee, total, is_group_order, group_cart_id, group_contributors, status) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)')
+                ->execute([$uid, $g['customer_name'], $g['phone'], $g['delivery_address'],
+                           $finalPayment, '', $subtotal, $fee, 0, $total, 1, $gid,
+                           json_encode($contribs), 'Pending']);
+            $oid = (int)$pdo->lastInsertId();
+            
+            $oi = $pdo->prepare('INSERT INTO order_items (order_id,product_id,name,price,qty,variation) VALUES (?,?,?,?,?,?)');
+            $up = $pdo->prepare('UPDATE products SET stock=stock-?, sold_out=(stock<=0) WHERE id=?');
+            foreach ($items as $it) {
+                $oi->execute([$oid, $it['product_id'], $it['name'], $it['price'], $it['qty'], $it['variation']]);
+                $up->execute([$it['qty'], $it['product_id']]);
+            }
+            $pdo->prepare('UPDATE group_carts SET status="ordered", order_id=? WHERE id=?')->execute([$oid, $gid]);
+            foreach ($contribs as $c) {
+                try {
+                    $pdo->prepare('INSERT INTO notifications (user_id, order_id, message) VALUES (?,?,?)')
+                        ->execute([$c['user_id'], $oid, "Bayanihan order #$oid ay nakumpirma na!"]);
+                } catch (Exception $e) {}
+            }
+            $pdo->commit();
+            out(['ok' => true, 'order_id' => $oid]);
+        } catch (Exception $e) {
+            $pdo->rollBack();
+            out(['error' => 'Error: ' . $e->getMessage()], 500);
+        }
+
+    case 'group-leave':
+        $uid = (int)($_SESSION['user_id'] ?? 0);
+        $gid = (int)($in['group_id'] ?? 0);
+        $s = $pdo->prepare('SELECT * FROM group_cart_members WHERE group_cart_id=? AND user_id=?');
+        $s->execute([$gid, $uid]);
+        $me = $s->fetch();
+        if (!$me) out(['error' => 'Not a member'], 404);
+        if ($me['role'] === 'host') out(['error' => 'Host cannot leave; cancel instead'], 400);
+        // 🛡️ GCash protection: paid members cannot leave
+        if ($me['paid'] == 1 && $me['payment_method'] === 'gcash') {
+            out(['error' => 'Hindi ka pwedeng umalis: nagbayad ka na via GCash. Kailangang i-refund muna ng host.'], 400);
+        }
+        $pdo->prepare('DELETE FROM group_cart_members WHERE id=?')->execute([$me['id']]);
+        $pdo->prepare('DELETE FROM group_cart_items WHERE group_cart_id=? AND user_id=?')->execute([$gid, $uid]);
+        resetGroupPayments($pdo, $gid);
+        out(['ok' => true]);
+
+    case 'group-cancel':
+        $uid = (int)($_SESSION['user_id'] ?? 0);
+        $gid = (int)($in['group_id'] ?? 0);
+        $s = $pdo->prepare('SELECT * FROM group_carts WHERE id=?');
+        $s->execute([$gid]);
+        $g = $s->fetch();
+        if (!$g) out(['error' => 'Not found'], 404);
+        if ($g['status'] === 'ordered') out(['error' => 'Ordered na ang group na ito — hindi na pwede i-cancel.'], 400);
+        if ($g['status'] === 'cancelled') out(['error' => 'Cancelled na.'], 400);
+        $s = $pdo->prepare('SELECT * FROM group_cart_members WHERE group_cart_id=? AND user_id=? AND role="host"');
+        $s->execute([$gid, $uid]);
+        if (!$s->fetch()) out(['error' => 'Only host'], 403);
+        $s = $pdo->prepare("SELECT COUNT(*) FROM group_cart_members WHERE group_cart_id=? AND paid=1 AND payment_method='gcash'");
+        $s->execute([$gid]);
+        $gcashPaid = (int)$s->fetchColumn();
+        if ($gcashPaid > 0) {
+            out(['error' => "Hindi ma-cancel: may $gcashPaid member na nagbayad via GCash. Kailangang i-refund muna."], 400);
+        }
+        $pdo->prepare('UPDATE group_carts SET status="cancelled" WHERE id=?')->execute([$gid]);
+        out(['ok' => true]);
+
+    // ============================================================
+    // ADMIN: Bayanihan monitoring (read-only)
+    // ============================================================
+    case 'admin-list-groups':
+        $stmt = $pdo->query("
+            SELECT gc.*, u.name AS host_name,
+                (SELECT COUNT(*) FROM group_cart_members WHERE group_cart_id=gc.id AND status='approved') AS member_count,
+                (SELECT COUNT(*) FROM group_cart_members WHERE group_cart_id=gc.id AND status='pending') AS pending_count,
+                (SELECT COALESCE(SUM(price*qty),0) FROM group_cart_items WHERE group_cart_id=gc.id) AS subtotal,
+                (SELECT COUNT(*) FROM group_cart_members WHERE group_cart_id=gc.id AND paid=1 AND payment_method='gcash') AS gcash_paid_count,
+                (SELECT COUNT(*) FROM group_cart_members WHERE group_cart_id=gc.id AND paid=1 AND payer_verified=1) AS verified_count
+            FROM group_carts gc
+            INNER JOIN users u ON gc.host_id = u.id
+            ORDER BY gc.created_at DESC
+        ");
+        out($stmt->fetchAll());
+
+    case 'admin-get-group':
+        $gid = (int)($in['id'] ?? $_GET['id'] ?? 0);
+        $s = $pdo->prepare('SELECT * FROM group_carts WHERE id=?');
+        $s->execute([$gid]);
+        $g = $s->fetch();
+        if (!$g) out(['error' => 'Not found'], 404);
+        $s = $pdo->prepare("
+            SELECT m.*, u.name, u.email FROM group_cart_members m
+            INNER JOIN users u ON m.user_id = u.id
+            WHERE m.group_cart_id=?
+            ORDER BY FIELD(m.role,'host','member'), m.joined_at ASC
+        ");
+        $s->execute([$gid]);
+        $g['members'] = $s->fetchAll();
+        $s = $pdo->prepare("
+            SELECT i.*, u.name AS user_name FROM group_cart_items i
+            INNER JOIN users u ON i.user_id = u.id
+            WHERE i.group_cart_id=? ORDER BY i.added_at ASC
+        ");
+        $s->execute([$gid]);
+        $g['items'] = $s->fetchAll();
+        out($g); 
 }
- 
+
 out(['error' => 'Unknown action'], 400);
 ?>

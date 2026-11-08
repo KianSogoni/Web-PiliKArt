@@ -1,4 +1,20 @@
 const app = {
+    showConfirm(title, message, onConfirm, btnText = 'Confirm') {
+        document.getElementById('cc-title').textContent = title;
+        document.getElementById('cc-message').innerHTML = message; // 🟢 Changed to innerHTML
+        const btn = document.getElementById('cc-confirm-btn');
+        btn.textContent = btnText;
+        
+        const newBtn = btn.cloneNode(true);
+        btn.parentNode.replaceChild(newBtn, btn);
+        newBtn.onclick = () => {
+            this.closeModal('custom-confirm-modal');
+            onConfirm();
+        };
+        
+        document.getElementById('custom-confirm-modal').classList.remove('hidden');
+    },
+
     lagunaData: {
         "Biñan": { "Biñan (Poblacion)": 25, "Bungahan": 19, "Canlalay": 45, "Casile": 44, "De La Paz": 54, "Ganado": 47, "Langkiwa": 90, "Loma": 144, "Malaban": 43, "Malamig": 113, "Mampalasan": 58, "Platero": 20, "San Antonio": 40, "San Francisco": 52, "San Jose": 35, "San Vicente": 28, "Santo Domingo": 42, "Santo Niño": 28, "Soro-soro": 45, "Timbao": 50, "Tubigan": 35, "Zapote": 2 },
         "Cabuyao": { "Baclaran": 86, "Banaybanay": 26, "Banlic": 55, "Barangay Dos": 12, "Barangay Tres": 8, "Barangay Uno": 10, "Bigaa": 19, "Butong": 44, "Casile": 90, "Diezmo": 77, "Gulod": 54, "Mamatid": 71, "Marinig": 31, "Niugan": 15, "Pittland": 70, "Pulo": 25, "Sala": 10, "San Isidro": 30 },
@@ -7,7 +23,8 @@ const app = {
         "San Pedro": { "Bagong Silang": 70, "Calendola": 42, "Chrysant": 46, "Cuyab": 18, "Estrella": 79, "Fatima": 15, "G.S.I.S.": 53, "Landayan": 23, "Langgam": 86, "Laram": 72, "Magsaysay": 48, "Maharlika": 32, "Narra": 68, "Nueva": 6, "Pacita 1": 29, "Pacita 2": 34, "Riverside": 66, "Rosario": 52, "Sampaguita Village": 46, "San Lorenzo Ruiz": 24, "San Roque": 11, "San Vicente": 79, "Santo Niño": 8, "United Bayanihan": 66, "United Better Living": 79 },
         "Santa Rosa": { "Aplaya": 50, "Balibago": 45, "Caingin": 30, "Dila": 25, "Dita": 40, "Don Jose": 70, "Ibaba": 15, "Kanluran": 15, "Labas": 25, "Macabling": 40, "Malitlit": 60, "Malusak": 10, "Market Area": 10, "Pooc": 30, "Pulong Santa Cruz": 60, "Santo Domingo": 50, "Sinalhan": 45, "Tagapo": 20 }
     },
-        async renderAdminUsers() {
+
+    async renderAdminUsers() {
         const grid = document.getElementById('admin-users-grid');
         if (!grid) return;
         grid.innerHTML = '<p style="text-align:center; color:var(--muted);">Loading users...</p>';
@@ -22,7 +39,15 @@ const app = {
                         <h4 style="font-size:16px;">${this.esc(u.name)}</h4>
                         <span class="meta-chip stock-high" style="font-size: 11px;">${u.order_count} Order(s)</span>
                     </div>
-                    <p style="font-size: 13px; color: var(--muted); font-weight: 600;">${this.esc(u.email)}</p>
+                    <div style="font-size: 12px; color: var(--muted); font-weight: 600; line-height: 1.6;">
+                        <div>📧 ${this.esc(u.email)}</div>
+                        <div>📱 ${this.esc(u.phone || 'No phone')}</div>
+                        <div>📍 ${this.esc(this.formatAddress(u.address) || 'No address')}</div>
+                    </div>
+                    <div style="margin-top: 4px; display:flex; justify-content:space-between; width:100%;">
+                        <span style="font-size: 10px; color: var(--brand); font-weight: 800; text-transform: uppercase;">${u.role}</span>
+                        <span style="font-size: 10px; color: var(--muted);">${new Date(u.created_at).toLocaleDateString()}</span>
+                    </div>
                 </div>
             `).join('');
         } catch (e) {
@@ -30,36 +55,129 @@ const app = {
         }
     },
 
+    _analyticsLimit: 5,
+    _analyticsSort: 'total_sold',
+
+    setAnalyticsLimit(limit, btn) {
+        this._analyticsLimit = limit;
+        document.querySelectorAll('#admin-analytics .admin-tab-btn').forEach(b => {
+            b.className = 'btn btn-ghost admin-tab-btn';
+        });
+        btn.className = 'btn btn-brand admin-tab-btn';
+        this.renderAdminAnalytics();
+    },
+
+    setAnalyticsSort(sort, btn) {
+        this._analyticsSort = sort;
+        document.querySelectorAll('#admin-analytics .sort-btn').forEach(b => {
+            b.className = 'btn btn-ghost sort-btn';
+        });
+        btn.className = 'btn btn-brand sort-btn';
+        this.renderAdminAnalytics();
+    },
+
     async renderAdminAnalytics() {
         const grid = document.getElementById('admin-analytics-grid');
+        const deptGrid = document.getElementById('admin-analytics-depts');
+        const cityGrid = document.getElementById('admin-analytics-cities');
+        const brgyGrid = document.getElementById('admin-analytics-brgys');
         if (!grid) return;
-        grid.innerHTML = '<p style="text-align:center; color:var(--muted);">Loading analytics...</p>';
+
+        grid.innerHTML = '<p style="text-align:center; color:var(--muted);">Loading...</p>';
 
         try {
-            const res = await fetch('api.php?action=admin-get-analytics');
+            // 1. Fetch Top Products
+            const res = await fetch(`api.php?action=admin-get-analytics&limit=${this._analyticsLimit}&sort=${this._analyticsSort}`);
             const data = await res.json();
 
             if (data.length === 0) {
-                grid.innerHTML = '<p style="text-align:center; color:var(--muted);">No sales data yet. Place some orders first!</p>';
-                return;
+                grid.innerHTML = '<p style="text-align:center; color:var(--muted);">No sales data yet.</p>';
+            } else {
+                const maxVal = Math.max(...data.map(d => this._analyticsSort === 'total_revenue' ? d.total_revenue : d.total_sold));
+                grid.innerHTML = data.map((item, index) => {
+                    const currentVal = this._analyticsSort === 'total_revenue' ? item.total_revenue : item.total_sold;
+                    const percent = (currentVal / maxVal) * 100;
+                    return `
+                    <div style="display:flex; align-items:center; gap: 16px; background: var(--bg); padding: 16px; border-radius: 16px; border: 1px solid var(--line); position:relative; overflow:hidden;">
+                        <div style="position:absolute; left:0; top:0; bottom:0; width:${percent}%; background:color-mix(in srgb, var(--brand) 10%, transparent); z-index:0;"></div>
+                        <div style="width: 40px; height: 40px; border-radius: 50%; background: var(--brand); color: #fff; display: flex; align-items: center; justify-content: center; font-family: 'Baloo 2'; font-weight: 800; font-size: 18px; z-index:1;">
+                            #${index + 1}
+                        </div>
+                        <div style="flex: 1; z-index:1;">
+                            <h4 style="font-size: 16px; font-weight: 800; color: var(--ink);">${this.esc(item.name)}</h4>
+                            <p style="font-size: 13px; color: var(--muted); font-weight: 700;">Total Sold: <span style="color: var(--brand);">${item.total_sold}</span> units</p>
+                        </div>
+                        <div style="text-align: right; font-family: 'Baloo 2'; font-size: 20px; color: var(--leaf); font-weight: 800; z-index:1;">
+                            ${this.money(item.total_revenue)}
+                        </div>
+                    </div>`;
+                }).join('');
             }
 
-            grid.innerHTML = data.map((item, index) => `
-                <div style="display:flex; align-items:center; gap: 16px; background: var(--bg); padding: 16px; border-radius: 16px; border: 1px solid var(--line);">
-                    <div style="width: 40px; height: 40px; border-radius: 50%; background: var(--brand); color: #fff; display: flex; align-items: center; justify-content: center; font-family: 'Baloo 2'; font-weight: 800; font-size: 18px;">
-                        #${index + 1}
+            // 2. Fetch & Render Departments (Pie Chart)
+            const dRes = await fetch('api.php?action=admin-get-dept-analytics');
+            const dData = await dRes.json();
+            
+            if (dData.length > 0) {
+                const totalRev = dData.reduce((s, d) => s + parseInt(d.total_revenue), 0);
+                const colors = { paso: '#f0905a', nipa: '#f2b354', habi: '#ff7b7b', apollo: '#5bc0de' };
+                
+                let gradientParts = [];
+                let currentAngle = 0;
+                let legendHtml = '';
+                
+                // 🟢 FIX: Ensure the angles add up to exactly 360 degrees to prevent rendering bugs
+                dData.forEach((d, index) => {
+                    const percent = (parseInt(d.total_revenue) / totalRev) * 100;
+                    const deg = (percent / 100) * 360;
+                    const endAngle = index === dData.length - 1 ? 360 : currentAngle + deg;
+                    
+                    gradientParts.push(`${colors[d.name] || '#ccc'} ${currentAngle}deg ${endAngle}deg`);
+                    currentAngle = endAngle;
+                    
+                    legendHtml += `
+                        <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px; font-size:13px; font-weight:700;">
+                            <span style="width:12px; height:12px; border-radius:50%; background:${colors[d.name] || '#ccc'};"></span>
+                            <span style="text-transform:capitalize; width:60px;">${d.name}</span>
+                            <span style="color:var(--brand);">${this.money(d.total_revenue)}</span>
+                            <span style="color:var(--muted); font-size:11px;">(${d.total_sold} items)</span>
+                        </div>
+                    `;
+                });
+
+                deptGrid.innerHTML = `
+                    <div style="width: 200px; height: 200px; border-radius: 50%; background: conic-gradient(${gradientParts.join(', ')}); box-shadow: 0 4px 12px rgba(0,0,0,0.2);"></div>
+                    <div style="flex:1; min-width:250px; background:var(--bg); padding:20px; border-radius:16px; border:1px solid var(--line);">
+                        ${legendHtml}
                     </div>
-                    <div style="flex: 1;">
-                        <h4 style="font-size: 16px; font-weight: 800; color: var(--ink);">${this.esc(item.name)}</h4>
-                        <p style="font-size: 13px; color: var(--muted); font-weight: 700;">Total Sold: <span style="color: var(--brand);">${item.total_sold}</span> units</p>
-                    </div>
-                    <div style="text-align: right; font-family: 'Baloo 2'; font-size: 20px; color: var(--leaf); font-weight: 800;">
-                        ${this.money(item.total_revenue)}
-                    </div>
-                </div>
-            `).join('');
+                `;
+            } else {
+                deptGrid.innerHTML = '<p>No department data.</p>';
+            }
+
+            // 3. Render Locations
+            const cityCount = {};
+            const brgyCount = {};
+            this.orders.forEach(o => {
+                try {
+                    const addr = JSON.parse(o.address);
+                    if (addr.city) cityCount[addr.city] = (cityCount[addr.city] || 0) + 1;
+                    if (addr.brgy) brgyCount[addr.brgy] = (brgyCount[addr.brgy] || 0) + 1;
+                } catch(e) {}
+            });
+
+            const renderLocations = (obj) => Object.entries(obj)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 5)
+                .map(([name, count]) => `<div class="admin-item-row" style="padding:8px 0; border-bottom:1px dashed var(--line);"><span>${this.esc(name)}</span> <b style="color:var(--brand);">${count} orders</b></div>`)
+                .join('');
+
+            cityGrid.innerHTML = `<div class="co-card"><h4 style="margin-bottom:12px; font-size:16px; color:var(--brand);">Top Cities</h4>${renderLocations(cityCount) || '<p>No data</p>'}</div>`;
+            brgyGrid.innerHTML = `<div class="co-card"><h4 style="margin-bottom:12px; font-size:16px; color:var(--leaf);">Top Barangays</h4>${renderLocations(brgyCount) || '<p>No data</p>'}</div>`;
+
         } catch (e) {
             grid.innerHTML = '<p>Error loading analytics.</p>';
+            console.error(e);
         }
     },
 
@@ -72,14 +190,13 @@ const app = {
             const res = await fetch(`api.php?action=admin-search-orders&q=${encodeURIComponent(q)}`);
             const orders = await res.json();
             
-            // Reuse your existing rendering logic by temporarily overriding this.orders
             const originalOrders = this.orders;
             this.orders = orders;
-            this.renderAdminOrders(); // Render using the API filtered results
-            this.orders = originalOrders; // Restore
+            this.renderAdminOrders(); 
+            this.orders = originalOrders; 
         } catch(e) { console.warn(e); }
     },
-    // Inside the app object, find tapPiliBot and replace it with this:
+
     tapPiliBot() {
         this.toggleBot();
 
@@ -87,10 +204,8 @@ const app = {
         const heartContainer = document.getElementById('pilibot-heart-container');
 
         if (btn) {
-            // Trigger leaf morph animation
             btn.classList.add('is-leaf');
 
-            // Spawn floating heart
             if (heartContainer) {
                 const heart = document.createElement('div');
                 heart.className = 'floating-heart';
@@ -99,7 +214,6 @@ const app = {
                 setTimeout(() => heart.remove(), 1000);
             }
 
-            // Revert back to robot icon after 1.5 seconds
             clearTimeout(this._piliLeafTimer);
             this._piliLeafTimer = setTimeout(() => {
                 btn.classList.remove('is-leaf');
@@ -147,6 +261,7 @@ const app = {
     products: [],
     orders: [],
     fee: 0,
+    feeSet: false,
     isSignUp: false,
     authBusy: false,
     gcashBase64: '',
@@ -155,6 +270,7 @@ const app = {
     adminOrderFilter: { search: '', status: 'all' },
     editingProductId: null,
     protectionEnabled: false,
+    bayanihan: { list: [], invites: [], current: null, activeGroupId: null },
 
     deptIcons: {
         paso: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10h16v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8z"/><path d="M2 10h20"/><path d="M8 6c0-2 1-3 2-3s2 1 2 3"/><path d="M14 6c0-2 1-3 2-3s2 1 2 3"/></svg>',
@@ -165,7 +281,7 @@ const app = {
 
     carouselIndex: 0,
     carouselTimer: null,
-        departments: [
+    departments: [
         {
             name: "PASO",
             desc: "Taste the warmth of Lola's kitchen. Every bite is a memory of home, crafted with the love only a Filipino family knows.",
@@ -176,19 +292,19 @@ const app = {
             name: "NIPA",
             desc: "More than just a house, it's where the heart is. The iconic Tabo is the ultimate symbol of Filipino practical living.",
             featured: "Classic Plastic Tabo",
-            image: "https://placehold.co/600x338/1a2b1c/85b56d?text=Tabo"
+            image: "assets/nipa/Classic Plastic Tabo.png"
         },
         {
             name: "HABI",
             desc: "Woven with the threads of our ancestors. Wrap yourself with our indigenous woven scarves, carrying the soul of our tribes with you.",featured: "T'nalak Scarf",
             featured: "T'nalak Scarf",
-            image: "https://placehold.co/600x338/1a2b1c/85b56d?text=Indigenous+Scarf"
+            image: "assets/habi/Indigenous Woven Scarf.png"
         },
         {
             name: "APOLLO",
             desc: "Reach for the stars while keeping your feet on the ground. Because no Filipino gathering is complete without a Videoke session!",
             featured: "Mini Karaoke Machine",
-            image: "https://placehold.co/600x338/1a2b1c/85b56d?text=Mini+Karaoke"
+            image: "assets/apollo/minikaraokemachine.png"
         }
     ],
 
@@ -202,6 +318,21 @@ const app = {
             this.products = data.products || [];
             this.orders = data.orders || [];
             this.fee = data.fee || 0;
+
+            if (this.user && this.user.address) {
+                try {
+                    let addrObj = null;
+                    if (this.user.address.trim().startsWith('{')) {
+                        addrObj = JSON.parse(this.user.address);
+                    }
+                    if (addrObj && addrObj.city && addrObj.brgy &&
+                        this.lagunaData[addrObj.city] &&
+                        this.lagunaData[addrObj.city][addrObj.brgy] !== undefined) {
+                        this.fee    = this.lagunaData[addrObj.city][addrObj.brgy];
+                        this.feeSet = true;
+                    }
+                } catch (e) { /* ignore malformed addresses */ }
+            }
         } catch (e) {
             console.warn('Backend not connected or error:', e);
         }
@@ -235,6 +366,36 @@ const app = {
                 this.renderCarousel();
             }
         }, 7000);
+
+                if (this._groupPollTimer) clearInterval(this._groupPollTimer);
+        this._groupPollTimer = setInterval(async () => {
+            if (!this.user) return;
+
+            // 🟢 STOP polling if user is typing or a modal is open
+            const isModalOpen = ['edit-group-item-modal', 'bayanihan-pay-modal', 'custom-confirm-modal', 'add-confirm-modal'].some(id => {
+                const el = document.getElementById(id);
+                return el && !el.classList.contains('hidden');
+            });
+            const isTyping = document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'SELECT' || document.activeElement.tagName === 'TEXTAREA');
+
+            if (isModalOpen || isTyping) return;
+
+            if (this.currentView === 'bayanihan') {
+                await this.loadGroups();
+                this.renderBayanihan();
+            } else if (this.currentView === 'bayanihan-detail' && this.bayanihan.current) {
+                const gid = this.bayanihan.current.id;
+                try {
+                    // 🟢 Silent fetch instead of calling openGroupDetail (which resets scroll)
+                    const res = await fetch('api.php?action=group-get', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: gid }) });
+                    const data = await res.json();
+                    if (data.id) {
+                        this.bayanihan.current = data;
+                        this.renderGroupDetail();
+                    }
+                } catch (e) {}
+            }
+        }, 10000); // 10 seconds
     },
 
     checkCartStock() {
@@ -301,6 +462,9 @@ const app = {
 
         const warning = document.getElementById('paso-restriction-note');
         if (warning) warning.classList.toggle('hidden', !hasPaso);
+
+        this.feeSet = false;
+        this.fee    = 0;
     },
 
     updateBrgyDropdown() {
@@ -335,13 +499,16 @@ const app = {
         const brgy = document.getElementById('co-brgy').value;
 
         if (city && brgy && this.lagunaData[city] && this.lagunaData[city][brgy] !== undefined) {
-            this.fee = this.lagunaData[city][brgy];
+            this.fee    = this.lagunaData[city][brgy];
+            this.feeSet = true;
         } else {
-            this.fee = 0;
+            this.fee    = 0;
+            this.feeSet = false;
         }
 
         this.renderCheckoutSummary();
         this.renderCart();
+        if (this.currentView === 'cart') this.renderCartPage();
     },
 
     toggleAcc(el) {
@@ -412,6 +579,8 @@ const app = {
         if (view === 'admin') this.renderAdmin();
         if (view === 'account') this.renderAccount();
         if (view === 'home') { this.updateGreeting(); setTimeout(() => this.sizeHeroVideo(), 50); this.maybeWelcome(); }
+        if (view === 'bayanihan') this.renderBayanihan();
+        if (view === 'bayanihan-detail') this.renderGroupDetail();
 
         if (view === 'faq' || view === 'recipes') {
             document.querySelectorAll('.faq-recipe-item').forEach((item, index) => {
@@ -525,10 +694,8 @@ const app = {
         clearTimeout(this._toastTimer);
         this._toastTimer = setTimeout(() => t.classList.remove('show'), 3600);
     },
-        // --- LANDING PAGE INTERACTIONS ---
     
     initLandingPage() {
-        // 1. Typewriter Effect
         const text = "Tuloy ka, suki! Dito, ang bawat pili ay may kasamang init ng tahanan.";
         const el = document.getElementById('typewriter-text');
         if (el) {
@@ -538,20 +705,17 @@ const app = {
                 if (i < text.length) {
                     el.innerHTML = text.substring(0, i + 1) + '<span class="type-cursor"></span>';
                     i++;
-                    setTimeout(typeWriter, 40); // Speed of typing
+                    setTimeout(typeWriter, 40); 
                 }
             };
-            // Start typing after a tiny delay
             setTimeout(typeWriter, 500);
         }
 
-        // 2. Mouse Follow Glow (Lantern Effect)
         const landingScreen = document.getElementById('view-landing');
         const glow = document.getElementById('landing-glow');
         
         if (landingScreen && glow) {
             landingScreen.addEventListener('mousemove', (e) => {
-                // Only move if we are actually on the landing page
                 if (!landingScreen.classList.contains('hidden')) {
                     const rect = landingScreen.getBoundingClientRect();
                     const x = e.clientX - rect.left;
@@ -560,36 +724,28 @@ const app = {
                 }
             });
             
-            // Reset glow position when mouse leaves
             landingScreen.addEventListener('mouseleave', () => {
                 glow.style.transform = `translate(-50%, -50%)`;
             });
         }
     },
 
-    // 3. Cinematic Entry Transition
     enterStore() {
         const landing = document.getElementById('view-landing');
         if (!landing) return;
-        
-        // Add the zooming class
         landing.classList.add('is-entering');
-        
-        // Wait for the animation to finish before switching views
         setTimeout(() => {
             this.go('auth');
-            // Reset the class so it works again if they log out
             setTimeout(() => landing.classList.remove('is-entering'), 500);
-        }, 800); // Matches the CSS transition duration
+        }, 800); 
     },
-        // 1. Set up the mouse follower
+
     initLandingInteractions() {
         const landingScreen = document.getElementById('view-landing');
         const glow = document.getElementById('landing-glow');
         
         if (landingScreen && glow) {
             landingScreen.addEventListener('mousemove', (e) => {
-                // Only move if we are actually on the landing page
                 if (!landingScreen.classList.contains('hidden')) {
                     const rect = landingScreen.getBoundingClientRect();
                     const x = e.clientX - rect.left;
@@ -600,22 +756,16 @@ const app = {
         }
     },
 
-    // 2. The cinematic entry transition
     enterStore() {
         const landing = document.getElementById('view-landing');
         if (!landing) return;
-        
-        // Add the zooming class
         landing.classList.add('is-entering');
-        
-        // Wait for the 1.2s animation to finish before switching the view
         setTimeout(() => {
             this.go('auth');
-            
-            // Reset the class so it's ready for next time
             setTimeout(() => landing.classList.remove('is-entering'), 100);
-        }, 1200); // Must match the CSS transition time
+        }, 1200); 
     },
+
     handleAuth() {
         if (this.user) {
             fetch('api.php?action=logout').then(() => location.reload());
@@ -751,6 +901,7 @@ const app = {
             this.updateBrgyDropdown();
             if (addrObj.brgy) {
                 document.getElementById('co-brgy').value = addrObj.brgy;
+                this.updateShippingFee();   // ← re-compute now that brgy is set
             }
         }
         set('co-street', addrObj.street);
@@ -857,7 +1008,6 @@ const app = {
             if (p.stock <= 0) stockClass = 'stock-out';
             else if (p.stock <= 10) stockClass = 'stock-low';
 
-            // NEW: Check if it's a best seller
             const isBestSeller = Number(p.best_seller) === 1;
             const bestSellerPill = isBestSeller ? `<span class="best-seller-pill">⭐ Suki's Choice</span>` : '';
 
@@ -929,7 +1079,6 @@ const app = {
         const box = document.getElementById('add-confirm-item-box');
         if (!box) return;
 
-        // Parse Options
         let optionsHtml = '';
         if (p.options) {
             try {
@@ -960,12 +1109,10 @@ const app = {
 
         box.innerHTML = `
             <div class="ci-horizontal-layout">
-                <!-- Left Column: Image -->
                 <div class="ci-left-col">
                     <img src="${this.esc(p.image || '')}" class="ci-hero-thumb" alt="${this.esc(p.name)}">
                 </div>
 
-                <!-- Right Column: Details & Options -->
                 <div class="ci-right-col">
                     <div class="ci-header">
                         <h3 class="ci-title">${this.esc(p.name)}</h3>
@@ -994,6 +1141,18 @@ const app = {
                 </div>
             </div>
         `;
+
+        const btnBay = document.getElementById('btn-add-bayanihan');
+        if (btnBay) {
+            const gid = this.bayanihan.activeGroupId;
+            const grp = gid ? this.bayanihan.list.find(x => x.id === gid) : null;
+            if (grp) {
+                btnBay.classList.remove('hidden');
+                btnBay.textContent = `+ Add to Bayanihan: ${grp.name}`;
+            } else {
+                btnBay.classList.add('hidden');
+            }
+        }
     },
 
     adjustPendingQty(d) {
@@ -1007,7 +1166,6 @@ const app = {
         if (!this.pendingCartItem) return;
         const p = this.pendingCartItem;
 
-        // Gather selected options
         const selectedOptions = [];
         document.querySelectorAll('#add-confirm-item-box input[type="radio"]:checked').forEach(input => {
             const groupName = input.name.replace('opt_', '');
@@ -1015,7 +1173,6 @@ const app = {
         });
         const variationStr = selectedOptions.join(', ');
 
-        // Check if the exact product + variation is already in the cart
         const item = this.cart.find(x => x.id === p.id && (x.variation || '') === variationStr);
         
         if (item) {
@@ -1089,13 +1246,22 @@ const app = {
         if (foot) foot.style.display = this.cart.length ? '' : 'none';
 
         const subtotal = this.cart.reduce((s, x) => s + x.price * x.qty, 0);
-        const fee = this.cart.length ? this.fee : 0;
-        const total = subtotal + fee;
+        const feeSet   = this.feeSet;
+        const fee      = (this.cart.length && feeSet) ? this.fee : 0;
+        const total    = subtotal + fee;
 
-        const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = '₱' + v.toFixed(2); };
-        set('cart-subtotal', subtotal);
-        set('cart-fee', fee);
-        set('cart-total', total);
+        const setText = (id, t) => { const el = document.getElementById(id); if (el) el.textContent = t; };
+        const setHTML = (id, h) => { const el = document.getElementById(id); if (el) el.innerHTML = h; };
+
+        setText('cart-subtotal', this.money(subtotal));
+        if (feeSet) {
+            setText('cart-fee',   this.money(fee));
+            setText('cart-total', this.money(total));
+        } else {
+            setHTML('cart-fee',   '<span style="color:var(--muted); font-style:italic; font-weight:700;">Soon</span>');
+            setHTML('cart-total', this.money(subtotal) +
+                ' <small style="font-size:10px; color:var(--muted); font-weight:600; font-family:\'Nunito\',sans-serif;">+ shipping</small>');
+        }
     },
 
     updateQty(id, variation, d) {
@@ -1223,13 +1389,22 @@ const app = {
     updateCartPageSummary() {
         const selected = this.cart.filter(c => c.selected);
         const subtotal = selected.reduce((s, x) => s + x.price * x.qty, 0);
-        const fee = selected.length ? this.fee : 0;
-        const total = subtotal + fee;
+        const feeSet   = this.feeSet;
+        const fee      = (selected.length && feeSet) ? this.fee : 0;
+        const total    = subtotal + fee;
 
-        const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = '₱' + v.toFixed(2); };
-        set('cart-page-subtotal', subtotal);
-        set('cart-page-fee', fee);
-        set('cart-page-total', total);
+        const setText = (id, t) => { const el = document.getElementById(id); if (el) el.textContent = t; };
+        const setHTML = (id, h) => { const el = document.getElementById(id); if (el) el.innerHTML = h; };
+
+        setText('cart-page-subtotal', this.money(subtotal));
+        if (feeSet) {
+            setText('cart-page-fee',   this.money(fee));
+            setText('cart-page-total', this.money(total));
+        } else {
+            setHTML('cart-page-fee',   '<span style="color:var(--muted); font-style:italic; font-weight:700;">Soon</span>');
+            setHTML('cart-page-total', this.money(subtotal) +
+                ' <small style="font-size:10px; color:var(--muted); font-weight:600; font-family:\'Nunito\',sans-serif;">+ shipping</small>');
+        }
     },
 
     toggleProtection(checked) {
@@ -1237,7 +1412,7 @@ const app = {
         this.renderCheckoutSummary();
     },
 
-        renderCheckoutSummary() {
+    renderCheckoutSummary() {
         const el = document.getElementById('checkout-summary');
         if (!el) return;
 
@@ -1254,7 +1429,8 @@ const app = {
 
         const selectedCart = this.cart.filter(c => c.selected);
         const subtotal = selectedCart.reduce((s, x) => s + x.price * x.qty, 0);
-        const fee = selectedCart.length ? this.fee : 0;
+        const feeSet   = this.feeSet;
+        const fee      = (selectedCart.length && feeSet) ? this.fee : 0;
         const protectionFee = this.protectionEnabled ? Math.ceil(subtotal / 200) * 50 : 0;
 
         if (!selectedCart.length) {
@@ -1282,15 +1458,22 @@ const app = {
                 </div>
                 <div class="sum-totals">
                     <div class="sum-row"><span>Subtotal</span><span>${this.money(subtotal)}</span></div>
-                    <div class="sum-row"><span>Shipping fee</span><span>${this.money(fee)}</span></div>
+                    <div class="sum-row"><span>Shipping fee</span><span>${feeSet
+                        ? this.money(fee)
+                        : '<span style="color:var(--muted); font-style:italic; font-weight:700;">Soon</span>'}</span></div>
                     ${this.protectionEnabled ? `<div class="sum-row"><span>Protection fee</span><span>${this.money(protectionFee)}</span></div>` : ''}
-                    <div class="sum-row total"><span>Kabuuan</span><span>${this.money(subtotal + fee + protectionFee)}</span></div>
+                    <div class="sum-row total"><span>Kabuuan</span><span>${feeSet
+                        ? this.money(subtotal + fee + protectionFee)
+                        : this.money(subtotal + protectionFee) +
+                          ' <small style="font-size:11px;color:var(--muted);font-weight:600;font-family:\'Nunito\',sans-serif;">+ shipping</small>'}</span></div>
                 </div>`;
         }
         const amt = document.getElementById('gcash-amount');
-        if (amt) amt.textContent = this.money(subtotal + fee + protectionFee);
-        const guest = document.getElementById('co-guest-note');
-        if (guest) guest.style.display = this.user ? 'none' : '';
+        if (amt) {
+            amt.textContent = feeSet
+                ? this.money(subtotal + fee + protectionFee)
+                : this.money(subtotal + protectionFee) + ' + shipping';
+        }
     },
 
     selectPayment(method) {
@@ -1565,13 +1748,38 @@ const app = {
                     </div>` : ''}
                 </div>
 
+                ${o.is_group_order ? `
+                <div style="padding:12px; background:color-mix(in srgb, var(--leaf) 10%, transparent); border-left:3px solid var(--leaf); border-radius:8px; font-size:11px; cursor:pointer; transition: all 0.2s;" 
+                     onclick="app.viewAdminGroup(${o.group_cart_id})" 
+                     onmouseover="this.style.background='color-mix(in srgb, var(--leaf) 20%, transparent)'; this.style.transform='translateX(4px)';" 
+                     onmouseout="this.style.background='color-mix(in srgb, var(--leaf) 10%, transparent)'; this.style.transform='translateX(0)';">
+                    <div style="font-weight:800; color:var(--leaf); text-transform:uppercase; margin-bottom:4px; display:flex; justify-content:space-between; align-items:center;">
+                        <span>🏘️ Bayanihan Cart</span>
+                        <span style="font-size:10px; background:var(--leaf); color:#fff; padding:2px 8px; border-radius:4px;">Click to View Details →</span>
+                    </div>
+                    <div style="color:var(--ink); font-weight:600; line-height:1.5;">
+                        ${(o.contributors || []).map(c => `${this.esc(c.name)}${c.paid_amount ? ` (${this.money(c.paid_amount)})` : ''}`).join(' · ') || 'N/A'}
+                    </div>
+                </div>` : ''}
+
                 <div class="order-footer">
                     <span class="footer-label">Kabuuan</span>
                     <span class="footer-total">${this.money(o.total)}</span>
                 </div>
             </div>
             `;
-        }).join('') || this.emptyState('orders', 'Wala ka pang order', 'Wala pang laman ang listahan mo. Tara, mamili tayo nang dahan-dahan!', 'Mamili na', 'app.scrollToMenu()');
+        }).join('') || this.emptyState('orders', 'Wala ka pang individual order', 'Wala pang laman ang listahan mo. Tara, mamili tayo nang dahan-dahan!', 'Mamili na', 'app.scrollToMenu()');
+
+        // 🟢 Suggest Group Carting
+        if (list.innerHTML) {
+            list.innerHTML += `
+                <div class="card" style="text-align:center; border-color:var(--leaf); padding:24px; margin-top:20px; background:linear-gradient(135deg, var(--surface2), var(--surface));">
+                    <h3 style="color:var(--leaf); margin-bottom:8px;">🏘️ Gusto mo bang mag-order kasama ang tropa?</h3>
+                    <p style="color:var(--muted); font-size:14px; margin-bottom:16px;">Gamitin ang <b>Bayanihan Cart</b> para sabay-sabay kayong umorder at awtomatikong hatiin ang bayad!</p>
+                    <button class="btn btn-leaf" onclick="app.navTo('bayanihan')">Try Bayanihan Cart</button>
+                </div>
+            `;
+        }
     },
 
     renderAccount() {
@@ -1695,14 +1903,13 @@ const app = {
         this.renderAdminInventory();
     },
 
-        switchAdminTab(tab, btn) {
+    switchAdminTab(tab, btn) {
         document.querySelectorAll('.admin-tab-btn').forEach(b => {
             b.className = 'btn btn-ghost admin-tab-btn';
         });
         btn.className = 'btn btn-brand admin-tab-btn';
         
-        // Updated to include the new tabs
-        ['orders', 'stock', 'add', 'users', 'analytics'].forEach(t => {
+        ['orders', 'stock', 'add', 'users', 'analytics', 'bayanihan'].forEach(t => {
             const el = document.getElementById('admin-' + t);
             if (el) el.classList.add('hidden');
         });
@@ -1710,9 +1917,9 @@ const app = {
         const target = document.getElementById('admin-' + tab);
         if (target) target.classList.remove('hidden');
 
-        // Trigger data load for the specific tabs
         if (tab === 'users') this.renderAdminUsers();
         if (tab === 'analytics') this.renderAdminAnalytics();
+        if (tab === 'bayanihan') this.renderAdminBayanihan();
     },
 
     filterAdminOrders() {
@@ -1771,6 +1978,14 @@ const app = {
                     ${o.items.map(i => `<div class="admin-item-row"><span>${i.qty}x ${this.esc(i.name)} ${i.variation ? `<small style="color:var(--brand);">(${this.esc(i.variation)})</small>` : ''}</span><span>${this.money(i.price * i.qty)}</span></div>`).join('')}
                 </div>
 
+                ${o.is_group_order ? `
+                <div style="padding:10px 12px; background:color-mix(in srgb, var(--leaf) 10%, transparent); border-left:3px solid var(--leaf); border-radius:8px; font-size:11px;">
+                    <div style="font-weight:800; color:var(--leaf); text-transform:uppercase; margin-bottom:4px;">🏘️ Bayanihan Cart</div>
+                    <div style="color:var(--ink); font-weight:600; line-height:1.5;">
+                        ${(o.contributors || []).map(c => `${this.esc(c.name)}${c.paid_amount ? ` (${this.money(c.paid_amount)})` : ''}`).join(' · ') || 'N/A'}
+                    </div>
+                </div>` : ''}
+
                 <div class="admin-order-footer">
                     <div class="admin-order-total">
                         <span>Total:</span>
@@ -1778,7 +1993,11 @@ const app = {
                         ${(o.protection_fee && o.protection_fee > 0) ? `<small style="display:block; font-size:10px; color:var(--muted); font-weight:700;">incl. ${this.money(o.protection_fee)} protection</small>` : ''}
                     </div>
                     <div class="admin-order-payment">
-                        ${o.payment === 'gcash' ? `<button class="btn btn-ghost" style="padding:4px 8px; font-size:11px;" onclick="app.viewProof('${o.payment_proof}')">View GCash Proof</button>` : '<span class="pay-badge">COD</span>'}
+                        ${o.payment === 'gcash'
+                            ? (o.payment_proof
+                                ? `<button class="btn btn-ghost" style="padding:4px 8px; font-size:11px;" onclick="app.viewProof('${o.payment_proof}')">View GCash Proof</button>`
+                                : '<span class="pay-badge" style="background:rgba(47,140,255,0.15); color:#2f8cff;">GCash</span>')
+                            : '<span class="pay-badge">COD</span>'}
                     </div>
                 </div>
 
@@ -1824,20 +2043,12 @@ const app = {
                                 <img src="${this.esc(p.image)}" alt="${this.esc(p.name)}" class="admin-inv-img">
                                 <div class="admin-inv-info">
                                     <h4>${this.esc(p.name)}</h4>
-                                    <div class="admin-inv-inputs">
-                                        <div class="inv-input-group">
-                                            <label>Price (₱)</label>
-                                            <input type="number" id="p-price-${p.id}" class="input" value="${p.price}">
-                                        </div>
-                                        <div class="inv-input-group">
-                                            <label>Stock</label>
-                                            <input type="number" id="p-stock-${p.id}" class="input" value="${p.stock}">
-                                        </div>
+                                    <div style="display:flex; gap:15px; font-size:12px; font-weight:700; color:var(--muted); margin: 4px 0 8px 0;">
+                                        <span>Price: <b style="color:var(--brand);">₱${p.price}</b></span>
+                                        <span>Stock: <b style="color:${p.stock > 0 ? 'var(--leaf)' : '#e5604d'}">${p.stock}</b></span>
                                     </div>
                                     <div class="admin-inv-actions">
-                                        <button class="btn btn-leaf" style="padding:6px 12px; font-size:12px;" onclick="app.saveProduct(${p.id})">Save</button>
-                                        <button class="btn btn-ghost" style="padding:6px 12px; font-size:12px;" onclick="app.openProductEditor(${p.id})">Edit</button>
-                                        <button class="btn btn-danger" style="padding:6px 12px; font-size:12px;" onclick="app.deleteProduct(${p.id})">Delete</button>
+                                        <button class="btn btn-ghost" style="padding:6px 12px; font-size:12px; width: 100%;" onclick="app.openProductEditor(${p.id})">Edit</button>
                                     </div>
                                 </div>
                             </div>
@@ -1871,8 +2082,20 @@ const app = {
         $('pe-image').value = p.image || '';
         $('pe-tags').value = p.tags || '';
         $('pe-bestseller').checked = Number(p.best_seller) === 1;
-        $('pe-options').value = p.options || ''; // NEW
 
+        // 🟢 Parse options JSON and build UI
+        const optContainer = document.getElementById('pe-options-container');
+        optContainer.innerHTML = ''; // Clear old UI
+        if (p.options) {
+            try {
+                const parsed = JSON.parse(p.options);
+                for (const [groupName, choices] of Object.entries(parsed)) {
+                    this.addPeOptionGroup(groupName, choices);
+                }
+            } catch(e) { console.warn('Invalid options JSON from DB', e); }
+        }
+
+        document.getElementById('pe-delete-btn').style.display = 'block';
         this.updateEditorPreview();
         document.getElementById('product-editor-modal').classList.remove('hidden');
     },
@@ -1891,6 +2114,51 @@ const app = {
         this.editingProductId = null;
     },
 
+    addPeOptionGroup(groupName = '', choices = []) {
+        const container = document.getElementById('pe-options-container');
+        const groupDiv = document.createElement('div');
+        groupDiv.className = 'pe-option-group';
+        groupDiv.style.cssText = 'background:var(--bg); padding:12px; border-radius:12px; border:1px solid var(--line);';
+
+        groupDiv.innerHTML = `
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                <input type="text" class="input pe-opt-name" placeholder="Option Name (e.g. Size)" value="${this.esc(groupName)}" style="padding:6px 10px; font-size:13px; width:75%; font-weight:800;">
+                <button type="button" class="qty-circle-btn" onclick="this.closest('.pe-option-group').remove()" style="color:#e5604d; border-color:rgba(229,96,77,0.3);" title="Remove Group">✕</button>
+            </div>
+            <div class="pe-opt-choices-container" style="display:flex; flex-direction:column; gap:8px; margin-bottom:10px;">
+                <!-- Choices go here -->
+            </div>
+            <button type="button" class="btn btn-ghost" style="padding:4px 10px; font-size:11px; border-radius:6px;" onclick="app.addPeOptionChoice(this)">
+                + Add Choice
+            </button>
+        `;
+
+        container.appendChild(groupDiv);
+
+        // If choices were passed (loading existing data), add them
+        const choicesContainer = groupDiv.querySelector('.pe-opt-choices-container');
+        if (choices.length > 0) {
+            choices.forEach(c => this._appendChoiceInput(choicesContainer, c));
+        } else {
+            this._appendChoiceInput(choicesContainer, ''); // Add one empty input by default
+        }
+    },
+
+    _appendChoiceInput(container, value = '') {
+        const div = document.createElement('div');
+        div.style.cssText = 'display:flex; align-items:center; gap:8px;';
+        div.innerHTML = `
+            <input type="text" class="input pe-opt-choice" placeholder="Choice (e.g. Small)" value="${this.esc(value)}" style="padding:6px 10px; font-size:12px; flex:1;">
+            <button type="button" class="qty-circle-btn" onclick="this.parentElement.remove()" style="color:#e5604d; border-color:rgba(229,96,77,0.3); width:22px; height:22px; font-size:10px;">✕</button>
+        `;
+        container.appendChild(div);
+    },
+
+    addPeOptionChoice(btn) {
+        const container = btn.previousElementSibling; // gets the .pe-opt-choices-container
+        this._appendChoiceInput(container);
+    },
+
     async saveProductEditor(e) {
         if (e) e.preventDefault();
         if (!this.editingProductId) return;
@@ -1904,6 +2172,24 @@ const app = {
         if (isNaN(price) || price < 0) return this.showToast('Mali ang presyo.');
         if (isNaN(stock) || stock < 0) return this.showToast('Mali ang stock.');
 
+        // 🟢 Rebuild the options JSON from the dynamic UI
+        const optionsObj = {};
+        document.querySelectorAll('#pe-options-container .pe-option-group').forEach(group => {
+            const groupName = group.querySelector('.pe-opt-name').value.trim();
+            if (!groupName) return; // Skip empty groups
+
+            const choices = [];
+            group.querySelectorAll('.pe-opt-choice').forEach(input => {
+                const val = input.value.trim();
+                if (val) choices.push(val); // Skip empty choices
+            });
+
+            if (choices.length > 0) {
+                optionsObj[groupName] = choices;
+            }
+        });
+        const optionsStr = Object.keys(optionsObj).length > 0 ? JSON.stringify(optionsObj) : '';
+
         const payload = {
             id: this.editingProductId,
             name,
@@ -1915,7 +2201,7 @@ const app = {
             image: v('pe-image'),
             tags: v('pe-tags'),
             best_seller: document.getElementById('pe-bestseller').checked ? 1 : 0,
-            options: v('pe-options') // NEW
+            options: optionsStr // Send the rebuilt JSON string
         };
 
         try {
@@ -1951,12 +2237,19 @@ const app = {
     },
 
     async deleteOrder(id) {
-        if (!confirm('Delete this order permanently?')) return;
-        await fetch('api.php?action=admin-delete-order', {
-            method: 'POST', headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ order_id: id })
-        });
-        await this.reloadAdminData();
+        this.showConfirm(
+            'Delete Order',
+            'Are you sure you want to permanently delete this order? This action cannot be undone.',
+            async () => {
+                await fetch('api.php?action=admin-delete-order', {
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ order_id: id })
+                });
+                this.showToast('Order deleted.');
+                await this.reloadAdminData();
+            },
+            'Delete'
+        );
     },
 
     async saveProduct(id) {
@@ -1970,13 +2263,27 @@ const app = {
         await this.reloadAdminData();
     },
 
+    deleteProductEditor() {
+        if (!this.editingProductId) return;
+        const id = this.editingProductId;
+        this.closeProductEditor();
+        this.deleteProduct(id);
+    },
+
     async deleteProduct(id) {
-        if (!confirm('Delete this product?')) return;
-        await fetch('api.php?action=admin-delete-product', {
-            method: 'POST', headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ id })
-        });
-        await this.reloadAdminData();
+        this.showConfirm(
+            'Delete Product',
+            'Are you sure you want to archive this product? It will no longer appear on the menu.',
+            async () => {
+                await fetch('api.php?action=admin-delete-product', {
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ id })
+                });
+                this.showToast('Product archived.');
+                await this.reloadAdminData();
+            },
+            'Archive'
+        );
     },
 
     async addProduct(e) {
@@ -1992,7 +2299,7 @@ const app = {
             image: document.getElementById('add-image').value.trim(),
             tags: document.getElementById('add-tags').value.trim(),
             best_seller: document.getElementById('add-bestseller').checked ? 1 : 0,
-            options: document.getElementById('add-options').value.trim() // NEW
+            options: document.getElementById('add-options').value.trim()
         };
 
         try {
@@ -2016,19 +2323,31 @@ const app = {
 
     toggleTheme() {
         const html = document.documentElement;
-        const isSunset = html.getAttribute('data-theme') === 'sunset';
-        const nextTheme = isSunset ? 'day' : 'sunset';
-        html.setAttribute('data-theme', nextTheme);
-        localStorage.setItem('pk_theme', nextTheme);
-
-        const pillWrap = document.getElementById('nd-theme-pill').parentElement;
-        if (pillWrap) pillWrap.classList.toggle('is-sunset', !isSunset);
+        const next = html.getAttribute('data-theme') === 'sunset' ? 'day' : 'sunset';
+        
+        // 1. Enable smooth cross-fade
+        html.classList.add('theme-switching');
+        void html.offsetWidth; // Forces the browser to apply the transition rule immediately
+        
+        // 2. Apply the new theme
+        html.setAttribute('data-theme', next);
+        localStorage.setItem('pk_theme', next);
+        
+        // 3. Update the toggle pill UI
+        const pillWrap = document.getElementById('nd-theme-pill')?.parentElement;
+        if (pillWrap) pillWrap.classList.toggle('is-sunset', next === 'sunset');
+        
+        // 4. Remove the transition class ONLY after the 0.7s animation finishes
+        clearTimeout(this._themeTimeout);
+        this._themeTimeout = setTimeout(() => {
+            html.classList.remove('theme-switching');
+        }, 800); 
     },
 
     checkTheme() {
         const saved = localStorage.getItem('pk_theme') || 'day';
         document.documentElement.setAttribute('data-theme', saved);
-        const pillWrap = document.getElementById('nd-theme-pill').parentElement;
+        const pillWrap = document.getElementById('nd-theme-pill')?.parentElement;
         if (pillWrap) pillWrap.classList.toggle('is-sunset', saved === 'sunset');
     },
 
@@ -2059,8 +2378,1209 @@ const app = {
             chat.innerHTML += `<div class="pb-msg">${reply}</div>`;
             chat.scrollTop = chat.scrollHeight;
         }, 600);
-    }
-};
+    },
+
+        // ============================================================
+    // BAYANIHAN CART
+    // ============================================================
+    async loadGroups() {
+        if (!this.user) return;
+        try {
+            const [gr, ir] = await Promise.all([
+                fetch('api.php?action=group-list'),
+                fetch('api.php?action=group-my-invites')
+            ]);
+            this.bayanihan.list = await gr.json();
+            this.bayanihan.invites = await ir.json();
+        } catch (e) { console.warn('loadGroups', e); }
+    },
+
+    copyText(text) {
+        if (navigator.clipboard) {
+            navigator.clipboard.writeText(text)
+                .then(() => this.showToast('Copied!'))
+                .catch(() => this._fallbackCopy(text));
+        } else this._fallbackCopy(text);
+    },
+    _fallbackCopy(text) {
+        const t = document.createElement('textarea');
+        t.value = text; document.body.appendChild(t);
+        t.select(); document.execCommand('copy'); t.remove();
+        this.showToast('Copied!');
+    },
+
+    openCreateGroupModal() {
+        document.getElementById('bg-create-name').value = '';
+        document.getElementById('bayanihan-create-modal').classList.remove('hidden');
+    },
+    async submitCreateGroup() {
+        const name = document.getElementById('bg-create-name').value.trim() || 'Bayanihan Cart';
+        try {
+            const res = await fetch('api.php?action=group-create', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name })
+            });
+            const data = await res.json();
+            if (data.ok) {
+                this.closeModal('bayanihan-create-modal');
+                this._newGroupId = data.id;
+                this.showCodeShareModal(data.code, data.name || name, data.id);
+                await this.loadGroups();
+                if (this.currentView === 'bayanihan') this.renderBayanihan();
+            } else this.showToast(data.error || 'Failed');
+        } catch (e) { this.showToast('Connection error'); }
+    },
+    showCodeShareModal(code, name, gid) {
+        this._newGroupId = gid;
+        document.getElementById('bg-code-display').textContent = code;
+        document.getElementById('bg-code-group-name').textContent = name;
+        document.getElementById('bayanihan-code-modal').classList.remove('hidden');
+    },
+    copyGroupCode() {
+        this.copyText(document.getElementById('bg-code-display').textContent);
+    },
+    async shareGroupCode() {
+        const code = document.getElementById('bg-code-display').textContent;
+        const name = document.getElementById('bg-code-group-name').textContent;
+        const text = `Join my PiliKart Bayanihan Cart "${name}"! Use code: ${code}`;
+        if (navigator.share) {
+            try { await navigator.share({ title: 'PiliKart Bayanihan Cart', text }); }
+            catch (e) {}
+        } else this.copyText(text);
+    },
+
+    openJoinGroupModal() {
+        document.getElementById('bg-join-code').value = '';
+        document.getElementById('bayanihan-join-modal').classList.remove('hidden');
+    },
+
+    switchBayanihanTab(tab, btn) {
+        document.querySelectorAll('.admin-tab-btn').forEach(b => {
+            b.className = 'btn btn-ghost admin-tab-btn';
+        });
+        btn.className = 'btn btn-brand admin-tab-btn';
+
+        if (tab === 'active') {
+            document.getElementById('bayanihan-active-list').classList.remove('hidden');
+            document.getElementById('bayanihan-history-list').classList.add('hidden');
+        } else {
+            document.getElementById('bayanihan-active-list').classList.add('hidden');
+            document.getElementById('bayanihan-history-list').classList.remove('hidden');
+        }
+    },
+
+    async submitJoinGroup() {
+        const code = (document.getElementById('bg-join-code').value || '').toUpperCase().trim();
+        if (code.length !== 6) return this.showToast('Kailangan ng 6-character code.');
+        try {
+            const res = await fetch('api.php?action=group-join-request', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ code })
+            });
+            const data = await res.json();
+            if (data.ok) {
+                this.closeModal('bayanihan-join-modal');
+                this.showToast('Join request sent! Hintayin ang approval.');
+                await this.loadGroups();
+                this.renderBayanihan();
+            } else this.showToast(data.error || 'Failed');
+        } catch (e) { this.showToast('Connection error'); }
+    },
+
+    async renderBayanihan() {
+        if (!this.user) { this.go('auth'); return; }
+        await this.loadGroups();
+
+        const invEl = document.getElementById('bayanihan-invites');
+        if (this.bayanihan.invites && this.bayanihan.invites.length) {
+            invEl.innerHTML = `
+                <div class="card" style="margin-bottom:20px; border-color:var(--amber);">
+                    <h3 style="margin-bottom:12px; font-size:18px;">📬 Pending Invites</h3>
+                    ${this.bayanihan.invites.map(inv => `
+                        <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; padding:12px; background:var(--surface2); border-radius:12px; margin-bottom:8px; flex-wrap:wrap;">
+                            <div>
+                                <b>${this.esc(inv.group_name)}</b>
+                                <div style="font-size:12px; color:var(--muted);">Host: ${this.esc(inv.host_name)} · Code: ${this.esc(inv.code)}</div>
+                            </div>
+                            <div style="display:flex; gap:8px;">
+                                <button class="btn btn-leaf" style="padding:6px 12px; font-size:12px;" onclick="app.acceptInvite(${inv.group_id})">Accept</button>
+                                <button class="btn btn-ghost" style="padding:6px 12px; font-size:12px;" onclick="app.declineInvite(${inv.group_id})">Decline</button>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>`;
+        } else invEl.innerHTML = '';
+
+        const activeList = document.getElementById('bayanihan-active-list');
+        const historyList = document.getElementById('bayanihan-history-list');
+
+        let activeHtml = '';
+        let historyHtml = '';
+
+        this.bayanihan.list.forEach(g => {
+            let displayStatus = g.status;
+            let statusClass = 'status-shipping';
+            
+            if (g.status === 'ordered' && g.order_status) {
+                displayStatus = g.order_status;
+                if (g.order_status === 'Pending') statusClass = 'status-pending';
+                else if (g.order_status === 'Shipping') statusClass = 'status-shipping';
+                else if (g.order_status === 'Out for Delivery') statusClass = 'status-out';
+                else if (g.order_status === 'Delivered') statusClass = 'status-delivered';
+            } else {
+                if (g.status === 'open') { displayStatus = 'Open'; statusClass = 'status-pending'; }
+                else if (g.status === 'ordered') { displayStatus = 'Ordered'; statusClass = 'status-delivered'; }
+                else if (g.status === 'cancelled') { displayStatus = 'Cancelled'; statusClass = 'status-out'; }
+            }
+
+            let myStatus = '';
+            if (g.my_status === 'pending') myStatus = '<div style="color:var(--amber); font-size:11px; font-weight:800; margin-top:8px;">⏳ Waiting for host approval</div>';
+            else if (g.my_status === 'invited') myStatus = '<div style="color:var(--amber); font-size:11px; font-weight:800; margin-top:8px;">📬 Check invites above</div>';
+            
+            const cardHtml = `
+                <div class="admin-order-card" style="cursor:pointer; margin-bottom:20px;" onclick="app.openGroupDetail(${g.id})">
+                    <div class="admin-order-header">
+                        <div><h4>${this.esc(g.name)}</h4><span class="admin-order-date">Host: ${this.esc(g.host_name)}</span></div>
+                        <span class="order-status ${statusClass}">${this.esc(displayStatus)}</span>
+                    </div>
+                    <div style="padding:14px; background:var(--surface2); border-radius:12px; text-align:center; position:relative;">
+                        <div style="font-size:10px; font-weight:800; color:var(--muted); text-transform:uppercase;">Cart Code</div>
+                        <div style="font-size:28px; font-weight:900; letter-spacing:5px; color:var(--brand); font-family:'Baloo 2';">${this.esc(g.code)}</div>
+                        <button class="qty-circle-btn" style="position:absolute; top:8px; right:8px; width:30px; height:30px;"
+                                onclick="event.stopPropagation(); app.copyText('${g.code}')" title="Copy">📋</button>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; font-size:13px; font-weight:700;">
+                        <span>👥 <b>${g.member_count}</b> member${g.member_count === 1 ? '' : 's'}</span>
+                        <span style="color:var(--brand);">${this.money(g.subtotal)}</span>
+                    </div>
+                    ${myStatus}
+                </div>`;
+
+            if (g.status === 'open') {
+                activeHtml += cardHtml;
+            } else {
+                historyHtml += cardHtml;
+            }
+        });
+
+        // Render Active
+        if (activeHtml) {
+            activeList.innerHTML = `<div class="admin-orders-grid">${activeHtml}</div>`;
+        } else {
+            activeList.innerHTML = this.emptyState('orders', 'Wala kang Active na Bayanihan Cart', 'Gumawa ng bagong Bayanihan Cart o sumali gamit ang code.', 'Create Bayanihan Cart', 'app.openCreateGroupModal()');
+        }
+
+        // Render History
+        if (historyHtml) {
+            historyList.innerHTML = `<div class="admin-orders-grid">${historyHtml}</div>`;
+        } else {
+            historyList.innerHTML = this.emptyState('orders', 'Walang Order History', 'Wala ka pang nakaraang Bayanihan orders.');
+        }
+    },
+
+    async acceptInvite(gid) {
+        await fetch('api.php?action=group-accept-invite', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ group_id: gid }) });
+        this.showToast('Invite accepted!'); await this.renderBayanihan();
+    },
+    async declineInvite(gid) {
+        await fetch('api.php?action=group-decline-invite', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ group_id: gid }) });
+        await this.renderBayanihan();
+    },
+    async withdrawJoin(gid) {
+        if (!confirm('Withdraw your join request?')) return;
+        await fetch('api.php?action=group-leave', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ group_id: gid }) });
+        this.showToast('Request withdrawn.'); await this.renderBayanihan();
+    },
+
+    async openGroupDetail(gid) {
+        try {
+            const res = await fetch('api.php?action=group-get', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: gid })
+            });
+            const data = await res.json();
+            if (data.error) { this.showToast(data.error); return; }
+            this.bayanihan.current = data;
+            this.go('bayanihan-detail');
+            this.renderGroupDetail();
+        } catch (e) { this.showToast('Error loading'); }
+    },
+
+    computeGroupSplit(g, subtotal, deliveryFee) {
+        const approved = g.members.filter(m => m.status === 'approved');
+        const n = approved.length;
+        if (n === 0) return [];
+        const total = subtotal + deliveryFee;
+        const method = g.split_method || 'equal';
+        const fixedAmount = parseInt(g.fixed_amount) || 0;
+        const result = approved.map(m => ({
+            userId: m.user_id, name: m.name, role: m.role,
+            amount: 0, isFixed: !!m.is_fixed, isPayer: !!m.is_payer
+        }));
+        if (method === 'equal') {
+            const per = Math.floor(total / n); let rem = total - per * n;
+            result.forEach(r => r.amount = per);
+            for (let i = 0; i < rem; i++) result[i % n].amount += 1;
+        } else if (method === 'by_adder') {
+            const userSub = {};
+            g.items.forEach(it => { userSub[it.user_id] = (userSub[it.user_id] || 0) + it.price * it.qty; });
+            const feePer = Math.floor(deliveryFee / n); let feeRem = deliveryFee - feePer * n;
+            result.forEach(r => r.amount = (userSub[r.userId] || 0) + feePer);
+            for (let i = 0; i < feeRem; i++) result[i % n].amount += 1;
+        } else if (method === 'fixed_contribution') {
+            const fixed = result.filter(r => r.isFixed);
+            const reg = result.filter(r => !r.isFixed);
+            if (!fixed.length) {
+                const per = Math.floor(total / n); let rem = total - per * n;
+                result.forEach(r => r.amount = per);
+                for (let i = 0; i < rem; i++) result[i % n].amount += 1;
+            } else {
+                fixed.forEach(r => r.amount = fixedAmount);
+                const remainder = Math.max(0, total - fixedAmount * fixed.length);
+                if (!reg.length) { if (remainder > 0) fixed[0].amount += remainder; }
+                else {
+                    const per = Math.floor(remainder / reg.length); let rem = remainder - per * reg.length;
+                    reg.forEach((r, i) => r.amount = per + (i < rem ? 1 : 0));
+                }
+            }
+        } else if (method === 'one_payer') {
+            const payers = result.filter(r => r.isPayer);
+            if (!payers.length) {
+                const per = Math.floor(total / n); let rem = total - per * n;
+                result.forEach(r => r.amount = per);
+                for (let i = 0; i < rem; i++) result[i % n].amount += 1;
+            } else {
+                const per = Math.floor(total / payers.length); let rem = total - per * payers.length;
+                payers.forEach((r, i) => r.amount = per + (i < rem ? 1 : 0));
+                result.filter(r => !r.isPayer).forEach(r => r.amount = 0);
+            }
+        }
+        return result;
+    },
+
+    renderGroupDetail() {
+        const g = this.bayanihan.current;
+        const body = document.getElementById('bayanihan-detail-body');
+        if (!body || !g || !this.user) return;
+        const me = g.members.find(m => m.user_id === this.user.id);
+        if (!me) { body.innerHTML = '<p>Access denied.</p>'; return; }
+        if (me.status !== 'approved') {
+            body.innerHTML = `
+                <div class="page-head">
+                    <button class="btn btn-ghost" style="margin-bottom:12px; padding:6px 14px; font-size:13px;" onclick="app.go('bayanihan')">← Back</button>
+                    <h1>${this.esc(g.name)}</h1>
+                </div>
+                <div class="co-card" style="text-align:center; padding:40px;">
+                    <h3>⏳ Waiting for approval</h3>
+                    <p style="color:var(--muted); margin:12px 0;">Pending ang request mo. Tanungin ang host na i-approve.</p>
+                    <button class="btn btn-ghost" onclick="app.go('bayanihan')">Back</button>
+                </div>`;
+            return;
+        }
+
+        const isHost = me.role === 'host';
+        const subtotal = g.items.reduce((s, it) => s + it.price * it.qty, 0);
+        const approvedMembers = g.members.filter(m => m.status === 'approved');
+        const pendingMembers = g.members.filter(m => m.status === 'pending');
+        const invitedMembers = g.members.filter(m => m.status === 'invited');
+        const allPaid = approvedMembers.length > 0 && approvedMembers.every(m => m.paid === 1 && m.payer_verified === 1);
+        const deliveryFee = parseInt(g.delivery_fee) || 0;
+        const total = subtotal + deliveryFee;
+        const split = this.computeGroupSplit(g, subtotal, deliveryFee);
+        const sumPaid = split.reduce((s, r) => {
+            const m = g.members.find(mm => mm.user_id === r.userId);
+            return s + (m && m.paid ? m.paid_amount : 0);
+        }, 0);
+        const shortfall = total - sumPaid;
+        const itemsByUser = {};
+        g.items.forEach(it => {
+            if (!itemsByUser[it.user_id]) itemsByUser[it.user_id] = { name: it.user_name, items: [] };
+            itemsByUser[it.user_id].items.push(it);
+        });
+        const hostMember = g.members.find(m => m.role === 'host');
+        const isOrdered = g.status === 'ordered';
+        const isCancelled = g.status === 'cancelled';
+        const orderStatus = g.order_status || 'Pending';
+
+        // TOP SUMMARY CARDS
+        const topCards = `
+            <div style="display:flex; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
+                <div style="padding:12px 20px; background:var(--surface); border:1px solid var(--line); border-radius:14px; text-align:center;">
+                    <div style="font-size:10px; font-weight:800; color:var(--muted); text-transform:uppercase;">Cart Code</div>
+                    <div style="font-size:24px; font-weight:900; letter-spacing:4px; color:var(--brand); font-family:'Baloo 2';">${this.esc(g.code)}</div>
+                    <button class="btn btn-ghost" style="padding:2px 10px; font-size:11px; margin-top:4px;" onclick="app.copyText('${g.code}')">Copy</button>
+                </div>
+                <div style="padding:12px 20px; background:var(--surface); border:1px solid var(--line); border-radius:14px; text-align:center;">
+                    <div style="font-size:10px; font-weight:800; color:var(--muted); text-transform:uppercase;">Status</div>
+                    <div style="font-size:18px; font-weight:800; text-transform:uppercase;">${this.esc(isOrdered ? orderStatus : g.status)}</div>
+                </div>
+                <div style="padding:12px 20px; background:var(--surface); border:1px solid var(--line); border-radius:14px; text-align:center; flex:1;">
+                    <div style="font-size:10px; font-weight:800; color:var(--muted); text-transform:uppercase;">Total Bill</div>
+                    <div style="font-size:24px; font-weight:800; color:var(--brand); font-family:'Baloo 2';">${this.money(total)}</div>
+                </div>
+            </div>`;
+
+        // ACTION BUTTONS AT THE TOP
+        let actions = '';
+                if (isHost && g.status === 'open') {
+            const isDeliverySet = g.customer_name && g.phone && g.delivery_address;
+            const canConfirm = allPaid && shortfall <= 0 && g.items.length > 0 && isDeliverySet;
+            const byAdderBlocked = g.split_method === 'by_adder' && !g.all_have_items;
+
+            let statusMsg = '';
+            let isError = false;
+
+            if (!g.items.length) statusMsg = 'Walang laman pa ang cart.';
+            else if (byAdderBlocked) { statusMsg = 'Cannot confirm: "By Items" split is chosen but someone has not added any items yet.'; isError = true; }
+            else if (!isDeliverySet) statusMsg = 'Kumpletuhin muna ang delivery details.';
+            else if (shortfall > 0) statusMsg = `Kulang ang bayad ng ${this.money(shortfall)}.`;
+            else if (!allPaid) statusMsg = 'Hintayin munang magbayad at ma-verify ang lahat.';
+
+            actions = `
+                <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:20px;">
+                    ${canConfirm
+                        ? '<button class="btn btn-brand btn-large" onclick="app.confirmGroupOrder()">✓ Confirm & Place Order</button>'
+                        : `<div style="flex:1; padding:16px; background:${isError ? 'rgba(229,96,77,0.1)' : 'var(--surface2)'}; border:${isError ? '1px solid #e5604d' : '1px solid transparent'}; border-radius:14px; text-align:center; color:${isError ? '#e5604d' : 'var(--muted)'}; font-weight:700;">
+                            ${statusMsg}
+                           </div>`}
+                    <button class="btn btn-ghost" onclick="app.inviteToGroup()">📧 Invite via Email</button>
+                    <button class="btn btn-danger" onclick="app.cancelGroup()">Cancel Bayanihan Cart</button>
+                </div>`;
+        } else if (g.status === 'open') {
+            const blocked = me.paid == 1 && me.payment_method === 'gcash';
+            actions = blocked
+                ? '<div style="padding:14px; background:var(--surface2); border-radius:10px; text-align:center; font-weight:700; color:var(--muted); margin-bottom:20px;">Hindi ka pwedeng umalis: nagbayad ka na via GCash. Ipa-refund muna sa host.</div>'
+                : '<button class="btn btn-ghost" style="margin-bottom:20px;" onclick="app.leaveGroup()">Leave Bayanihan Cart</button>';
+        }
+
+        // DELIVERED HIGHLIGHT
+        let deliveredHighlight = '';
+        if (isOrdered) {
+            deliveredHighlight = `
+                <div class="co-card" style="margin-bottom:20px; border-color:var(--leaf);">
+                    <h3 style="color:var(--leaf); display:flex; justify-content:space-between; align-items:center;">
+                        <span>🏘️ Bayanihan Order Summary</span>
+                        <span class="order-status ${orderStatus === 'Delivered' ? 'status-delivered' : 'status-pending'}">${orderStatus}</span>
+                    </h3>
+                    <p style="color:var(--muted); margin-bottom:16px;">Order #${g.order_id} — Here is what everyone contributed:</p>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+                        ${Object.entries(itemsByUser).map(([uid, grp]) => `
+                            <div style="background:var(--bg); padding:16px; border-radius:14px; border:1px solid var(--line);">
+                                <div style="font-weight:800; color:var(--brand); margin-bottom:8px; display:flex; align-items:center; gap:6px;">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                                    ${this.esc(grp.name)}
+                                </div>
+                                ${grp.items.map(it => `
+                                    <div style="display:flex; justify-content:space-between; font-size:13px; font-weight:600; margin-bottom:4px;">
+                                        <span>${it.qty}× ${this.esc(it.name)}</span>
+                                        <span>${this.money(it.price * it.qty)}</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>`;
+        }
+
+        // DELIVERY DETAILS
+        const editable = isHost && g.status === 'open';
+        let currentAddr = { city: '', brgy: '', street: '' };
+        try {
+            if (g.delivery_address && g.delivery_address.trim().startsWith('{')) {
+                currentAddr = JSON.parse(g.delivery_address);
+            } else if (g.delivery_address) {
+                currentAddr.street = g.delivery_address;
+            }
+        } catch(e) {}
+        
+        const memberOptions = approvedMembers.map(m => 
+            `<option value="${this.esc(m.name)}|${this.esc(m.phone || '')}" ${g.customer_name === m.name ? 'selected' : ''}>${this.esc(m.name)} (${this.esc(m.phone || 'No phone')})</option>`
+        ).join('');
+
+        const cityOptions = Object.keys(this.lagunaData).map(c => 
+            `<option value="${c}" ${currentAddr.city === c ? 'selected' : ''}>${c}</option>`
+        ).join('');
+
+        let brgyOptions = '<option value="" disabled selected>Pumili ng Barangay</option>';
+        if (currentAddr.city && this.lagunaData[currentAddr.city]) {
+            brgyOptions = Object.keys(this.lagunaData[currentAddr.city]).map(b => 
+                `<option value="${b}" ${currentAddr.brgy === b ? 'selected' : ''}>${b}</option>`
+            ).join('');
+        }
+
+        const deliveryHtml = `
+            <div class="co-card" style="margin-bottom:20px;">
+                <h3>📍 Delivery Details ${!editable ? '<small style="color:var(--muted); font-weight:600; font-size:11px;">(locked)</small>' : ''}</h3>
+                <div class="co-row">
+                    <div class="co-field">
+                        <label>Recipient (Member)</label>
+                        <select id="bg-member" class="input" ${editable ? '' : 'disabled'} onchange="app.updateGroupRecipient(this.value)">
+                            <option value="" disabled ${!g.customer_name ? 'selected' : ''}>Select member...</option>
+                            ${memberOptions}
+                        </select>
+                    </div>
+                    <div class="co-field">
+                        <label>Contact Number</label>
+                        <input type="text" id="bg-phone" class="input" value="${this.esc(g.phone || '')}" ${editable ? '' : 'disabled'} placeholder="09171234567">
+                    </div>
+                </div>
+                <div class="co-row">
+                    <div class="co-field">
+                        <label>Lungsod</label>
+                        <select id="bg-city" class="input" ${editable ? '' : 'disabled'} onchange="app.updateGroupBrgyDropdown()">
+                            <option value="" disabled ${!currentAddr.city ? 'selected' : ''}>Pumili ng Lungsod</option>
+                            ${cityOptions}
+                        </select>
+                    </div>
+                    <div class="co-field">
+                        <label>Barangay</label>
+                        <select id="bg-brgy" class="input" ${editable ? '' : 'disabled'} onchange="app.updateGroupFee()">
+                            ${brgyOptions}
+                        </select>
+                    </div>
+                </div>
+                <div class="co-row">
+                    <div class="co-field">
+                        <label>Additional info (Street, Bldg, Subd)</label>
+                        <input type="text" id="bg-street" class="input" value="${this.esc(currentAddr.street || '')}" ${editable ? '' : 'disabled'}>
+                    </div>
+                    <div class="co-field">
+                        <label>Payment Method (Auto)</label>
+                        <input type="text" class="input" value="${g.payment_summary}" readonly style="background:var(--bg); color:var(--brand); font-weight:800;">
+                    </div>
+                </div>
+                <div class="co-row">
+                    <div class="co-field">
+                        <label>Delivery Fee (₱)</label>
+                        <input type="number" id="bg-fee" class="input" value="${deliveryFee}" ${editable ? '' : 'disabled'} readonly>
+                    </div>
+                </div>
+                ${editable ? '<button class="btn btn-ghost" style="margin-top:8px;" onclick="app.saveDeliveryDetails()">Save Delivery Details</button>' : ''}
+            </div>`;
+
+        // ITEMS LIST
+        const itemsHtml = `
+            <div class="co-card" style="margin-bottom:0; height: 100%;">
+                <h3>🛒 Items (${g.items.length})</h3>
+                ${g.items.length === 0
+                    ? '<p style="color:var(--muted); text-align:center; padding:20px;">Walang laman ang cart.</p>'
+                    : Object.entries(itemsByUser).map(([uid, grp]) => `
+                        <div style="margin-bottom:16px; border-left:3px solid var(--brand); padding-left:12px;">
+                            <div style="font-weight:800; color:var(--brand); margin-bottom:8px; font-size:13px;">Added by: ${this.esc(grp.name)}</div>
+                            ${grp.items.map(it => `
+                                <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 12px; background:var(--surface2); border-radius:10px; margin-bottom:6px; gap:10px; flex-wrap:wrap;">
+                                    <div style="flex:1;">
+                                        <b style="font-size:13px;">${this.esc(it.name)}</b>
+                                        ${it.variation ? `<div style="font-size:11px; color:var(--brand); font-weight:800;">${this.esc(it.variation)}</div>` : ''}
+                                        <div style="font-size:11px; color:var(--muted);">${it.qty} × ${this.money(it.price)}</div>
+                                    </div>
+                                    <div style="display:flex; align-items:center; gap:10px;">
+                                        <div style="font-family:'Baloo 2'; font-weight:800;">${this.money(it.price * it.qty)}</div>
+                                        ${(g.status === 'open' && (it.user_id === this.user.id || isHost)) ? `
+                                            <button class="btn btn-ghost" style="padding:4px 10px; font-size:11px; border-radius:6px;" onclick='app.openEditGroupItem(${JSON.stringify(it).replace(/'/g, "&#39;")})'>Edit</button>
+                                        ` : ''}
+                                    </div>
+                                </div>`).join('')}
+                        </div>`).join('')}
+                ${(g.status === 'open' && me.status === 'approved') ? `
+                    <button class="btn btn-brand" style="margin-top:10px; width:100%;" onclick="app.addMoreToGroup()">+ Add More Items from Menu</button>
+                ` : ''}
+            </div>`;
+
+        // SPLIT SETTINGS & APPROVALS
+        let splitSettings = '';
+        if (isHost && g.status === 'open') {
+            splitSettings = `
+                <div class="co-card" style="margin-bottom:20px;">
+                    <h3>⚖️ Split Method</h3>
+                    <div class="pay-grid" style="grid-template-columns:1fr 1fr;">
+                        ${[
+                            ['equal', '👥 Equal', 'Pare-pareho ang bayad.'],
+                            ['by_adder', '🛒 By Items', 'Bayaran ang idinagdag + equal delivery.'],
+                            ['fixed_contribution', '📌 Fixed + Equal', 'Fixed amount sa may marka; rest split.'],
+                            ['one_payer', '💳 One Payer', 'Ang designated payer(s) ang sasagot.']
+                        ].map(([v, l, d]) => `
+                            <button type="button" class="pay-opt ${g.split_method === v ? 'active' : ''}" onclick="app.setGroupSplit('${v}')">
+                                <b>${l}</b><small>${d}</small>
+                            </button>`).join('')}
+                    </div>
+                    ${g.split_method === 'fixed_contribution' ? `
+                        <div class="form-group" style="margin-top:14px;">
+                            <label>Fixed amount per marked member (₱)</label>
+                            <input type="number" class="input" value="${g.fixed_amount || 0}"
+                                   onchange="app.setGroupFixedAmount(this.value)">
+                        </div>` : ''}
+                </div>`;
+        }
+
+        let approvals = '';
+        if (isHost && (pendingMembers.length || invitedMembers.length)) {
+            approvals = `
+                <div class="co-card" style="margin-bottom:20px;">
+                    <h3>👥 Pending Members</h3>
+                    ${pendingMembers.map(p => `
+                        <div style="display:flex; justify-content:space-between; align-items:center; padding:10px; background:var(--bg); border-radius:10px; margin-bottom:6px; gap:8px; flex-wrap:wrap;">
+                            <div><b>${this.esc(p.name)}</b> <span style="font-size:11px; color:var(--muted);">(requesting)</span></div>
+                            <div style="display:flex; gap:6px;">
+                                <button class="btn btn-leaf" style="padding:4px 10px; font-size:11px;" onclick="app.approveMember(${p.id})">Approve</button>
+                                <button class="btn btn-ghost" style="padding:4px 10px; font-size:11px;" onclick="app.rejectMember(${p.id})">Reject</button>
+                            </div>
+                        </div>`).join('')}
+                    ${invitedMembers.map(p => `
+                        <div style="display:flex; justify-content:space-between; align-items:center; padding:10px; background:var(--bg); border-radius:10px; margin-bottom:6px; gap:8px; flex-wrap:wrap;">
+                            <div><b>${this.esc(p.name)}</b> <span style="font-size:11px; color:var(--muted);">(invited)</span></div>
+                            <button class="btn btn-ghost" style="padding:4px 10px; font-size:11px;" onclick="app.rejectMember(${p.id})">Cancel Invite</button>
+                        </div>`).join('')}
+                </div>`;
+        }
+
+        const splitRows = split.map(s => {
+            const m = g.members.find(mm => mm.user_id === s.userId);
+            const isMine = s.userId === this.user.id;
+            const methodLabel = m.payment_method === 'gcash' ? '📱 GCash' : m.payment_method === 'cash' ? '💵 Cash' : '';
+            const verified = !!m.payer_verified;
+            const canPaySelf = isMine && !m.paid && g.status === 'open' && s.amount > 0;
+            const canVerify   = isHost && m.paid && !verified && g.status === 'open';
+            const badge = !m.paid
+                ? '<span style="color:var(--muted); font-weight:800; font-size:11px;">UNPAID</span>'
+                : verified
+                    ? '<span style="color:var(--leaf); font-weight:800; font-size:11px;">✓ VERIFIED</span>'
+                    : '<span style="color:var(--amber); font-weight:800; font-size:11px;">⏳ AWAITING VERIFY</span>';
+            let flagCtrl = '';
+            if (isHost && g.status === 'open') {
+                if (g.split_method === 'fixed_contribution') {
+                    flagCtrl = `<label style="display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:800; margin-left:8px;"><input type="checkbox" ${m.is_fixed ? 'checked' : ''} onchange="app.setMemberFlag(${m.id}, 'is_fixed', this.checked)"> Fixed</label>`;
+                } else if (g.split_method === 'one_payer') {
+                    flagCtrl = `<label style="display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:800; margin-left:8px;"><input type="checkbox" ${m.is_payer ? 'checked' : ''} onchange="app.setMemberFlag(${m.id}, 'is_payer', this.checked)"> Payer</label>`;
+                }
+            }
+            let actions = '';
+            if (canPaySelf) {
+                actions = `<button class="btn btn-leaf" style="padding:6px 12px; font-size:12px;" onclick="app.openPayShareModal(${m.id}, ${s.amount})">Pay ${this.money(s.amount)}</button>`;
+            } else if (canVerify) {
+                if (m.payment_method === 'gcash' && m.payment_proof) {
+                    actions += `<button class="btn btn-ghost" style="padding:6px 10px; font-size:11px;" onclick="app.viewProof('${m.payment_proof}')">View Proof</button>`;
+                }
+                actions += `<button class="btn btn-leaf" style="padding:6px 10px; font-size:11px;" onclick="app.verifyPayment(${m.id}, true)">Verify ✓</button>`;
+            } else if (isHost && verified && g.status === 'open') {
+                actions += `<button class="btn btn-ghost" style="padding:4px 10px; font-size:11px;" onclick="app.verifyPayment(${m.id}, false)">Unverify</button>`;
+            }
+            if (isHost && m.role !== 'host' && g.status === 'open') {
+                const gcashLocked = m.paid == 1 && m.payment_method === 'gcash';
+                actions += ` <button class="btn btn-danger group-remove-btn" data-member-id="${m.id}" data-member-name="${this.esc(s.name)}" data-gcash-locked="${gcashLocked ? '1' : '0'}" style="padding:4px 10px; font-size:11px; ${gcashLocked ? 'opacity:0.5; cursor:not-allowed;' : ''}" title="${gcashLocked ? 'Hindi ma-remove: nagbayad via GCash' : 'Remove member'}">Remove</button>`;
+            }
+            return `
+                <div style="display:flex; justify-content:space-between; align-items:center; padding:12px; background:var(--surface2); border-radius:12px; margin-bottom:8px; gap:10px; flex-wrap:wrap;">
+                    <div style="flex:1;">
+                        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                            <b>${this.esc(s.name)}</b>
+                            ${isMine ? '<span style="font-size:10px; color:var(--brand); font-weight:800;">(You)</span>' : ''}
+                            ${m.role === 'host' ? '<span style="font-size:10px; color:var(--leaf); font-weight:800;">HOST</span>' : ''}
+                            ${badge} ${methodLabel ? `<span style="font-size:11px; color:var(--muted); font-weight:700;">${methodLabel}</span>` : ''} ${flagCtrl}
+                        </div>
+                    </div>
+                    <div style="text-align:right; display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                        <div style="font-family:'Baloo 2'; font-size:18px; font-weight:800; color:var(--brand);">${this.money(s.amount)}</div>
+                        ${actions}
+                    </div>
+                </div>`;
+        }).join('');
+
+        const splitBreakdownHtml = `
+            <div class="co-card" style="margin-bottom:0; height: 100%;">
+                <h3>💰 Split Breakdown</h3>
+                <div style="font-size:12px; color:var(--muted); margin-bottom:12px; font-weight:600;">
+                    Method: <b>${g.split_method === 'equal' ? 'Equal' : g.split_method === 'by_adder' ? 'By Items Added' : g.split_method === 'fixed_contribution' ? 'Fixed + Equal' : 'One/Multi Payer'}</b>
+                    · Subtotal: <b>${this.money(subtotal)}</b> · Delivery: <b>${this.money(deliveryFee)}</b>
+                </div>
+                ${splitRows}
+                <div class="sum-totals" style="margin-top:16px;">
+                    <div class="sum-row total"><span>TOTAL</span><span>${this.money(total)}</span></div>
+                </div>
+                ${!allPaid && g.status === 'open'
+                    ? '<p style="font-size:11px; color:var(--amber); font-weight:700; margin-top:12px; text-align:center;">Hindi pa bayad/verified ang lahat.</p>'
+                    : (allPaid && g.status === 'open'
+                        ? '<p style="font-size:11px; color:var(--leaf); font-weight:700; margin-top:12px; text-align:center;">✓ Lahat ay bayad at verified na! Ready for host confirmation.</p>'
+                        : '')}
+                ${shortfall > 0 && allPaid && g.status === 'open'
+                    ? `<p style="font-size:11px; color:#e5604d; font-weight:700; margin-top:6px; text-align:center;">⚠️ Kulang ng ${this.money(shortfall)} sa total.</p>`
+                    : ''}
+            </div>`;
+
+        let mainContentHtml = '';
+        if (isOrdered) {
+            mainContentHtml = `<div style="margin-bottom: 20px;">${splitBreakdownHtml}</div>`;
+        } else {
+            mainContentHtml = `
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 20px; margin-bottom: 20px; align-items: start;">
+                    ${itemsHtml}
+                    ${splitBreakdownHtml}
+                </div>`;
+        }
+
+        body.innerHTML = `
+            <div class="page-head" style="margin-bottom:16px;">
+                <button class="btn btn-ghost" style="margin-bottom:12px; padding:6px 14px; font-size:13px;" onclick="app.go('bayanihan')">← Back</button>
+                <h1>${this.esc(g.name)}</h1>
+                <p>Host: ${this.esc(hostMember.name)}</p>
+            </div>
+            ${isCancelled ? `<div style="background:rgba(229,96,77,0.1); border-left:3px solid #e5604d; padding:14px; border-radius:8px; margin-bottom:20px; text-align:center;"><b style="color:#e5604d;">❌ Cancelled na ang Bayanihan Cart na ito.</b></div>` : ''}
+            ${topCards}
+            ${actions}
+            ${deliveredHighlight}
+            ${splitSettings}
+            ${approvals}
+            ${deliveryHtml}
+            ${mainContentHtml}`;
+
+        document.querySelectorAll('.group-remove-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.removeMember(parseInt(btn.dataset.memberId), btn.dataset.memberName, btn.dataset.gcashLocked === '1');
+            });
+        });
+    },
+
+    openEditGroupItem(item) {
+        this._editItemId = item.id;
+        document.getElementById('egi-name').textContent = item.name;
+        document.getElementById('egi-qty').value = item.qty;
+
+        // Build options HTML
+        const wrap = document.getElementById('egi-options-wrap');
+        const container = document.getElementById('egi-options-container');
+        
+        // Find original product to get options
+        const prod = this.products.find(p => p.id === item.product_id);
+        if (prod && prod.options) {
+            try {
+                const parsedOpts = JSON.parse(prod.options);
+                let html = '';
+                for (const [groupName, choices] of Object.entries(parsedOpts)) {
+                    const currentVal = item.variation.split(', ').find(v => v.startsWith(groupName + ':'))?.split(': ')[1] || choices[0];
+                    html += `
+                        <div style="margin-bottom:12px;">
+                            <div style="font-size:11px; font-weight:800; color:var(--muted); margin-bottom:4px;">${groupName}</div>
+                            <div class="ci-radio-pills">
+                                ${choices.map(c => `
+                                    <label class="ci-radio-label">
+                                        <input type="radio" name="egi_opt_${groupName}" value="${this.esc(c)}" ${currentVal === c ? 'checked' : ''}>
+                                        <span>${this.esc(c)}</span>
+                                    </label>
+                                `).join('')}
+                            </div>
+                        </div>`;
+                }
+                container.innerHTML = html;
+                wrap.classList.remove('hidden');
+            } catch(e) { wrap.classList.add('hidden'); }
+        } else {
+            wrap.classList.add('hidden');
+        }
+
+        document.getElementById('edit-group-item-modal').classList.remove('hidden');
+    },
+
+    async saveGroupItemEdit() {
+        const qty = parseInt(document.getElementById('egi-qty').value);
+        if (isNaN(qty) || qty < 0) return this.showToast('Invalid quantity.');
+
+        const opts = [];
+        document.querySelectorAll('#egi-options-container input[type="radio"]:checked').forEach(inp => {
+            opts.push(`${inp.name.replace('egi_opt_', '')}: ${inp.value}`);
+        });
+        const variation = opts.join(', ');
+
+        const g = this.bayanihan.current;
+        const res = await fetch('api.php?action=group-edit-item', {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ group_id: g.id, item_id: this._editItemId, qty, variation })
+        });
+        const data = await res.json();
+        if (data.ok) {
+            this.closeModal('edit-group-item-modal');
+            this.openGroupDetail(g.id);
+        } else this.showToast(data.error || 'Failed');
+    },
+
+    // 🟢 Helpers for Delivery Details
+    updateGroupRecipient(val) {
+        const parts = val.split('|');
+        const phoneInput = document.getElementById('bg-phone');
+        phoneInput.value = parts[1] || '';
+        // If they have no phone, allow the host to type one manually
+        if (phoneInput.value === '') {
+            phoneInput.readOnly = false;
+            phoneInput.focus();
+        } else {
+            phoneInput.readOnly = true;
+        }
+    },
+    
+    updateGroupBrgyDropdown() {
+        const city = document.getElementById('bg-city').value;
+        const brgySelect = document.getElementById('bg-brgy');
+        brgySelect.innerHTML = '<option value="" disabled selected>Pumili ng Barangay</option>';
+        if (this.lagunaData[city]) {
+            Object.keys(this.lagunaData[city]).forEach(b => {
+                brgySelect.innerHTML += `<option value="${b}">${b}</option>`;
+            });
+        }
+        this.updateGroupFee();
+    },
+
+    updateGroupFee() {
+        const city = document.getElementById('bg-city').value;
+        const brgy = document.getElementById('bg-brgy').value;
+        let fee = 0;
+        if (city && brgy && this.lagunaData[city] && this.lagunaData[city][brgy] !== undefined) {
+            fee = this.lagunaData[city][brgy];
+        }
+        document.getElementById('bg-fee').value = fee;
+    },
+
+    async saveDeliveryDetails() {
+        const g = this.bayanihan.current;
+        const sel = document.getElementById('bg-member');
+        const name = sel.options[sel.selectedIndex].text.split(' (')[0];
+        const phone = document.getElementById('bg-phone').value.trim();
+        const city = document.getElementById('bg-city').value;
+        const brgy = document.getElementById('bg-brgy').value;
+        const street = document.getElementById('bg-street').value.trim();
+        const fee = parseInt(document.getElementById('bg-fee').value) || 0;
+
+        if (!city || !brgy) return this.showToast('Pumili ng Lungsod at Barangay.');
+        if (!phone) return this.showToast('Ilagay ang contact number.');
+        
+        const address = JSON.stringify({ street, brgy, city });
+        const payload = { group_id: g.id, name, phone, address, fee };
+
+        const res = await fetch('api.php?action=group-set-delivery', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+        const data = await res.json();
+        if (data.ok) { this.showToast('Delivery details saved!'); this.openGroupDetail(g.id); }
+        else this.showToast(data.error || 'Failed');
+    },
+
+    // ----- Split changes (with confirmation if anyone already paid) -----
+    async setGroupSplit(method) {
+        const g = this.bayanihan.current;
+        if (!g) return;
+        const approved = g.members.filter(m => m.status === 'approved');
+        const alreadyPaid = approved.filter(m => m.paid == 1);
+        if (alreadyPaid.length > 0) {
+            const msg = `Baguhin ang split to "${method.replace(/_/g,' ')}"?\n\n` +
+                `⚠️ ${alreadyPaid.length} member(s) already paid:\n` +
+                `• ${alreadyPaid.map(m => m.name).join('\n• ')}\n\n` +
+                `Ma-reset lahat ng bayad. Tuloy?`;
+            if (!confirm(msg)) return;
+        }
+        await fetch('api.php?action=group-set-split', { method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ group_id: g.id, method, fixed_amount: g.fixed_amount || 0 }) });
+        this.openGroupDetail(g.id);
+    },
+
+    async setGroupFixedAmount(val) {
+        const g = this.bayanihan.current;
+        const approved = g.members.filter(m => m.status === 'approved');
+        const alreadyPaid = approved.filter(m => m.paid == 1);
+        if (alreadyPaid.length > 0) {
+            if (!confirm(`Baguhin ang fixed amount?\n\n⚠️ Ma-reset ang bayad ng ${alreadyPaid.length} member(s). Tuloy?`)) return;
+        }
+        await fetch('api.php?action=group-set-split', { method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ group_id: g.id, method: g.split_method, fixed_amount: parseInt(val) || 0 }) });
+        this.openGroupDetail(g.id);
+    },
+
+    async setMemberFlag(memberId, field, value) {
+        const g = this.bayanihan.current;
+        const approved = g.members.filter(m => m.status === 'approved');
+        const alreadyPaid = approved.filter(m => m.paid == 1);
+        if (alreadyPaid.length > 0) {
+            if (!confirm(`Baguhin ang ${field.replace('is_','')} flag?\n\n⚠️ Ma-reset ang bayad ng ${alreadyPaid.length} member(s). Tuloy?`)) return;
+        }
+        await fetch('api.php?action=group-set-member-flag', { method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ group_id: g.id, member_id: memberId, field, value: value ? 1 : 0 }) });
+        this.openGroupDetail(g.id);
+    },
+
+    async groupUpdateQty(itemId, delta) {
+        const g = this.bayanihan.current;
+        await fetch('api.php?action=group-update-qty', { method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ group_id: g.id, item_id: itemId, delta }) });
+        this.openGroupDetail(g.id);
+    },
+    async approveMember(memberId) {
+        const g = this.bayanihan.current;
+        await fetch('api.php?action=group-approve-member', { method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ group_id: g.id, member_id: memberId }) });
+        this.openGroupDetail(g.id);
+    },
+    async rejectMember(memberId) {
+        const g = this.bayanihan.current;
+        await fetch('api.php?action=group-reject-member', { method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ group_id: g.id, member_id: memberId }) });
+        this.openGroupDetail(g.id);
+    },
+
+    openPayShareModal(memberId, amount) {
+        this._payMemberId = memberId;
+        this._payAmount = amount;
+        this._shareProof = '';
+        document.getElementById('bg-pay-amount').textContent = `Amount: ${this.money(amount)}`;
+        document.getElementById('bg-share-preview').style.display = 'none';
+        document.getElementById('bg-share-title').textContent = 'Upload GCash screenshot';
+        document.getElementById('bg-share-drop').classList.remove('has-file');
+        this.selectShareMethod('cash');
+        document.getElementById('bayanihan-pay-modal').classList.remove('hidden');
+    },
+    selectShareMethod(method) {
+        document.getElementById('bg-pay-cash').classList.toggle('active', method === 'cash');
+        document.getElementById('bg-pay-gcash').classList.toggle('active', method === 'gcash');
+        document.getElementById('bg-gcash-box').classList.toggle('hidden', method !== 'gcash');
+        this._shareMethod = method;
+    },
+    handleShareProof(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        if (file.size > 10 * 1024 * 1024) { this.showToast('Max 10MB lang.'); e.target.value = ''; return; }
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            const img = new Image();
+            img.onload = () => {
+                const c = document.createElement('canvas');
+                const scale = Math.min(1, 800 / Math.max(img.width, img.height));
+                c.width = img.width * scale; c.height = img.height * scale;
+                c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+                this._shareProof = c.toDataURL('image/jpeg', 0.7);
+                const prev = document.getElementById('bg-share-preview');
+                prev.src = this._shareProof; prev.style.display = 'block';
+                document.getElementById('bg-share-drop').classList.add('has-file');
+                document.getElementById('bg-share-title').textContent = 'Screenshot attached ✓';
+            };
+            img.src = ev.target.result;
+        };
+        reader.readAsDataURL(file);
+    },
+    async submitSharePayment() {
+        const g = this.bayanihan.current;
+        if (!g || !this._payMemberId) return;
+        if (this._shareMethod === 'gcash' && !this._shareProof) {
+            return this.showToast('I-upload muna ang GCash screenshot.');
+        }
+        const res = await fetch('api.php?action=group-member-pay', {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ group_id: g.id, method: this._shareMethod, proof: this._shareProof, amount: this._payAmount })
+        });
+        const data = await res.json();
+        if (data.ok) {
+            this.closeModal('bayanihan-pay-modal');
+            this.showToast(this._shareMethod === 'gcash'
+                ? 'Payment submitted! Hintayin ang verification ng host.'
+                : 'Marked as cash. Host will verify.');
+            this.openGroupDetail(g.id);
+        } else this.showToast(data.error || 'Failed');
+    },
+
+    async verifyPayment(memberId, verify) {
+        const g = this.bayanihan.current;
+        const m = g.members.find(mm => mm.id === memberId);
+        if (!m) return;
+
+        let msg = verify ? `Verify payment from <b>${this.esc(m.name)}</b>?` : `Unverify payment from <b>${this.esc(m.name)}</b>?`;
+        
+        if (verify && m.payment_method === 'gcash' && m.payment_proof) {
+            msg += `<div style="margin-top:12px; border-radius:8px; overflow:hidden; border:1px solid var(--line);"><img src="${m.payment_proof}" style="width:100%; max-height:200px; object-fit:contain; background:#fff;"></div>`;
+        }
+
+        this.showConfirm(
+            verify ? 'Verify Payment' : 'Unverify Payment',
+            msg,
+            async () => {
+                await fetch('api.php?action=group-verify-payment', {
+                    method:'POST', headers:{'Content-Type':'application/json'},
+                    body: JSON.stringify({ group_id: g.id, member_id: memberId, verify: verify ? 1 : 0 })
+                });
+                this.openGroupDetail(g.id);
+            },
+            verify ? 'Verify ✓' : 'Unverify'
+        );
+    },
+
+    inviteToGroup() {
+        document.getElementById('bg-invite-email').value = '';
+        document.getElementById('bayanihan-invite-modal').classList.remove('hidden');
+    },
+    async submitInvite() {
+        const g = this.bayanihan.current;
+        const email = document.getElementById('bg-invite-email').value.trim();
+        const res = await fetch('api.php?action=group-invite', { method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ group_id: g.id, email }) });
+        const data = await res.json();
+        if (data.ok) {
+            this.closeModal('bayanihan-invite-modal');
+            this.showToast('Invite sent!');
+            this.openGroupDetail(g.id);
+        } else this.showToast(data.error || 'Failed');
+    },
+
+    addMoreToGroup() {
+        const g = this.bayanihan.current;
+        if (!g) return;
+        this.bayanihan.activeGroupId = g.id;
+        this.showToast(`Adding items to: ${g.name}`);
+        this.go('home');
+        setTimeout(() => this.scrollToMenu(), 200);
+    },
+
+    async confirmGroupOrder() {
+        this.showConfirm(
+            'Confirm Order',
+            'Confirm this Bayanihan order? Stock will be deducted.',
+            async () => {
+                const g = this.bayanihan.current;
+                const res = await fetch('api.php?action=group-confirm-order', { method:'POST', headers:{'Content-Type':'application/json'},
+                    body: JSON.stringify({ group_id: g.id }) });
+                const data = await res.json();
+                if (data.ok) {
+                    this.showToast(`Order #${data.order_id} placed!`);
+                    this.bayanihan.activeGroupId = null;
+                    await this.refreshData();
+                    this.go('orders');
+                } else this.showToast(data.error || 'Failed');
+            },
+            'Confirm'
+        );
+    },
+
+    async leaveGroup() {
+        const g = this.bayanihan.current;
+        if (!g) return;
+        const me = g.members.find(m => m.user_id === this.user.id);
+        
+        if (me && me.paid == 1 && me.payment_method === 'gcash') {
+            return this.showToast('Hindi ka pwedeng umalis: nagbayad ka na via GCash. Ipa-refund muna sa host.');
+        }
+        const myItems = g.items.filter(it => it.user_id === this.user.id);
+        const itemCount = myItems.reduce((s, it) => s + it.qty, 0);
+        const itemList = myItems.length
+            ? `\n\n⚠️ MAWAWALA ang iyong ${itemCount} item(s):\n• ${myItems.map(it => `${it.qty}× ${it.name}`).join('\n• ')}`
+            : '';
+            
+        this.showConfirm(
+            'Leave Bayanihan Cart?',
+            `Ma-reset din ang bayad ng iba pang miyembro.${itemList}\n\nSigurado ka ba?`,
+            async () => {
+                const res = await fetch('api.php?action=group-leave', { method:'POST', headers:{'Content-Type':'application/json'},
+                    body: JSON.stringify({ group_id: g.id }) });
+                const data = await res.json();
+                if (!data.ok) { this.showToast(data.error || 'Failed'); return; }
+                this.bayanihan.activeGroupId = null;
+                this.showToast('You left the Bayanihan Cart.');
+                this.go('bayanihan');
+            },
+            'Leave'
+        );
+    },
+
+    async cancelGroup() {
+        const g = this.bayanihan.current;
+        if (!g) return;
+        const gcashPaid = g.members.filter(m => m.paid == 1 && m.payment_method === 'gcash');
+        if (gcashPaid.length > 0) {
+            return this.showToast(`Hindi ma-cancel: may ${gcashPaid.length} member na nagbayad via GCash. Ipa-refund muna.`);
+        }
+        const approvedCount = g.members.filter(m => m.status === 'approved').length;
+        const itemCount = g.items.reduce((s, it) => s + it.qty, 0);
+        
+        this.showConfirm(
+            'Cancel Bayanihan Cart? ❌',
+            `• ${approvedCount} member(s) mawawalan ng access\n• ${itemCount} item(s) mawawala\n• Lahat ng bayad mawawala\n\nHINDI na maibabalik. Sigurado ka ba?`,
+            async () => {
+                const res = await fetch('api.php?action=group-cancel', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ group_id: g.id }) });
+                const data = await res.json();
+                if (!data.ok) { this.showToast(data.error || 'Failed'); return; }
+                this.bayanihan.activeGroupId = null;
+                this.showToast('Bayanihan Cart cancelled.');
+                this.go('bayanihan');
+            },
+            'Yes, Cancel'
+        );
+    },
+
+    async confirmAddToBayanihan() {
+        if (!this.pendingCartItem || !this.bayanihan.activeGroupId) return;
+        const p = this.pendingCartItem;
+        const gid = this.bayanihan.activeGroupId;
+        const grp = this.bayanihan.list.find(x => x.id === gid);
+        const grpName = grp ? grp.name : 'Bayanihan Cart';
+        
+        this.showConfirm(
+            'Add to Bayanihan?',
+            `Add ${p.name} (×${this.pendingQty}) to "${grpName}"?\n\nMakikita ito ng lahat at ikaw ang sisingilin sa split.`,
+            async () => {
+                const opts = [];
+                document.querySelectorAll('#add-confirm-item-box input[type="radio"]:checked').forEach(inp => {
+                    opts.push(`${inp.name.replace('opt_', '')}: ${inp.value}`);
+                });
+                const variation = opts.join(', ');
+                try {
+                    const res = await fetch('api.php?action=group-add-item', {
+                        method:'POST', headers:{'Content-Type':'application/json'},
+                        body: JSON.stringify({ group_id: gid, product_id: p.id, qty: this.pendingQty, variation })
+                    });
+                    const data = await res.json();
+                    if (data.ok) {
+                        this.showToast(`${p.name} added to ${grpName}!`);
+                        this.closeAddModal();
+                    } else this.showToast(data.error || 'Failed');
+                } catch (e) { this.showToast('Connection error'); }
+            },
+            'Add Item'
+        );
+    },
+
+    // ============================================================
+    // ADMIN: Bayanihan monitoring
+    // ============================================================
+    async renderAdminBayanihan() {
+        const grid = document.getElementById('admin-groups-grid');
+        if (!grid) return;
+        grid.innerHTML = '<p style="text-align:center; color:var(--muted); padding:20px;">Loading...</p>';
+        try {
+            const res = await fetch('api.php?action=admin-list-groups');
+            const groups = await res.json();
+            const filter = (document.getElementById('admin-group-status')?.value) || 'all';
+            const filtered = filter === 'all' ? groups : groups.filter(g => g.status === filter);
+
+            if (!filtered.length) {
+                grid.innerHTML = '<div class="empty-state"><h3>Walang Bayanihan Cart</h3><p>Wala pang gumawa ng group cart.</p></div>';
+                return;
+            }
+
+            grid.innerHTML = filtered.map(g => {
+                const statusClass = g.status === 'open' ? 'status-pending'
+                    : g.status === 'ordered' ? 'status-delivered'
+                    : g.status === 'cancelled' ? 'status-out' : 'status-shipping';
+                const hasGcash = parseInt(g.gcash_paid_count) > 0;
+                return `
+                <div class="admin-order-card" style="cursor:pointer;" onclick="app.viewAdminGroup(${g.id})">
+                    <div class="admin-order-header">
+                        <div><h4>${this.esc(g.name)}</h4><span class="admin-order-date">Host: ${this.esc(g.host_name)}</span></div>
+                        <span class="order-status ${statusClass}">${this.esc(g.status)}</span>
+                    </div>
+                    <div style="padding:12px; background:var(--surface2); border-radius:12px; text-align:center;">
+                        <div style="font-size:10px; font-weight:800; color:var(--muted); text-transform:uppercase;">Code</div>
+                        <div style="font-size:22px; font-weight:900; letter-spacing:4px; color:var(--brand); font-family:'Baloo 2';">${this.esc(g.code)}</div>
+                    </div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; font-size:12px; font-weight:700;">
+                        <div>👥 Members: <b>${g.member_count}</b></div>
+                        <div>⏳ Pending: <b>${g.pending_count}</b></div>
+                        <div>💰 Subtotal: <b style="color:var(--brand);">${this.money(g.subtotal)}</b></div>
+                        <div>✅ Verified: <b>${g.verified_count}/${g.member_count}</b></div>
+                    </div>
+                    ${hasGcash ? `
+                        <div style="padding:8px 12px; background:rgba(47,140,255,0.1); border-left:3px solid #2f8cff; border-radius:6px; font-size:11px; font-weight:800; color:#2f8cff;">
+                            📱 ${g.gcash_paid_count} member(s) paid via GCash — cart locked from cancellation
+                        </div>` : ''}
+                </div>`;
+            }).join('');
+        } catch (e) { grid.innerHTML = '<p>Error loading groups.</p>'; }
+    },
+
+    async viewAdminGroup(gid) {
+        try {
+            const res = await fetch('api.php?action=admin-get-group', {
+                method:'POST', headers:{'Content-Type':'application/json'},
+                body: JSON.stringify({ id: gid })
+            });
+            const g = await res.json();
+            if (g.error) { this.showToast(g.error); return; }
+
+            const subtotal = g.items.reduce((s, it) => s + it.price * it.qty, 0);
+            const deliveryFee = parseInt(g.delivery_fee) || 0;
+            const total = subtotal + deliveryFee;
+            const approved = g.members.filter(m => m.status === 'approved');
+            const gcashPaid = approved.filter(m => m.paid == 1 && m.payment_method === 'gcash');
+
+            const body = document.getElementById('admin-group-detail-body');
+            body.innerHTML = `
+                <div class="page-head">
+                    <button class="btn btn-ghost" style="margin-bottom:12px; padding:6px 14px; font-size:13px;" onclick="app.go('admin')">← Back to Dashboard</button>
+                    <h1>${this.esc(g.name)}</h1>
+                    <p>Host: ${this.esc(approved.find(m => m.role === 'host')?.name || '—')} · Status: <b>${this.esc(g.status)}</b></p>
+                </div>
+
+                ${gcashPaid.length ? `
+                    <div style="padding:14px; background:rgba(47,140,255,0.1); border-left:4px solid #2f8cff; border-radius:10px; margin-bottom:20px;">
+                        <b style="color:#2f8cff;">📱 GCash Payments Locked</b>
+                        <p style="font-size:12px; margin-top:4px; color:var(--ink); font-weight:600;">
+                            ${gcashPaid.length} member(s) already paid via GCash — this cart cannot be cancelled.
+                        </p>
+                    </div>` : ''}
+
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:20px;">
+                    <div class="co-card">
+                        <h3>📍 Delivery</h3>
+                        <p style="font-size:13px; font-weight:600; line-height:1.7;">
+                            <b>Recipient:</b> ${this.esc(g.customer_name || '—')}<br>
+                            <b>Phone:</b> ${this.esc(g.phone || '—')}<br>
+                            <b>Address:</b> ${this.esc(this.formatAddress(g.delivery_address) || '—')}<br>
+                            <b>Payment:</b> ${g.payment.toUpperCase()}<br>
+                            <b>Delivery Fee:</b> ${this.money(deliveryFee)}
+                        </p>
+                    </div>
+                    <div class="co-card">
+                        <h3>💰 Totals</h3>
+                        <p style="font-size:13px; font-weight:600; line-height:1.7;">
+                            <b>Subtotal:</b> ${this.money(subtotal)}<br>
+                            <b>Total:</b> <span style="color:var(--brand); font-size:18px; font-family:'Baloo 2';">${this.money(total)}</span><br>
+                            <b>Split Method:</b> ${g.split_method.replace(/_/g, ' ')}<br>
+                            <b>Order ID:</b> ${g.order_id || '—'}
+                        </p>
+                    </div>
+                </div>
+
+                <div class="co-card" style="margin-bottom:20px;">
+                    <h3>👥 Members (${approved.length} approved)</h3>
+                    ${g.members.map(m => {
+                        const statusBadge = m.status === 'approved' ? '✅'
+                            : m.status === 'pending' ? '⏳'
+                            : m.status === 'invited' ? '📬' : '❌';
+                        const payBadge = m.paid == 1
+                            ? (m.payer_verified == 1
+                                ? `<span style="color:var(--leaf); font-weight:800;">✓ Verified (${m.payment_method.toUpperCase()}) ${this.money(m.paid_amount)}</span>
+                                   ${m.payment_method === 'gcash' && m.payment_proof ? `<button class="btn btn-ghost" style="padding:2px 8px; font-size:10px; margin-left:8px;" onclick="app.viewProof('${m.payment_proof}')">View Proof</button>` : ''}`
+                                : `<span style="color:var(--amber); font-weight:800;">⏳ Awaiting verify (${m.payment_method.toUpperCase()})</span>`)
+                            : '<span style="color:var(--muted); font-weight:700;">Unpaid</span>';
+                        return `
+                            <div style="display:flex; justify-content:space-between; align-items:center; padding:10px; background:var(--bg); border-radius:10px; margin-bottom:6px; gap:8px; flex-wrap:wrap;">
+                                <div>
+                                    <b>${statusBadge} ${this.esc(m.name)}</b>
+                                    <span style="font-size:11px; color:var(--muted);">${this.esc(m.email)}</span>
+                                    ${m.role === 'host' ? '<span style="font-size:10px; color:var(--leaf); font-weight:800; margin-left:6px;">HOST</span>' : ''}
+                                </div>
+                                <div style="font-size:12px;">${payBadge}</div>
+                            </div>`;
+                    }).join('')}
+                </div>
+
+                <div class="co-card">
+                    <h3>🛒 Items (${g.items.length})</h3>
+                    ${g.items.length === 0
+                        ? '<p style="text-align:center; color:var(--muted); padding:20px;">No items.</p>'
+                        : g.items.map(it => `
+                            <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 12px; background:var(--surface2); border-radius:10px; margin-bottom:6px;">
+                                <div>
+                                    <b style="font-size:13px;">${this.esc(it.name)}</b>
+                                    <div style="font-size:11px; color:var(--muted);">by ${this.esc(it.user_name)} · ${it.qty} × ${this.money(it.price)}</div>
+                                </div>
+                                <div style="font-family:'Baloo 2'; font-weight:800;">${this.money(it.price * it.qty)}</div>
+                            </div>`).join('')}
+                </div>`;
+            this.go('admin-group-detail');
+        } catch (e) { this.showToast('Error loading group'); }
+    },
+}
 
 // Menu glow follows mouse
 document.addEventListener('mousemove', e => {
