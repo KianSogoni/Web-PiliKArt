@@ -13,6 +13,7 @@ const app = {
         };
         
         document.getElementById('custom-confirm-modal').classList.remove('hidden');
+        this.updateBodyScrollLock();
     },
     
     botBrain: [
@@ -107,6 +108,7 @@ const app = {
         document.getElementById('refund-drop-title').textContent = 'I-upload ang litrato';
         document.getElementById('refund-drop-sub').textContent = 'I-click para pumili ng file';
         document.getElementById('refund-modal').classList.remove('hidden');
+        this.updateBodyScrollLock();
     },
 
     handleRefundProof(e) {
@@ -233,6 +235,7 @@ const app = {
         
         document.getElementById('role-change-modal').classList.remove('hidden');
         document.getElementById('rc-admin-pass').focus();
+        this.updateBodyScrollLock();
     },
 
     async submitRoleChange() {
@@ -415,18 +418,21 @@ const app = {
         if (force) { 
             d.classList.add('hidden'); 
             d.classList.remove('closing'); 
+            this.updateBodyScrollLock();
             return; 
         }
         
         if (d.classList.contains('hidden')) {
             d.classList.remove('hidden', 'closing');
             this.renderNotifications();
+            this.updateBodyScrollLock();
         } 
         else {
             d.classList.add('closing');
             setTimeout(() => { 
                 d.classList.add('hidden'); 
                 d.classList.remove('closing'); 
+                this.updateBodyScrollLock(); 
             }, 800);
         }
     },
@@ -827,6 +833,7 @@ const app = {
         if (footer) footer.classList.toggle('hidden', bare);
         document.body.style.overflow = bare ? 'hidden' : 'auto';
         this.currentView = view;
+        this.updateBodyScrollLock();
         if (!bare) window.scrollTo({ top: 0 });
 
         const botBtn = document.getElementById('pilibot-btn');
@@ -905,6 +912,7 @@ const app = {
         const backdrop = document.getElementById('nav-drawer-backdrop');
         const isOpen = drawer.classList.toggle('open');
         backdrop.classList.toggle('show', isOpen);
+        this.updateBodyScrollLock(); 
     },
 
     navTo(view) { this.toggleNavDrawer(); this.go(view); },
@@ -947,6 +955,7 @@ const app = {
         this.setAuthMode(mode, false);
         this.clearAuthError();
         this.populateAuthCities();
+        this.updateBodyScrollLock();
     },
 
     closeAuthModal() {
@@ -954,6 +963,7 @@ const app = {
         if (!modal) return;
         modal.classList.add('hidden');
         document.body.style.overflow = (this.currentView === 'landing') ? 'hidden' : 'auto';
+        this.updateBodyScrollLock();
     },
 
     updateNavDrawerAuthUI() {
@@ -1014,10 +1024,39 @@ const app = {
 
     handleAuthFromDrawer() { this.toggleNavDrawer(); this.handleAuth(); },
 
-    showToast(msg) {
+    updateBodyScrollLock() {
+        const isDrawerOpen = document.querySelector('.drawer:not(.hidden)') !== null;
+        const isModalOpen = document.querySelector('.modal:not(.hidden)') !== null;
+        const isAuthOpen = document.getElementById('view-auth') && !document.getElementById('view-auth').classList.contains('hidden');
+        const isNavOpen = document.getElementById('nav-drawer').classList.contains('open');
+        const isLanding = document.getElementById('view-landing') && !document.getElementById('view-landing').classList.contains('hidden');
+
+        if (isDrawerOpen || isModalOpen || isAuthOpen || isNavOpen || isLanding) {
+            document.body.classList.add('no-scroll');
+        } else {
+            document.body.classList.remove('no-scroll');
+        }
+    },
+
+    showToast(msg, isNotification = false) {
         const t = document.getElementById('toast');
         t.textContent = msg;
         t.classList.add('show');
+        
+        const botBtn = document.getElementById('pilibot-btn');
+        if (botBtn) {
+            botBtn.classList.remove('bot-notif-active', 'bot-toast-active');
+            void botBtn.offsetWidth; 
+            if (isNotification) {
+                botBtn.classList.add('bot-notif-active');
+                clearTimeout(this._botAnimTimer);
+                this._botAnimTimer = setTimeout(() => botBtn.classList.remove('bot-notif-active'), 2000);
+            } else {
+                botBtn.classList.add('bot-toast-active');
+                clearTimeout(this._botAnimTimer);
+                this._botAnimTimer = setTimeout(() => botBtn.classList.remove('bot-toast-active'), 1500);
+            }
+        }
         clearTimeout(this._toastTimer);
         this._toastTimer = setTimeout(() => t.classList.remove('show'), 3600);
     },
@@ -1494,7 +1533,10 @@ setupTrail(containerId, options = {}) {
         this.pendingQty = 1;
         this.renderAddConfirmModal(); 
         const modal = document.getElementById('add-confirm-modal');
-        if (modal) modal.classList.remove('hidden');
+        if (modal) {
+            modal.classList.remove('hidden');
+            this.updateBodyScrollLock();
+        }
     },
 
     pendingPriceModifier: 0,
@@ -1680,7 +1722,12 @@ setupTrail(containerId, options = {}) {
         const modal = document.getElementById('add-confirm-modal');
         if (!modal) return;
         modal.classList.add('closing');
-        setTimeout(() => { modal.classList.add('hidden'); modal.classList.remove('closing'); this.pendingCartItem = null; }, 500);
+        setTimeout(() => { 
+            modal.classList.add('hidden'); 
+            modal.classList.remove('closing'); 
+            this.pendingCartItem = null; 
+            this.updateBodyScrollLock();
+        }, 500);
     },
 
     emptyState(kind, title, text, btnLabel, btnAction) {
@@ -1815,6 +1862,7 @@ setupTrail(containerId, options = {}) {
         document.getElementById('convert-group-name').value = `Bayanihan Order (${this.user.name.split(' ')[0]})`;
         this.toggleCart(true);
         document.getElementById('bayanihan-convert-modal').classList.remove('hidden');
+        this.updateBodyScrollLock();
     },
 
     async createBayanihanFromCart() {
@@ -1889,19 +1937,38 @@ setupTrail(containerId, options = {}) {
     toggleCart(force = false) {
         const d = document.getElementById('cart-drawer');
         if (!d) return;
-        if (force) { d.classList.add('hidden'); d.classList.remove('closing'); this._cartBusy = false; return; }
+        if (force) { 
+            d.classList.add('hidden'); 
+            d.classList.remove('closing'); 
+            this._cartBusy = false; 
+            this.updateBodyScrollLock();
+            return; 
+        }
         const isOpen = !d.classList.contains('hidden');
-        if (!isOpen) { d.classList.remove('hidden', 'closing'); return; }
+        if (!isOpen) { 
+            d.classList.remove('hidden', 'closing'); 
+            this.updateBodyScrollLock(); 
+            return; 
+        }
         this._cartBusy = true;
         d.classList.add('closing');
-        setTimeout(() => { d.classList.add('hidden'); d.classList.remove('closing'); this._cartBusy = false; }, 800);
+        setTimeout(() => { 
+            d.classList.add('hidden'); 
+            d.classList.remove('closing'); 
+            this._cartBusy = false; 
+            this.updateBodyScrollLock(); 
+        }, 800);
     },
 
     closeModal(id) {
         const m = document.getElementById(id);
         if (!m || m.classList.contains('hidden')) return;
         m.classList.add('closing');
-        setTimeout(() => { m.classList.add('hidden'); m.classList.remove('closing'); }, 650);
+        setTimeout(() => { 
+            m.classList.add('hidden'); 
+            m.classList.remove('closing'); 
+            this.updateBodyScrollLock(); 
+        }, 650);
     },
 
     renderCartPage() {
@@ -2054,6 +2121,7 @@ setupTrail(containerId, options = {}) {
                 `).join('');
             }
             document.getElementById('paso-restriction-modal').classList.remove('hidden');
+            this.updateBodyScrollLock();
         } else {
             this.toggleCart(true);
             this.go('checkout');
@@ -2212,7 +2280,7 @@ setupTrail(containerId, options = {}) {
                 const tempDiv = document.createElement('div');
                 tempDiv.innerHTML = latest.message;
                 const textMsg = tempDiv.textContent || tempDiv.innerText || "";
-                this.showToast(`🔔 ${textMsg}`);
+                this.showToast(`🔔 ${textMsg}`, true);
             }
         } catch (e) { console.warn('Refresh failed', e); }
     },
@@ -2658,10 +2726,17 @@ setupTrail(containerId, options = {}) {
         document.getElementById('pe-delete-btn').style.display = 'block';
         this.updateEditorPreview();
         document.getElementById('product-editor-modal').classList.remove('hidden');
+        this.updateBodyScrollLock();
     },
 
     updateEditorPreview() { const img = document.getElementById('pe-preview'); if (!img) return; const src = document.getElementById('pe-image').value.trim(); img.src = src || 'https://placehold.co/400x400/eee/333?text=No+Image'; },
-    closeProductEditor() { const m = document.getElementById('product-editor-modal'); if (!m) return; m.classList.add('hidden'); this.editingProductId = null; },
+    closeProductEditor() { 
+        const m = document.getElementById('product-editor-modal'); 
+        if (!m) return; 
+        m.classList.add('hidden'); 
+        this.editingProductId = null; 
+        this.updateBodyScrollLock();
+    },
 
     addPeOptionGroup(groupName = '', choices = {}) {
         const container = document.getElementById('pe-options-container');
@@ -2764,8 +2839,12 @@ setupTrail(containerId, options = {}) {
         }
     },
 
-    viewProof(src) { document.getElementById('proof-img').src = src; document.getElementById('proof-modal').classList.remove('hidden'); },
-    
+    viewProof(src) { 
+        document.getElementById('proof-img').src = src; 
+        document.getElementById('proof-modal').classList.remove('hidden'); 
+        this.updateBodyScrollLock();
+    },
+
     async updateOrderStatus(id, status) {
         try {
             const res = await fetch('api.php?action=admin-update-order', { 
@@ -2912,7 +2991,7 @@ setupTrail(containerId, options = {}) {
         // Initialize Header Button Icon based on saved theme
         this.updateThemeButton();
     },
-    
+
     toggleBot() { 
         document.getElementById('pilibot-window').classList.toggle('hidden'); 
     },
@@ -2960,7 +3039,12 @@ setupTrail(containerId, options = {}) {
         const t = document.createElement('textarea'); t.value = text; document.body.appendChild(t); t.select(); document.execCommand('copy'); t.remove(); this.showToast('Copied!');
     },
 
-    openCreateGroupModal() { document.getElementById('bg-create-name').value = ''; document.getElementById('bayanihan-create-modal').classList.remove('hidden'); },
+    openCreateGroupModal() { 
+        document.getElementById('bg-create-name').value = ''; 
+        document.getElementById('bayanihan-create-modal').classList.remove('hidden'); 
+        this.updateBodyScrollLock();
+    },
+    
     async submitCreateGroup() {
         const name = document.getElementById('bg-create-name').value.trim() || 'Bayanihan Cart';
         try {
@@ -2983,7 +3067,12 @@ setupTrail(containerId, options = {}) {
         if (navigator.share) { try { await navigator.share({ title: 'PiliKart Bayanihan Cart', text }); } catch (e) {} } else this.copyText(text);
     },
 
-    openJoinGroupModal() { document.getElementById('bg-join-code').value = ''; document.getElementById('bayanihan-join-modal').classList.remove('hidden'); },
+    openJoinGroupModal() { 
+        document.getElementById('bg-join-code').value = ''; 
+        document.getElementById('bayanihan-join-modal').classList.remove('hidden'); 
+        this.updateBodyScrollLock();
+    },
+
     switchBayanihanTab(tab, btn) {
         document.querySelectorAll('.admin-tab-btn').forEach(b => { b.className = 'btn btn-ghost admin-tab-btn'; });
         btn.className = 'btn btn-brand admin-tab-btn';
@@ -3299,6 +3388,7 @@ setupTrail(containerId, options = {}) {
             } catch(e) { wrap.classList.add('hidden'); }
         } else { wrap.classList.add('hidden'); }
         document.getElementById('edit-group-item-modal').classList.remove('hidden');
+        this.updateBodyScrollLock();
     },
 
     async saveGroupItemEdit() {
@@ -3364,7 +3454,9 @@ setupTrail(containerId, options = {}) {
         this._payMemberId = memberId; this._payAmount = amount; this._isHostMarking = isHostMarking; this._shareProof = '';
         document.getElementById('bg-pay-amount').textContent = isHostMarking ? `Mark as Paid: ${this.money(amount)}` : `Amount: ${this.money(amount)}`;
         document.getElementById('bg-share-preview').style.display = 'none'; document.getElementById('bg-share-title').textContent = 'Upload GCash screenshot'; document.getElementById('bg-share-drop').classList.remove('has-file');
-        this.selectShareMethod('cash'); document.getElementById('bayanihan-pay-modal').classList.remove('hidden');
+        this.selectShareMethod('cash'); 
+        document.getElementById('bayanihan-pay-modal').classList.remove('hidden');
+        this.updateBodyScrollLock();
     },
     selectShareMethod(method) {
         document.getElementById('bg-pay-cash').classList.toggle('active', method === 'cash'); document.getElementById('bg-pay-gcash').classList.toggle('active', method === 'gcash');
@@ -3554,7 +3646,11 @@ setupTrail(containerId, options = {}) {
     },
 
     openAddFeeModal() {
-        document.getElementById('new-fee-city').value = ''; document.getElementById('new-fee-brgy').value = ''; document.getElementById('new-fee-amount').value = ''; document.getElementById('add-fee-modal').classList.remove('hidden');
+        document.getElementById('new-fee-city').value = ''; 
+        document.getElementById('new-fee-brgy').value = ''; 
+        document.getElementById('new-fee-amount').value = ''; 
+        document.getElementById('add-fee-modal').classList.remove('hidden');
+        this.updateBodyScrollLock();
     },
 
     async submitAddFee() {
