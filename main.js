@@ -547,10 +547,9 @@ const app = {
             const cartKey = this.user ? `pk_cart_${this.user.id}` : 'pk_cart_guest';
             try {
                 const savedCart = JSON.parse(localStorage.getItem(cartKey) || '[]');
-                // Map through to ensure old carts without 'selected' property still work
                 this.cart = savedCart.map(item => ({ 
                     ...item, 
-                    selected: item.selected !== undefined ? item.selected : true 
+                    selected: item.selected === false ? false : true 
                 }));
             } catch(e) { 
                 this.cart = []; 
@@ -625,10 +624,22 @@ const app = {
                 const nres = await fetch('api.php?action=get-notifications');
                 const ndata = await nres.json();
                 if (Array.isArray(ndata)) {
+                    const oldIds = new Set((this.notifications || []).map(n => Number(n.id)));
+                    const newNotifs = ndata.filter(n => !oldIds.has(Number(n.id)) && !Number(n.is_read));
+
                     this.notifications = ndata;
                     this.updateNotifBadge();
                     const drawer = document.getElementById('notifications-drawer');
                     if (drawer && !drawer.classList.contains('hidden')) this.renderNotifications();
+
+                    if (newNotifs.length > 0) {
+                        const latest = newNotifs[0];
+                        // Strip HTML tags from the message for the clean toast text
+                        const tempDiv = document.createElement('div');
+                        tempDiv.innerHTML = latest.message;
+                        const textMsg = tempDiv.textContent || tempDiv.innerText || "";
+                        this.showToast(`🔔 ${textMsg}`);
+                    }
                 }
             } catch (e) {}
         }, 10000);
@@ -827,6 +838,23 @@ const app = {
         } else if (menuSec) menuSec.scrollIntoView({ behavior: 'smooth' });
     },
 
+    filterFromFooter(category) {
+        this.go('home');
+        
+        setTimeout(() => {
+            this.scrollToMenu();
+            
+            // Find the correct department pill and click it
+            const pills = document.querySelectorAll('.dept-pill');
+            for (let pill of pills) {
+                if (pill.getAttribute('onclick') && pill.getAttribute('onclick').includes(`'${category}'`)) {
+                    pill.click(); 
+                    break;
+                }
+            }
+        }, 150);
+    },
+
     toggleNavDrawer() {
         const drawer = document.getElementById('nav-drawer');
         const backdrop = document.getElementById('nav-drawer-backdrop');
@@ -909,6 +937,34 @@ const app = {
                 if (adminMyOrdersLink) adminMyOrdersLink.classList.add('hidden');
             }
         } else { if (adminMyOrdersLink) adminMyOrdersLink.classList.add('hidden'); }
+        this.updateFooterLinks();
+    },
+
+    updateFooterLinks() {
+        const ul = document.getElementById('footer-dynamic-links');
+        if (!ul) return;
+
+        let links = `<li><a href="#" onclick="app.scrollToMenu(); return false;">Menu</a></li>`;
+
+        if (this.user) {
+            if (this.user.role === 'admin') {
+                links += `
+                    <li><a href="#" onclick="app.go('admin'); return false;">Admin Dashboard</a></li>
+                    <li><a href="#" onclick="app.go('orders'); return false;">My Orders</a></li>
+                `;
+            } else {
+                links += `<li><a href="#" onclick="app.go('orders'); return false;">My Orders</a></li>`;
+            }
+        } else {
+            links += `<li><a href="#" onclick="app.openAuthModal('signin'); return false;">Sign In</a></li>`;
+        }
+
+        links += `
+            <li><a href="#" onclick="app.go('recipes'); return false;">Recipe Box</a></li>
+            <li><a href="#" onclick="app.go('faq'); return false;">FAQ</a></li>
+        `;
+
+        ul.innerHTML = links;
     },
 
     handleAuthFromDrawer() { this.toggleNavDrawer(); this.handleAuth(); },
@@ -1567,7 +1623,11 @@ setupTrail(containerId, options = {}) {
 
         if (isBuyNow) {
             this.toggleCart(true); // Ensure sidebar is closed
-            setTimeout(() => this.go('checkout'), 300); // Short delay so the toast shows first
+            setTimeout(() => {
+                // 🟢 FIX: Call attemptCheckout instead of go('checkout') 
+                // This forces the PASO restriction check to run
+                this.attemptCheckout(); 
+            }, 300); // Short delay so the toast shows first
         }
     },
 
@@ -1598,13 +1658,39 @@ setupTrail(containerId, options = {}) {
     },
 
     renderCart() {
+        let needsSave = false;
+        this.cart.forEach(c => { 
+            if (c.selected === undefined || c.selected === null) { 
+                c.selected = true; 
+                needsSave = true; 
+            }
+            // 🟢 Auto-deselect out of stock items
+            const p = this.products.find(x => x.id === c.id);
+            const isOutOfStock = !p || p.stock <= 0 || p.stock < c.qty;
+            if (isOutOfStock && c.selected) {
+                c.selected = false;
+                needsSave = true;
+            }
+        });
+        if (needsSave) {
+            const cartKey = this.user ? `pk_cart_${this.user.id}` : 'pk_cart_guest';
+            localStorage.setItem(cartKey, JSON.stringify(this.cart));
+        }
+
         const count = this.cart.reduce((s, x) => s + x.qty, 0);
         const badge = document.getElementById('cart-badge');
         if (badge) badge.textContent = count;
+        
+        // 🟢 Hide Select All if cart is empty
+        const selectAllContainer = document.getElementById('cart-sidebar-select-all-container');
+        if (selectAllContainer) {
+            if (this.cart.length === 0) selectAllContainer.classList.add('hidden');
+            else selectAllContainer.classList.remove('hidden');
+        }
+
         const itemsDiv = document.getElementById('cart-items');
         const foot = document.getElementById('cart-foot');
         
-        // 🟢 Update Sidebar Select All state
         const selectAllSidebar = document.getElementById('cart-sidebar-select-all');
         if (selectAllSidebar) {
             selectAllSidebar.checked = this.cart.length > 0 && this.cart.every(c => c.selected);
@@ -1612,23 +1698,27 @@ setupTrail(containerId, options = {}) {
 
         if (itemsDiv) {
             itemsDiv.innerHTML = this.cart.map((c, i) => {
-                const maxStock = this.products.find(x => x.id === c.id)?.stock || 9999;
+                const p = this.products.find(x => x.id === c.id);
+                const maxStock = p?.stock || 0;
+                const isOutOfStock = !p || p.stock <= 0 || p.stock < c.qty;
+
                 return `
-                <div class="cart-row-card" style="animation-delay:${i * 80}ms; ${c.selected ? '' : 'opacity: 0.6;'}">
-                    <label class="cart-checkbox-wrap" style="margin-right: 0px;">
-                        <input type="checkbox" ${c.selected ? 'checked' : ''} onchange="app.toggleCartItem(${c.id}, ${c.variation ? `'${this.esc(c.variation)}'` : 'null'})">
+                <div class="cart-row-card" style="animation-delay:${i * 80}ms; ${c.selected ? '' : 'opacity: 0.6;'} ${isOutOfStock ? 'border-color: #e5604d; background: rgba(229, 96, 77, 0.05);' : ''}">
+                    <label class="cart-checkbox-wrap" style="margin-right: 0px; ${isOutOfStock ? 'pointer-events: none; opacity: 0.5;' : ''}">
+                        <input type="checkbox" ${c.selected ? 'checked' : ''} ${isOutOfStock ? 'disabled' : ''} onchange="app.toggleCartItem(${c.id}, ${c.variation ? `'${this.esc(c.variation)}'` : 'null'})">
                         <span class="cart-checkbox-custom" style="width: 20px; height: 20px;"></span>
                     </label>
-                    <img class="cart-card-thumb" src="${this.esc(c.image || '')}" alt="${this.esc(c.name)}">
+                    <img class="cart-card-thumb" src="${this.esc(c.image || '')}" alt="${this.esc(c.name)}" style="${isOutOfStock ? 'filter: grayscale(1);' : ''}">
                     <div class="cart-card-info">
                         <b class="cart-card-title" style="font-size: 14px;">${this.esc(c.name)}</b>
                         ${c.variation ? `<small style="display:block; font-size:11px; color:var(--brand); margin-top:2px;">${this.esc(c.variation)}</small>` : ''}
-                        <span class="cart-card-price" style="font-size: 14px;">₱${(c.price * c.qty).toFixed(2)}</span>
+                        <span class="cart-card-price" style="font-size: 14px; ${isOutOfStock ? 'color: var(--muted); text-decoration: line-through;' : ''}">₱${(c.price * c.qty).toFixed(2)}</span>
+                        ${isOutOfStock ? `<small style="color: #e5604d; font-weight: 800; font-size: 11px; display: block; margin-top: 2px;">Kulang/Ubos na stock</small>` : ''}
                     </div>
                     <div class="cart-card-qty" style="gap: 6px;">
-                        <button class="qty-circle-btn" style="width: 24px; height: 24px; font-size: 14px;" onclick="app.updateQty(${c.id}, ${c.variation ? `'${this.esc(c.variation)}'` : 'null'}, -1)">−</button>
-                        <input type="number" class="qty-input-sm" value="${c.qty}" min="1" max="${maxStock}" onchange="app.updateQtyInput(${c.id}, ${c.variation ? `'${this.esc(c.variation)}'` : 'null'}, this.value)">
-                        <button class="qty-circle-btn" style="width: 24px; height: 24px; font-size: 14px;" onclick="app.updateQty(${c.id}, ${c.variation ? `'${this.esc(c.variation)}'` : 'null'}, 1)">+</button>
+                        <button class="qty-circle-btn" style="width: 24px; height: 24px; font-size: 14px; ${isOutOfStock ? 'pointer-events:none; opacity:0.5;' : ''}" onclick="app.updateQty(${c.id}, ${c.variation ? `'${this.esc(c.variation)}'` : 'null'}, -1)">−</button>
+                        <input type="number" class="qty-input-sm" value="${c.qty}" min="1" max="${maxStock}" ${isOutOfStock ? 'disabled' : ''} onchange="app.updateQtyInput(${c.id}, ${c.variation ? `'${this.esc(c.variation)}'` : 'null'}, this.value)">
+                        <button class="qty-circle-btn" style="width: 24px; height: 24px; font-size: 14px; ${isOutOfStock ? 'pointer-events:none; opacity:0.5;' : ''}" onclick="app.updateQty(${c.id}, ${c.variation ? `'${this.esc(c.variation)}'` : 'null'}, 1)">+</button>
                         <button class="qty-circle-btn" style="width: 24px; height: 24px; color:#e5604d; border-color:rgba(229,96,77,0.3); margin-left:2px;" onclick="app.removeFromCart(${c.id}, ${c.variation ? `'${this.esc(c.variation)}'` : 'null'})" title="Alisin">
                             <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                         </button>
@@ -1784,32 +1874,42 @@ setupTrail(containerId, options = {}) {
         }
 
         summary.style.display = 'block';
+        // 🟢 Ensure out-of-stock items are deselected on the full page too
         let needsSave = false;
-        this.cart.forEach(c => { if (c.selected === undefined) { c.selected = true; needsSave = true; } });
+        this.cart.forEach(c => { 
+            if (c.selected === undefined || c.selected === null) { c.selected = true; needsSave = true; }
+            const p = this.products.find(x => x.id === c.id);
+            const isOutOfStock = !p || p.stock <= 0 || p.stock < c.qty;
+            if (isOutOfStock && c.selected) { c.selected = false; needsSave = true; }
+        });
         if (needsSave) this.saveCart();
 
         const allSelected = this.cart.every(c => c.selected);
         if (selectAll) selectAll.checked = allSelected;
 
         list.innerHTML = this.cart.map(c => {
-            const maxStock = this.products.find(x => x.id === c.id)?.stock || 9999;
+            const p = this.products.find(x => x.id === c.id);
+            const maxStock = p?.stock || 0;
+            const isOutOfStock = !p || p.stock <= 0 || p.stock < c.qty;
+
             return `
-            <div class="cart-page-item ${c.selected ? 'selected' : ''}">
-                <label class="cart-checkbox-wrap">
-                    <input type="checkbox" ${c.selected ? 'checked' : ''} onchange="app.toggleCartItem(${c.id}, ${c.variation ? `'${this.esc(c.variation)}'` : 'null'})">
+            <div class="cart-page-item ${c.selected ? 'selected' : ''}" style="${isOutOfStock ? 'border-color: #e5604d; background: rgba(229, 96, 77, 0.05);' : ''}">
+                <label class="cart-checkbox-wrap" style="${isOutOfStock ? 'pointer-events:none; opacity:0.5;' : ''}">
+                    <input type="checkbox" ${c.selected ? 'checked' : ''} ${isOutOfStock ? 'disabled' : ''} onchange="app.toggleCartItem(${c.id}, ${c.variation ? `'${this.esc(c.variation)}'` : 'null'})">
                     <span class="cart-checkbox-custom"></span>
                 </label>
-                <img src="${this.esc(c.image || '')}" class="cart-page-img" alt="${this.esc(c.name)}">
+                <img src="${this.esc(c.image || '')}" class="cart-page-img" alt="${this.esc(c.name)}" style="${isOutOfStock ? 'filter:grayscale(1);' : ''}">
                 <div class="cart-page-info">
                     <h4>${this.esc(c.name)}</h4>
                     ${c.variation ? `<p style="font-size:12px; font-weight:800; color:var(--brand); margin-bottom:4px;">${this.esc(c.variation)}</p>` : ''}
                     <p class="cart-page-price">₱${Number(c.price || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })} bawat isa</p>
                     <p class="cart-page-subtotal-inline" style="font-weight:800; color:var(--brand); font-size:15px; margin-top:4px;">₱${(Number(c.price || 0) * c.qty).toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
+                    ${isOutOfStock ? `<p style="color: #e5604d; font-weight: 800; font-size: 12px; margin-top: 4px;">⚠️ Kulang/Ubos na stock</p>` : ''}
                 </div>
                 <div class="cart-page-actions" style="display:flex; align-items:center; gap:8px; margin-left:auto;">
-                    <button class="qty-circle-btn" onclick="app.updateQty(${c.id}, ${c.variation ? `'${this.esc(c.variation)}'` : 'null'}, 1)" title="Dagdagan">+</button>
-                    <input type="number" class="qty-input-sm" style="font-size:16px; width: 40px;" value="${c.qty}" min="1" max="${maxStock}" onchange="app.updateQtyInput(${c.id}, ${c.variation ? `'${this.esc(c.variation)}'` : 'null'}, this.value)">
-                    <button class="qty-circle-btn" onclick="app.updateQty(${c.id}, ${c.variation ? `'${this.esc(c.variation)}'` : 'null'}, -1)" title="Bawasan">−</button>
+                    <button class="qty-circle-btn" onclick="app.updateQty(${c.id}, ${c.variation ? `'${this.esc(c.variation)}'` : 'null'}, 1)" title="Dagdagan" ${isOutOfStock ? 'disabled style="opacity:0.5;"' : ''}>+</button>
+                    <input type="number" class="qty-input-sm" style="font-size:16px; width: 40px;" value="${c.qty}" min="1" max="${maxStock}" ${isOutOfStock ? 'disabled' : ''} onchange="app.updateQtyInput(${c.id}, ${c.variation ? `'${this.esc(c.variation)}'` : 'null'}, this.value)">
+                    <button class="qty-circle-btn" onclick="app.updateQty(${c.id}, ${c.variation ? `'${this.esc(c.variation)}'` : 'null'}, -1)" title="Bawasan" ${isOutOfStock ? 'disabled style="opacity:0.5;"' : ''}>−</button>
                     <div style="width:1px; height:20px; background:var(--line); margin: 0 6px;"></div>
                     <button class="qty-circle-btn" onclick="app.removeFromCart(${c.id}, ${c.variation ? `'${this.esc(c.variation)}'` : 'null'})" style="color:#e5604d; border-color:rgba(229,96,77,0.3);" title="Alisin">
                         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
@@ -1822,7 +1922,13 @@ setupTrail(containerId, options = {}) {
     },
 
     removeFromCart(id, variation) { this.cart = this.cart.filter(x => !(x.id === id && (x.variation || '') === (variation || ''))); this.saveCart(); },
-    clearCart() { if(confirm('Sigurado ka bang i-clear ang buong cart?')) { this.cart = []; this.saveCart(); } },
+    clearCart() { 
+        this.showConfirm('Clear Cart', 'Sigurado ka bang i-clear ang buong cart?', () => {
+            this.cart = []; 
+            this.saveCart(); 
+            this.showToast('Na-clear na ang buong cart mo.');
+        }, 'Clear');
+    },
     toggleCartItem(id, variation) { 
         const item = this.cart.find(x => x.id === id && (x.variation || '') === (variation || '')); 
         if (item) { 
@@ -2035,10 +2141,19 @@ setupTrail(containerId, options = {}) {
         try {
             const res = await fetch('api.php?action=load');
             const data = await res.json();
-            this.user = data.user; this.products = data.products || []; this.orders = data.orders || []; this.fee = data.fee || this.fee;
+            this.user = data.user; 
+            this.products = data.products || []; 
+            this.orders = data.orders || []; 
+            this.fee = data.fee || this.fee;
             this.deliveryFeesRaw = data.deliveryFees || [];
             this.lagunaData = {};
-            this.notifications = data.notifications || [];
+            
+            const ndata = data.notifications || [];
+            const oldIds = new Set((this.notifications || []).map(n => Number(n.id)));
+            const newNotifs = ndata.filter(n => !oldIds.has(Number(n.id)) && !Number(n.is_read));
+
+            this.notifications = ndata;
+            
             this.deliveryFeesRaw.forEach(f => { if (!this.lagunaData[f.city]) this.lagunaData[f.city] = {}; this.lagunaData[f.city][f.barangay] = parseInt(f.fee); });
             this.updateFaqDeliveryInfo(); 
             this.renderMenu(); 
@@ -2046,6 +2161,14 @@ setupTrail(containerId, options = {}) {
             this.renderCart(); 
             this.renderCarousel();
             this.updateNotifBadge();
+
+            if (newNotifs.length > 0) {
+                const latest = newNotifs[0];
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = latest.message;
+                const textMsg = tempDiv.textContent || tempDiv.innerText || "";
+                this.showToast(`🔔 ${textMsg}`);
+            }
         } catch (e) { console.warn('Refresh failed', e); }
     },
 

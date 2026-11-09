@@ -443,7 +443,27 @@ th { background: var(--surface2); font-weight: 800; text-transform: uppercase; f
 .pb-msg { padding: 10px 14px; border-radius: 15px; max-width: 85%; background: var(--surface2); color: var(--ink); animation: fadeIn var(--dur-mid) var(--ease-smooth); }
 .pb-msg.user { background: var(--brand); color: white; align-self: flex-end; }
 .pb-input { padding: 10px; border-top: 1px solid var(--line); display: flex; gap: 8px; }
-#toast { position: fixed; bottom: 20px; left: 50%; transform: translate(-50%, 20px); background: var(--surface); border: 2px solid var(--brand); color: var(--ink); padding: 12px 24px; border-radius: 99px; font-weight: bold; z-index: 200; opacity: 0; visibility: hidden; box-shadow: var(--shadow); transition: all var(--dur-mid) var(--ease-smooth); }
+#toast { 
+    position: fixed; 
+    bottom: 30px; 
+    left: 50%; 
+    transform: translate(-50%, 20px); 
+    background: var(--surface); 
+    border: 2px solid var(--brand); 
+    color: var(--ink); 
+    padding: 12px 24px; 
+    border-radius: 20px; 
+    font-weight: bold; 
+    z-index: 9999; 
+    opacity: 0; 
+    visibility: hidden; 
+    box-shadow: var(--shadow); 
+    transition: all var(--dur-mid) var(--ease-smooth); 
+    max-width: 90vw;
+    width: max-content;
+    text-align: center;
+    line-height: 1.4;
+}
 #toast.show { opacity: 1; visibility: visible; transform: translate(-50%, 0); }
 .auth-screen {
     position: fixed;
