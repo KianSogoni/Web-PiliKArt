@@ -1423,12 +1423,7 @@
         <div class="footer-col">
             <h2 class="footer-logo">pilikart</h2>
             <p class="footer-tag">pumili ka + cart</p>
-            <ul class="footer-links">
-                <li><a href="#" onclick="app.scrollToMenu(); return false;">Menu</a></li>
-                <li><a href="#" onclick="app.go('orders'); return false;">My Orders</a></li>
-                <li><a href="#" onclick="app.go('recipes'); return false;">Recipe Box</a></li>
-                <li><a href="#" onclick="app.go('faq'); return false;">FAQ</a></li>
-            </ul>
+            <ul class="footer-links" id="footer-dynamic-links"></ul>
         </div>
         <div class="footer-col">
             <h3 class="footer-title">About Us</h3>
@@ -1440,10 +1435,10 @@
                 Apat na Tindahan
             </h3>
             <ul class="footer-links footer-dept-list">
-                <li><strong>PASO</strong> - pagkain — food essentials</li>
-                <li><strong>HABI</strong> - damit — clothing & fashion</li>
-                <li><strong>NIPA</strong> - tahanan — home essentials</li>
-                <li><strong>APOLLO</strong> - teknolohiya — technology</li>
+                <li><a href="#" onclick="app.filterFromFooter('paso'); return false;"><strong>PASO</strong> - pagkain — food essentials</a></li>
+                <li><a href="#" onclick="app.filterFromFooter('habi'); return false;"><strong>HABI</strong> - damit — clothing & fashion</a></li>
+                <li><a href="#" onclick="app.filterFromFooter('nipa'); return false;"><strong>NIPA</strong> - tahanan — home essentials</a></li>
+                <li><a href="#" onclick="app.filterFromFooter('apollo'); return false;"><strong>APOLLO</strong> - teknolohiya — technology</a></li>
             </ul>
         </div>
     </div>
@@ -1477,12 +1472,15 @@
                 <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </button>
         </div>
-            <div style="padding-bottom: 12px; margin-bottom: 12px; border-bottom: 1px dashed var(--line); display: flex; align-items: center;">
+            <div id="cart-sidebar-select-all-container" style="padding-bottom: 12px; margin-bottom: 12px; border-bottom: 1px dashed var(--line); display: flex; align-items: center; justify-content: space-between;">
                 <label class="cart-checkbox-wrap" style="margin: 0;">
                     <input type="checkbox" id="cart-sidebar-select-all" onchange="app.toggleAllCartItems(this.checked)">
                     <span class="cart-checkbox-custom" style="width: 20px; height: 20px;"></span>
                     <span class="cart-select-all-text" style="font-size: 13px;">Piliin Lahat</span>
                 </label>
+                <button class="btn btn-ghost" onclick="app.clearCart()" style="padding: 4px 10px; font-size: 11px; border-radius: 6px; border-color: var(--line); color: var(--muted); transition: all 0.2s;" onmouseover="this.style.color='#e5604d'; this.style.borderColor='#e5604d'" onmouseout="this.style.color='var(--muted)'; this.style.borderColor='var(--line)'">
+                    Clear Cart
+                </button>
             </div>
 
             <div id="cart-items" class="cart-items"></div>
@@ -2181,42 +2179,53 @@
 
 <!-- 🟢 NEW: Credits Modal -->
 <div id="credits-modal" class="modal hidden" onclick="if (event.target === this) app.closeModal('credits-modal')">
-    <div class="modal-content" style="max-width: 400px; padding: 32px; text-align: center;">
+    <div class="modal-content" style="max-width: 420px; padding: 32px; text-align: center;">
         <button class="modal-close-btn" onclick="app.closeModal('credits-modal')">✕</button>
         
-        <div style="font-size: 46px; margin-bottom: 10px;">🏆</div>
-        <h2 style="font-family: 'Baloo 2'; font-size: 26px; margin-bottom: 6px; color: var(--ink);">PiliKart Team</h2>
+        <!-- SVG Trophy Icon -->
+        <div style="display: flex; justify-content: center; margin-bottom: 12px; color: var(--amber);">
+            <svg viewBox="0 0 24 24" width="56" height="56" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path>
+                <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path>
+                <path d="M4 22h16"></path>
+                <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"></path>
+                <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"></path>
+                <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"></path>
+            </svg>
+        </div>
+
+        <h2 style="font-family: 'Baloo 2'; font-size: 26px; margin-bottom: 6px; color: var(--ink);">piliKArt Team</h2>
         <p style="color: var(--muted); font-size: 13px; font-weight: 600; margin-bottom: 24px; line-height: 1.5;">The brilliant minds behind this digital love letter to Filipino heritage.</p>
         
-        <div style="display: flex; flex-direction: column; gap: 12px; text-align: left;">
-            <!-- Person 1 -->
-            <div style="background: var(--surface2); padding: 14px 18px; border-radius: 14px; border: 1px solid var(--line);">
-                <b style="display: block; color: var(--ink); font-size: 15px;">Maria Clara Santos</b>
-                <span style="color: var(--brand); font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">Lead Full-Stack Developer</span>
+        <div style="display: flex; flex-direction: column; gap: 10px; text-align: left;">
+            <!-- Kian -->
+            <div style="background: var(--surface2); padding: 12px 16px; border-radius: 14px; border: 1px solid var(--line);">
+                <b style="display: block; color: var(--ink); font-size: 15px;">Kian Charli Sogoni</b>
+                <span style="color: var(--brand); font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; line-height: 1.4; display: block; margin-top: 2px;">Team Leader, Fullstack Developer, Web Designer, Quality Control</span>
             </div>
             
-            <!-- Person 2 -->
-            <div style="background: var(--surface2); padding: 14px 18px; border-radius: 14px; border: 1px solid var(--line);">
-                <b style="display: block; color: var(--ink); font-size: 15px;">Jose Rizal Jr.</b>
-                <span style="color: var(--leaf); font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">UI/UX Designer</span>
+            <!-- Bryan -->
+            <div style="background: var(--surface2); padding: 12px 16px; border-radius: 14px; border: 1px solid var(--line);">
+                <b style="display: block; color: var(--ink); font-size: 15px;">Bryan Joshua Flores</b>
+                <span style="color: var(--leaf); font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; line-height: 1.4; display: block; margin-top: 2px;">Fullstack Developer, Web Developer, Quality Assurance Tester</span>
             </div>
 
-            <!-- Person 3 -->
-            <div style="background: var(--surface2); padding: 14px 18px; border-radius: 14px; border: 1px solid var(--line);">
-                <b style="display: block; color: var(--ink); font-size: 15px;">Andres Bonifacio</b>
-                <span style="color: var(--wood); font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">Backend Engineer</span>
+            <!-- Marc -->
+            <div style="background: var(--surface2); padding: 12px 16px; border-radius: 14px; border: 1px solid var(--line);">
+                <b style="display: block; color: var(--ink); font-size: 15px;">Marc Joseph Arambulo</b>
+                <span style="color: var(--sand); font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; line-height: 1.4; display: block; margin-top: 2px;">Data Maintainer</span>
             </div>
 
-            <!-- Person 4 -->
-            <div style="background: var(--surface2); padding: 14px 18px; border-radius: 14px; border: 1px solid var(--line);">
-                <b style="display: block; color: var(--ink); font-size: 15px;">Gabriela Silang</b>
-                <span style="color: var(--amber); font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">Project Manager</span>
+            <!-- James -->
+            <div style="background: var(--surface2); padding: 12px 16px; border-radius: 14px; border: 1px solid var(--line);">
+                <b style="display: block; color: var(--ink); font-size: 15px;">James Carlo Ladra</b>
+                <span style="color: var(--sand); font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; line-height: 1.4; display: block; margin-top: 2px;">Data Maintainer</span>
             </div>
 
-            <!-- Person 5 -->
-            <div style="background: var(--surface2); padding: 14px 18px; border-radius: 14px; border: 1px solid var(--line);">
-                <b style="display: block; color: var(--ink); font-size: 15px;">Lapu-Lapu</b>
-                <span style="color: var(--sand); font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">QA Tester</span>
+            <!-- Christer -->
+            <div style="background: var(--surface2); padding: 12px 16px; border-radius: 14px; border: 1px solid var(--line);">
+                <b style="display: block; color: var(--ink); font-size: 15px;">Christer John Masangcay</b>
+                <span style="color: var(--sand); font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; line-height: 1.4; display: block; margin-top: 2px;">Data Maintainer</span>
             </div>
         </div>
         
