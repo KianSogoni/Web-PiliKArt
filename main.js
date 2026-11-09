@@ -14,6 +14,300 @@ const app = {
         
         document.getElementById('custom-confirm-modal').classList.remove('hidden');
     },
+    
+    botBrain: [
+        // ==================== GREETINGS ====================
+        { keys: ['hi', 'hello', 'hey', 'yo', 'sup', "what's up", "whats up", 'uy', 'psst'],
+          reply: "Uy, kumusta, suki! :) Ako si PiliBot. Ano ang maitutulong ko sa iyo ngayon? Pwede kang magtanong tungkol sa delivery, GCash, orders, o products!" },
+        { keys: ['kumusta', 'kamusta', 'musta', 'kumusta ka', 'kamusta ka'],
+          reply: "Mabuti naman ako, suki! <3 Salamat sa pagtanong. Ikaw, kumusta? Ano'ng hanap mo ngayon sa PiliKart?" },
+        { keys: ['magandang umaga', 'good morning', 'morning'],
+          reply: "Magandang umaga, suki! :) Simulan natin ang araw nang may ngiti. Kape o almusal ba ang hanap mo?" },
+        { keys: ['magandang tanghali', 'good noon', 'tanghali'],
+          reply: "Magandang tanghali, suki! :D Tanghalian na, kain muna tayo! May mga pagkain ba akong maitutulong sa iyo?" },
+        { keys: ['magandang hapon', 'good afternoon', 'hapon'],
+          reply: "Magandang hapon, suki! :) Mainit-init pa ba ang araw diyan? Tara, mag-ikot tayo sa menu!" },
+        { keys: ['magandang gabi', 'good evening', 'gabi'],
+          reply: "Magandang gabi, suki! <3 Pahinga ka na ba? Pwede mo namang i-browse ang mga paninda namin bago matulog." },
+        { keys: ['mabuhay'],
+          reply: "Mabuhay ka rin, suki! ^_^ Ipinagmamalaki namin ang gawang Pinoy. Tara, pumili ka na!" },
+        { keys: ['bye', 'goodbye', 'paalam', 'ingat ka', 'ingat'],
+          reply: "Paalam, suki! :) Ingat ka palagi diyan. Balik ka agad ha, andito lang kami palagi para sa iyo. <3" },
+
+        // ==================== GENERAL (20 intents) ====================
+        { keys: ['deliver', 'delivery', 'fee', 'shipping', 'ship', 'padala'],
+        reply: "Hello po, suki! :) Ang delivery fee namin ay depende sa iyong lokasyon. Pumunta ka lang sa checkout para makita ang eksaktong fee - walang hidden charges, promise!" },
+        { keys: ['gcash', 'bayad', 'payment', 'resibo', 'receipt'],
+        reply: "Oo naman po, suki! <3 Tumatanggap kami ng GCash. Pagkatapos magbayad, i-upload mo lang ang screenshot ng resibo sa checkout para ma-verify agad namin. Salamat sa tiwala!" },
+        { keys: ['track', 'tracking', 'saan na', 'status', 'nasaan', 'update order'],
+        reply: "Naiintindihan kita, suki! :) Gusto mo bang malaman kung nasaan na ang order mo? Pumunta lang sa <a href='#' onclick='app.go(\"orders\"); return false;' style='color:var(--brand);text-decoration:underline;'>Mga Order Ko</a> para masubaybayan ang biyahe ng iyong order. Sana malapit na siya!" },
+        { keys: ['budget', 'mahal', 'mura', 'afford', 'cheap', 'price range'],
+        reply: "Nice idea, suki! :) Gamitin ang Budget Mode sa itaas ng menu - ilagay mo lang ang maximum na presyo at awtomatikong itatago namin ang mga mamahaling item. Tipid na, saya pa!" },
+        { keys: ['cancel', 'cancellation', 'bawi', 'stop order'],
+        reply: "Naku, may bago ka bang isip, suki? :3 Kung gusto mong i-cancel ang order, mag-message agad sa aming support team. Depende sa status ng order kung pwede pa - kausapin mo lang kami!" },
+        { keys: ['refund', 'money back', 'ibalik pera', 'reimburse'],
+        reply: "Sorry sa abala, suki! :( Para sa refund concerns, makipag-ugnayan muna sa aming support team para ma-review namin ang request mo. Aasikasuhin namin nang maayos." },
+        { keys: ['store hours', 'opening hours', 'open', 'close', 'oras', 'schedule'],
+        reply: "Suki, para sa updated store hours, bisitahin mo ang aming <a href='#' onclick='app.go(\"faq\"); return false;' style='color:var(--brand);text-decoration:underline;'>FAQ page</a> o mag-message sa support team. Andito lang kami para sa iyo!" },
+        { keys: ['best seller', 'bestseller', 'popular', 'patok', 'recommended'],
+        reply: "Gusto mo ng mga paborito ng ibang suki? :) Bisitahin ang aming <a href='#' onclick='app.go(\"menu\"); return false;' style='color:var(--brand);text-decoration:underline;'>Menu</a> - hanapin ang may 'Suki's Choice' badge. Siguradong sulit!" },
+        { keys: ['menu', 'products', 'items', 'paninda', 'tinda', 'catalog'],
+        reply: "Ang daming pagpipilian, suki! :) Tingnan ang aming <a href='#' onclick='app.go(\"menu\"); return false;' style='color:var(--brand);text-decoration:underline;'>Product Menu</a> - may PASO, NIPA, HABI, at APOLLO, lahat gawang Pinoy!" },
+        { keys: ['available', 'availability', 'out of stock', 'sold out', 'stock', 'ubos'],
+        reply: "Good question, suki! :) Ang availability ay nagbabago depende sa stock. Bisitahin ang <a href='#' onclick='app.go(\"menu\"); return false;' style='color:var(--brand);text-decoration:underline;'>Menu</a> para makita ang available ngayon. May 'Ubos na' badge kung wala." },
+        { keys: ['discount', 'promo', 'promotion', 'voucher', 'sale', 'coupon'],
+        reply: "Suki! :D Abangan ang aming discounts at special promos. Tingnan ang available offers bago mag-checkout - baka may swertehin!" },
+        { keys: ['account', 'register', 'signup', 'sign up', 'login', 'log in'],
+        reply: "Welcome, suki! :) Pwede kang gumawa ng account o mag-log in para mas madaling ma-access ang iyong orders at updates. Tara, sign up na!" },
+        { keys: ['checkout', 'check out', 'place order', 'purchase', 'bumili'],
+        reply: "Ready ka na ba, suki? :) Review-in lang ang mga napili mo, tapos proceed to checkout. Konti na lang, matatanggap mo na!" },
+        { keys: ['address', 'location', 'delivery address', 'saan kayo'],
+        reply: "Suki, siguraduhin lang na tama ang delivery address mo sa checkout para iwas-problema. Kung may changes, i-update sa My Account. Salamat!" },
+        { keys: ['contact', 'support', 'customer service', 'help', 'tulong', 'agent'],
+        reply: "We're here for you, suki! :) Bisitahin ang aming <a href='#' onclick='app.go(\"faq\"); return false;' style='color:var(--brand);text-decoration:underline;'>FAQ page</a> para sa mga sagot. Kung kailangan ng tulong, mag-message lang sa support team." },
+        { keys: ['wrong item', 'incorrect item', 'maling item', 'damaged', 'sira', 'defective'],
+        reply: "Naku, pasensya na suki! :( Kung may maling o sira na item kang natanggap, mag-message agad sa amin para matulungan ka. Aayusin namin, promise." },
+        { keys: ['change order', 'edit order', 'modify order', 'palitan order'],
+        reply: "Suki, kung gusto mong baguhin ang order, mag-message agad sa support. Depende sa processing stage kung pwede pa - mas mabilis, mas mabuti!" },
+        { keys: ['bulk', 'wholesale', 'maramihan', 'large order'],
+        reply: "May okasyon, suki? :D Kung maramihan ang order, mag-message sa support team para sa special arrangements at possible discounts. Sulit!" },
+        { keys: ['allergy', 'allergic', 'ingredients', 'sangkap'],
+        reply: "Mahalaga ang kalusugan mo, suki! (!) Siguraduhing suriin ang ingredients sa product listing. Kung may tanong tungkol sa allergens, mag-message lang sa amin." },
+        { keys: ['thank you', 'thanks', 'salamat', 'thank u'],
+        reply: "Aww, you're welcome, suki! <3 Salamat din sa pagpili sa PiliKart. Happy shopping at ingat lagi!" },
+
+        // ==================== PASO FOOD ESSENTIALS (20 intents) ====================
+        { keys: ['paso', 'paso store', 'food essentials'],
+        reply: "Welcome sa PASO Food Essentials, suki! :) Dito ang mga paborito mong lutong-bahay at grocery essentials. Bisitahin ang <a href='#' onclick='app.go(\"menu\")'>Menu</a> para mag-explore!" },
+        { keys: ['rice', 'bigas', 'rice products'],
+        reply: "Naghahanap ka ng bigas, suki? :) Tingnan ang PASO section sa aming <a href='#' onclick='app.go(\"menu\")'>Menu</a> para sa mga available na bigas at rice products." },
+        { keys: ['snacks', 'chips', 'junk food'],
+        reply: "Craving ng snacks, suki? :P Bisitahin ang PASO section - puno ng chips, biscuits, at kung anu-ano pa sa aming <a href='#' onclick='app.go(\"menu\")'>Menu</a>!" },
+        { keys: ['biscuits', 'cookies', 'crackers'],
+        reply: "Gusto mo ng biscuits o cookies, suki? :) Hanapin ang PASO Food Essentials sa aming <a href='#' onclick='app.go(\"menu\")'>Menu</a> - for sure may paborito ka doon!" },
+        { keys: ['drinks', 'beverages', 'soft drinks'],
+        reply: "Uhaw ka na ba, suki? :) Bisitahin ang PASO section para sa soft drinks at beverages. Nasa <a href='#' onclick='app.go(\"menu\")'>Menu</a> lahat!" },
+        { keys: ['coffee', 'instant coffee', 'kape'],
+        reply: "Kapeng umaga, suki? :) Hanapin ang PASO Food Essentials section sa <a href='#' onclick='app.go(\"menu\")'>Menu</a> - may instant coffee at iba pa para sa iyo!" },
+        { keys: ['milk', 'powdered milk', 'condensed milk'],
+        reply: "Gatas para sa almusal, suki? :) Nasa PASO section ang lahat ng milk products - powdered, condensed, at iba pa. Bisitahin ang <a href='#' onclick='app.go(\"menu\")'>Menu</a>!" },
+        { keys: ['noodles', 'instant noodles', 'pancit canton'],
+        reply: "Gusto mo ng pancit canton, suki? :) Nasa PASO section ang mga noodles at instant meals. Tingnan ang <a href='#' onclick='app.go(\"menu\")'>Menu</a> para sa choices!" },
+        { keys: ['canned goods', 'canned food', 'sardines', 'tuna'],
+        reply: "Stock up sa canned goods, suki? :) Nasa PASO section ang sardinas, tuna, at iba pa. Bisitahin ang <a href='#' onclick='app.go(\"menu\")'>Menu</a>!" },
+        { keys: ['cooking oil', 'oil', 'mantika'],
+        reply: "Mantika para sa lutong-bahay, suki? :) Nasa PASO section ang cooking oil at iba pang essentials. Check ang <a href='#' onclick='app.go(\"menu\")'>Menu</a>!" },
+        { keys: ['sugar', 'asukal', 'sweetener'],
+        reply: "Asukal para sa kape o kakanin, suki? :) Nasa PASO section ang sugar at sweeteners. Tingnan ang <a href='#' onclick='app.go(\"menu\")'>Menu</a>!" },
+        { keys: ['salt', 'asin', 'seasoning'],
+        reply: "Asin at seasoning, suki? :) Nasa PASO section lahat - perfect para sa lutong-bahay. Bisitahin ang <a href='#' onclick='app.go(\"menu\")'>Menu</a>!" },
+        { keys: ['condiments', 'sauce', 'ketchup', 'soy sauce'],
+        reply: "Sarsa at condiments para sa luto, suki? :) Nasa PASO section ang ketchup, toyo, at iba pa. Check ang <a href='#' onclick='app.go(\"menu\")'>Menu</a>!" },
+        { keys: ['frozen food', 'frozen products', 'frozen'],
+        reply: "Frozen food, suki? :) Nasa PASO section ang mga frozen products - madali at masarap lutuin. Bisitahin ang <a href='#' onclick='app.go(\"menu\")'>Menu</a>!" },
+        { keys: ['bread', 'loaf bread', 'pandesal'],
+        reply: "Tinapay para sa almusal, suki? :) Nasa PASO section ang loaf bread at pandesal. Tingnan ang <a href='#' onclick='app.go(\"menu\")'>Menu</a>!" },
+        { keys: ['cooking ingredients', 'ingredients', 'pangluto'],
+        reply: "Magluluto ka, suki? :) Nasa PASO section lahat ng kailangan mo - from pangluto to seasoning. Check ang <a href='#' onclick='app.go(\"menu\")'>Menu</a>!" },
+        { keys: ['breakfast', 'breakfast food', 'morning food'],
+        reply: "Almusal ideas, suki? :) Nasa PASO section ang lahat ng breakfast essentials. Bisitahin ang <a href='#' onclick='app.go(\"menu\")'>Menu</a> para mag-plano!" },
+        { keys: ['food bundle', 'grocery bundle', 'food package'],
+        reply: "Gusto mo ng bundles, suki? :) May food at grocery bundles sa PASO section. Tingnan ang <a href='#' onclick='app.go(\"menu\")'>Menu</a> - mas tipid!" },
+        { keys: ['food expiration', 'expiry date', 'expiration date'],
+        reply: "Careful sa expiration, suki! :) Nakalagay ang info sa product packaging. Kung may specific item kang tanong, mag-message lang sa amin o bisitahin ang <a href='#' onclick='app.go(\"faq\")'>FAQ</a>." },
+        { keys: ['paso recommendation', 'recommend food', 'food suggestion'],
+        reply: "Ano'ng hanap mo, suki? :/ Sabihin mo lang kung anong klaseng pagkain, at tutulungan kita. Pwede mo ring i-explore ang PASO sa <a href='#' onclick='app.go(\"menu\")'>Menu</a>!" },
+
+        // ==================== APOLLO TECHNOLOGIES (20 intents) ====================
+        { keys: ['apollo', 'apollo store', 'technology store'],
+        reply: "Welcome sa APOLLO Technologies, suki! :) Dito ang mga gadgets at tech finds. Bisitahin ang <a href='#' onclick='app.go(\"menu\")'>Menu</a> para mag-explore!" },
+        { keys: ['smartphone', 'smartphones', 'mobile phone', 'cellphone'],
+        reply: "Naghahanap ka ng smartphone, suki? :) Tingnan ang APOLLO section sa <a href='#' onclick='app.go(\"menu\")'>Menu</a> para sa available models." },
+        { keys: ['laptop', 'notebook', 'portable computer'],
+        reply: "Laptop for work or school, suki? :) Nasa APOLLO section ang mga available options. Check ang <a href='#' onclick='app.go(\"menu\")'>Menu</a>!" },
+        { keys: ['tablet', 'ipad', 'android tablet'],
+        reply: "Tablet for entertainment, suki? :) Nasa APOLLO section ang mga tablet. Bisitahin ang <a href='#' onclick='app.go(\"menu\")'>Menu</a>!" },
+        { keys: ['headphones', 'earphones', 'headset'],
+        reply: "Gusto mo ng magandang tunog, suki? :) Nasa APOLLO section ang headphones, earphones, at headsets. Check ang <a href='#' onclick='app.go(\"menu\")'>Menu</a>!" },
+        { keys: ['charger', 'phone charger', 'charging cable'],
+        reply: "Charger o cable, suki? :) Nasa APOLLO section lahat ng charging needs mo. Bisitahin ang <a href='#' onclick='app.go(\"menu\")'>Menu</a>!" },
+        { keys: ['powerbank', 'power bank', 'portable charger'],
+        reply: "Para laging may karga, suki? :) Nasa APOLLO section ang powerbanks. Check ang <a href='#' onclick='app.go(\"menu\")'>Menu</a> para sa options!" },
+        { keys: ['keyboard', 'computer keyboard', 'mechanical keyboard'],
+        reply: "Keyboard for gaming or work, suki? :) Nasa APOLLO section ang mechanical keyboards at iba pa. Tingnan ang <a href='#' onclick='app.go(\"menu\")'>Menu</a>!" },
+        { keys: ['mouse', 'computer mouse', 'wireless mouse'],
+        reply: "Mouse para sa computer, suki? :) Nasa APOLLO section ang wireless at wired mice. Bisitahin ang <a href='#' onclick='app.go(\"menu\")'>Menu</a>!" },
+        { keys: ['speaker', 'bluetooth speaker', 'portable speaker'],
+        reply: "Speaker para sa music, suki? :) Nasa APOLLO section ang Bluetooth at portable speakers. Check ang <a href='#' onclick='app.go(\"menu\")'>Menu</a>!" },
+        { keys: ['smartwatch', 'smart watch', 'digital watch'],
+        reply: "Smartwatch para sa fitness, suki? :) Nasa APOLLO section ang mga smartwatches. Bisitahin ang <a href='#' onclick='app.go(\"menu\")'>Menu</a>!" },
+        { keys: ['phone case', 'cellphone case', 'phone cover'],
+        reply: "Phone case para sa proteksyon, suki? :) Nasa APOLLO section lahat ng cases at covers. Check ang <a href='#' onclick='app.go(\"menu\")'>Menu</a>!" },
+        { keys: ['screen protector', 'tempered glass', 'phone protector'],
+        reply: "Screen protector, suki? :) Nasa APOLLO section ang tempered glass at iba pa. Tingnan ang <a href='#' onclick='app.go(\"menu\")'>Menu</a>!" },
+        { keys: ['usb', 'flash drive', 'usb drive'],
+        reply: "USB flash drive, suki? :) Nasa APOLLO section ang mga storage devices. Bisitahin ang <a href='#' onclick='app.go(\"menu\")'>Menu</a>!" },
+        { keys: ['computer monitor', 'monitor', 'display screen'],
+        reply: "Monitor para sa computer, suki? :) Nasa APOLLO section ang mga display at monitors. Check ang <a href='#' onclick='app.go(\"menu\")'>Menu</a>!" },
+        { keys: ['gaming accessories', 'gaming gear', 'gaming equipment'],
+        reply: "Gaming gear, suki? :) Nasa APOLLO section ang gaming accessories at peripherals. Tingnan ang <a href='#' onclick='app.go(\"menu\")'>Menu</a>!" },
+        { keys: ['webcam', 'computer camera', 'camera'],
+        reply: "Webcam para sa meetings o streaming, suki? :) Nasa APOLLO section lahat ng cameras at webcams. Check ang <a href='#' onclick='app.go(\"menu\")'>Menu</a>!" },
+        { keys: ['printer', 'printing machine', 'ink printer'],
+        reply: "Printer para sa office o bahay, suki? :) Nasa APOLLO section ang mga printers. Bisitahin ang <a href='#' onclick='app.go(\"menu\")'>Menu</a>!" },
+        { keys: ['gadget warranty', 'device warranty', 'product warranty'],
+        reply: "Warranty details, suki? :) Nakalagay sa product info ang warranty. Kung may specific question, mag-message lang sa amin o bisitahin ang <a href='#' onclick='app.go(\"faq\")'>FAQ</a>!" },
+        { keys: ['apollo recommendation', 'recommend gadget', 'technology suggestion'],
+        reply: "Ano'ng device ang kailangan mo, suki? :/ Sabihin mo lang ang purpose, at tutulungan kita. Pwede mo ring i-explore ang APOLLO sa <a href='#' onclick='app.go(\"menu\")'>Menu</a>!" },
+
+        // ==================== HABI FASHION & COSMETICS (20 intents) ====================
+        { keys: ['habi', 'habi store', 'fashion store'],
+        reply: "Welcome sa HABI Fashion & Cosmetics, suki! :) Dito ang mga fashion at beauty finds. Bisitahin ang <a href='#' onclick='app.go(\"menu\")'>Menu</a> para mag-explore!" },
+        { keys: ['clothes', 'clothing', 'apparel'],
+        reply: "Naghahanap ka ng damit, suki? :) Nasa HABI section ang clothes at apparel. Check ang <a href='#' onclick='app.go(\"menu\")'>Menu</a>!" },
+        { keys: ['shirt', 'tshirt', 't-shirt'],
+        reply: "Bagong shirt, suki? :) Nasa HABI section ang mga designs. Bisitahin ang <a href='#' onclick='app.go(\"menu\")'>Menu</a> para pumili!" },
+        { keys: ['pants', 'trousers', 'jeans'],
+        reply: "Pants o jeans, suki? :) Nasa HABI section lahat ng bottoms. Check ang <a href='#' onclick='app.go(\"menu\")'>Menu</a>!" },
+        { keys: ['dress', 'dresses', 'gown'],
+        reply: "Dress para sa okasyon, suki? :) Nasa HABI section ang mga dresses at gowns. Tingnan ang <a href='#' onclick='app.go(\"menu\")'>Menu</a>!" },
+        { keys: ['jacket', 'hoodie', 'sweater'],
+        reply: "Jacket o hoodie, suki? :) Nasa HABI section lahat ng outerwear. Bisitahin ang <a href='#' onclick='app.go(\"menu\")'>Menu</a>!" },
+        { keys: ['shoes', 'footwear', 'sneakers'],
+        reply: "Bagong sapatos, suki? :) Nasa HABI section ang shoes at sneakers. Check ang <a href='#' onclick='app.go(\"menu\")'>Menu</a>!" },
+        { keys: ['sandals', 'slippers', 'flip flops'],
+        reply: "Sandals o slippers, suki? :) Nasa HABI section lahat ng footwear. Tingnan ang <a href='#' onclick='app.go(\"menu\")'>Menu</a>!" },
+        { keys: ['bags', 'handbag', 'backpack'],
+        reply: "Bag para sa everyday, suki? :) Nasa HABI section ang handbags at backpacks. Bisitahin ang <a href='#' onclick='app.go(\"menu\")'>Menu</a>!" },
+        { keys: ['clothing size', 'shirt size', 'dress size'],
+        reply: "Size guide, suki? :) Check ang size info sa product listing bago mag-order. Kung unsure ka pa rin, mag-message sa support!" },
+        { keys: ['makeup', 'cosmetics', 'beauty products'],
+        reply: "Beauty products, suki? :) Nasa HABI section ang makeup at cosmetics. Explore the <a href='#' onclick='app.go(\"menu\")'>Menu</a> para sa favorites!" },
+        { keys: ['lipstick', 'lip gloss', 'lip tint'],
+        reply: "Bagong lipstick, suki? :) Nasa HABI cosmetics section ang lipsticks at tints. Check ang <a href='#' onclick='app.go(\"menu\")'>Menu</a>!" },
+        { keys: ['foundation', 'concealer', 'face makeup'],
+        reply: "Foundation o concealer, suki? :) Nasa HABI section ang face makeup. Tingnan ang <a href='#' onclick='app.go(\"menu\")'>Menu</a>!" },
+        { keys: ['skincare', 'skin care', 'facial care'],
+        reply: "Skincare products, suki? :) Nasa HABI section ang skincare finds. Bisitahin ang <a href='#' onclick='app.go(\"menu\")'>Menu</a>!" },
+        { keys: ['sunscreen', 'sunblock', 'spf'],
+        reply: "Sunscreen para sa araw, suki? :) Nasa HABI section ang sunscreens at sunblocks. Check ang <a href='#' onclick='app.go(\"menu\")'>Menu</a>!" },
+        { keys: ['perfume', 'fragrance', 'body spray'],
+        reply: "Pabango, suki? :) Nasa HABI section ang perfumes at fragrances. Bisitahin ang <a href='#' onclick='app.go(\"menu\")'>Menu</a>!" },
+        { keys: ['jewelry', 'jewellery', 'accessories'],
+        reply: "Accessories para sa outfit, suki? :) Nasa HABI section ang jewelry at accessories. Tingnan ang <a href='#' onclick='app.go(\"menu\")'>Menu</a>!" },
+        { keys: ['hat', 'cap', 'headwear'],
+        reply: "Hat o cap, suki? :) Nasa HABI section lahat ng headwear. Check ang <a href='#' onclick='app.go(\"menu\")'>Menu</a>!" },
+        { keys: ['fashion style', 'outfit', 'ootd'],
+        reply: "OOTD ideas, suki? :) Explore the HABI fashion items sa <a href='#' onclick='app.go(\"menu\")'>Menu</a>. For sure may magugustuhan ka!" },
+        { keys: ['habi recommendation', 'recommend clothes', 'recommend makeup'],
+        reply: "Ano'ng hanap mo, suki? :/ Clothes, accessories, o cosmetics? Sabihin mo lang, o i-explore ang HABI sa <a href='#' onclick='app.go(\"menu\")'>Menu</a>!" },
+
+        // ==================== NIPA HOME ESSENTIALS (20 intents) ====================
+        { keys: ['nipa', 'nipa store', 'home essentials'],
+        reply: "Welcome sa NIPA Home Essentials, suki! :) Dito ang mga gamit para sa bahay. Bisitahin ang <a href='#' onclick='app.go(\"menu\")'>Menu</a> para mag-explore!" },
+        { keys: ['cleaning supplies', 'cleaning products', 'house cleaning'],
+        reply: "Cleaning supplies, suki? :) Nasa NIPA section ang lahat ng kailangan mo. Check ang <a href='#' onclick='app.go(\"menu\")'>Menu</a>!" },
+        { keys: ['detergent', 'laundry detergent', 'washing powder'],
+        reply: "Laundry detergent, suki? :) Nasa NIPA section ang detergents at washing essentials. Bisitahin ang <a href='#' onclick='app.go(\"menu\")'>Menu</a>!" },
+        { keys: ['dishwashing liquid', 'dish soap', 'dishwashing'],
+        reply: "Dishwashing liquid, suki? :) Nasa NIPA section lahat ng panghugas. Tingnan ang <a href='#' onclick='app.go(\"menu\")'>Menu</a>!" },
+        { keys: ['broom', 'walis', 'sweeping'],
+        reply: "Walis at cleaning tools, suki? :) Nasa NIPA section ang brooms at sweepers. Check ang <a href='#' onclick='app.go(\"menu\")'>Menu</a>!" },
+        { keys: ['mop', 'floor mop', 'floor cleaning'],
+        reply: "Mop para sa sahig, suki? :) Nasa NIPA section lahat ng floor cleaning essentials. Bisitahin ang <a href='#' onclick='app.go(\"menu\")'>Menu</a>!" },
+        { keys: ['kitchenware', 'kitchen tools', 'cooking utensils'],
+        reply: "Kitchen tools, suki? :) Nasa NIPA section lahat ng kitchenware. Tingnan ang <a href='#' onclick='app.go(\"menu\")'>Menu</a>!" },
+        { keys: ['plates', 'dishes', 'dinnerware'],
+        reply: "Plates at dishes, suki? :) Nasa NIPA section ang dinnerware. Check ang <a href='#' onclick='app.go(\"menu\")'>Menu</a>!" },
+        { keys: ['spoon', 'fork', 'cutlery'],
+        reply: "Spoons at forks, suki? :) Nasa NIPA section ang cutlery. Bisitahin ang <a href='#' onclick='app.go(\"menu\")'>Menu</a>!" },
+        { keys: ['food containers', 'storage containers', 'lunch box'],
+        reply: "Storage containers, suki? :) Nasa NIPA section ang food containers at organizers. Check ang <a href='#' onclick='app.go(\"menu\")'>Menu</a>!" },
+        { keys: ['water bottle', 'tumbler', 'drinking bottle'],
+        reply: "Water bottle o tumbler, suki? :) Nasa NIPA section lahat ng drinkware. Tingnan ang <a href='#' onclick='app.go(\"menu\")'>Menu</a>!" },
+        { keys: ['bedsheet', 'bed sheets', 'bedding'],
+        reply: "Bedsheets at bedding, suki? :) Nasa NIPA section ang mga bedding essentials. Bisitahin ang <a href='#' onclick='app.go(\"menu\")'>Menu</a>!" },
+        { keys: ['pillow', 'pillows', 'pillowcase'],
+        reply: "Pillows at pillowcases, suki? :) Nasa NIPA section lahat ng sleep essentials. Check ang <a href='#' onclick='app.go(\"menu\")'>Menu</a>!" },
+        { keys: ['towel', 'bath towel', 'bathroom towel'],
+        reply: "Towels, suki? :) Nasa NIPA section ang bath towels at iba pa. Tingnan ang <a href='#' onclick='app.go(\"menu\")'>Menu</a>!" },
+        { keys: ['bathroom supplies', 'bathroom accessories', 'bathroom items'],
+        reply: "Bathroom essentials, suki? :) Nasa NIPA section lahat ng kailangan mo. Bisitahin ang <a href='#' onclick='app.go(\"menu\")'>Menu</a>!" },
+        { keys: ['trash bin', 'garbage bin', 'dustbin'],
+        reply: "Trash bin, suki? :) Nasa NIPA section ang garbage bins. Check ang <a href='#' onclick='app.go(\"menu\")'>Menu</a>!" },
+        { keys: ['home decor', 'decoration', 'decorative items'],
+        reply: "Home decor, suki? :) Nasa NIPA section ang decorative items. Bisitahin ang <a href='#' onclick='app.go(\"menu\")'>Menu</a>!" },
+        { keys: ['lamp', 'light bulb', 'lighting'],
+        reply: "Lamp o lighting, suki? :) Nasa NIPA section ang lamps at bulbs. Tingnan ang <a href='#' onclick='app.go(\"menu\")'>Menu</a>!" },
+        { keys: ['storage organizer', 'organizer', 'storage box'],
+        reply: "Storage organizers, suki? :) Nasa NIPA section lahat ng pampatipid-space. Check ang <a href='#' onclick='app.go(\"menu\")'>Menu</a>!" },
+        { keys: ['nipa recommendation', 'recommend home products', 'household suggestion'],
+        reply: "Ano'ng kailangan mo sa bahay, suki? :/ Sabihin mo lang, o i-explore ang NIPA sa <a href='#' onclick='app.go(\"menu\")'>Menu</a>!" },
+
+        // ==================== NEW: 20 ADDITIONAL HELPFUL QUERIES ====================
+        { keys: ['how to order', 'paano mag-order', 'paano mag order', 'paano bumili', 'order process', 'steps to order'],
+        reply: "Easy lang, suki! :) (1) Piliin ang items sa <a href='#' onclick='app.go(\"menu\")'>Menu</a>, (2) i-add sa cart, (3) i-checkout at ilagay ang address, (4) pumili ng payment (COD o GCash), tapos (5) i-confirm. Matatanggap mo agad ang order mo!" },
+        { keys: ['gaano katagal', 'kailan darating', 'when will it arrive', 'how long', 'eta'],
+        reply: "Good question, suki! :) Ang exact na ETA ay depende sa iyong barangay at oras ng order. Usually same-day o next-day sa Laguna. Ipaalam namin ang detalye sa order confirmation mo!" },
+        { keys: ['minimum order', 'min order', 'minimum purchase'],
+        reply: "Walang minimum order, suki! :) Kahit isang item lang, ipapadala namin sa iyo. Ang delivery fee lang ang idadagdag depende sa lokasyon mo." },
+        { keys: ['reorder', 'order again', 'ulitin', 'repeat order', 'order ulit'],
+        reply: "Gusto mo i-order ulit, suki? :) Pumunta lang sa <a href='#' onclick='app.go(\"orders\")'>My Orders</a>, hanapin ang dating order, at i-add ulit ang mga items sa cart. Madali lang!" },
+        { keys: ['loyalty', 'suki points', 'points', 'suki card', 'reward program', 'rewards'],
+        reply: "Awww, suki for life! <3 Sa ngayon, wala pa kaming formal points program, pero pinaplano na. Abangan ang updates - may sorpresa kami soon!" },
+        { keys: ['gift wrap', 'giftwrapping', 'gift', 'regalo', 'present'],
+        reply: "Gusto mo ba ng gift wrap, suki? :) Mag-message lang sa support team bago mag-checkout - pwede kaming mag-arrange ng special packaging para sa regalo mo." },
+        { keys: ['eco-friendly', 'eco friendly', 'sustainable', 'plastic free', 'plastic-free', 'kalikasan', 'environment friendly'],
+        reply: "Kalikasan first, suki! <3 We try our best na maging eco-friendly. Kung may special packaging request ka (tulad ng no plastic), sabihin mo lang sa support team." },
+        { keys: ['facebook', 'instagram', 'tiktok', 'social media', 'follow us', 'fb page'],
+        reply: "Sumunod sa amin, suki! :) Hanapin ang PiliKart sa Facebook, Instagram, at TikTok. May promos, updates, at behind-the-scenes doon!" },
+        { keys: ['feedback', 'review', 'rating', 'reklamo', 'complaint', 'suggestion'],
+        reply: "Salamat sa pagmamalasakit, suki! :) Ipadala mo lang ang feedback, review, o suggestion sa support team. Malaking tulong para mapabuti ang serbisyo namin." },
+        { keys: ['weather', 'bagyo', 'typhoon', 'flood', 'umuulan', 'maulan', 'calamity'],
+        reply: "Kung may bagyo o malakas na ulan, suki, posibleng ma-delay ang delivery para sa safety ng rider at order mo. Salamat sa pag-unawa! :)" },
+        { keys: ['schedule order', 'advance order', 'pre-order', 'preorder', 'tomorrow', 'specific date', 'reserve'],
+        reply: "Pwede ka mag-advance order, suki! :) Mag-message lang sa support team para mag-schedule ng delivery sa specific na araw. Kami na ang bahala!" },
+        { keys: ['physical store', 'visit store', 'store visit', 'physical shop', 'puntahan ang store'],
+        reply: "Sa ngayon ay online kami, suki! :) Kung gusto mo talagang puntahan ang aming store, mag-message sa support para sa appointment at address." },
+        { keys: ['become seller', 'be a seller', 'partner', 'reseller', 'negosyo', 'magbenta', 'supplier'],
+        reply: "Interesado kang maging partner, suki? :) Mag-message sa aming support team para sa details kung paano mag-benta ng products mo sa PiliKart!" },
+        { keys: ['jobs', 'hiring', 'career', 'trabaho', 'vacancy', 'apply'],
+        reply: "Hiring kami paminsan-minsan, suki! :) Mag-message sa support o check ang aming social media page para sa job openings at vacancies." },
+        { keys: ['privacy', 'secure', 'security', 'trust', 'personal info', 'safe'],
+        reply: "Protektado ang info mo sa amin, suki! :) Hindi namin ibinabahagi ang iyong personal data. Use strong passwords at ingat sa pag-log-in." },
+        { keys: ['bayanihan', 'group order', 'split bill', 'split the bill', 'group cart', 'hati sa bayad'],
+        reply: "Ang Bayanihan Cart ay para sa group orders, suki! :) Gumawa ng cart, mag-share ng code sa kaibigan, at hati-hatiin ang bayad. Click 'Bayanihan Cart' sa menu para mag-umpisa!" },
+        { keys: ['protection fee', 'insurance', 'damage protection', 'protect my order'],
+        reply: "Ang Delivery Protection ay optional, suki! :) Php 50 per Php 200 ng subtotal - pang-copag may spill o damage sa delivery. Ikaw bahala kung gusto mong i-avail!" },
+        { keys: ['suggest product', 'request item', 'item not on menu', 'hindi ko makita', 'suggest item', 'request product'],
+        reply: "Gusto mong makita ang isang product, suki? :) I-message sa support team ang suggestion mo - pinapakinggan namin ang mga suki para mas mapabuti ang menu!" },
+        { keys: ['about pilikart', 'about you', 'kwento', 'who are you', 'sino kayo', 'about the store'],
+        reply: "Ang PiliKart ay isang digital love letter sa Filipino heritage, suki! <3 May apat na tindahan: PASO (pagkain), NIPA (bahay), HABI (fashion), APOLLO (tech). Basahin ang full story sa About page!" },
+        { keys: ['new arrival', 'bagong item', 'whats new', 'featured', 'fresh finds'],
+        reply: "May bago kami, suki! :) Tingnan ang <a href='#' onclick='app.go(\"menu\")'>Menu</a> - regular kaming nagdadagdag ng items. Hanapin ang may 'Bagong Item' badge o i-explore lahat!" },
+        
+        // ==================== EASTER EGGS & FUN ====================
+        { keys: ['jose rizal', 'rizal', 'pepe'],
+          reply: "Si Dr. Jose Rizal? Ang ultimate 'Suki's Choice' ng bayan! :) Kung buhay lang siya ngayon, for sure nagta-TikTok na siya para i-promote ang PiliKart." },
+        { keys: ['mahal kita', 'i love you', 'i love u', 'love you'],
+          reply: "Awww! <3 Kinikilig naman si PiliBot! Mahal ko rin kayong lahat ng mga suki ko. Mwah! ^_^" },
+        { keys: ['are you human', 'tao ka ba', 'robot ka ba', 'ai ka ba', 'bot ka ba', 'robot'],
+          reply: "100% Robot po ako, suki! :) Pero ang puso ko, pusong-Pinoy na marunong mag-malasakit. <3" },
+        { keys: ['hello world', 'programmer', 'coding', 'code'],
+          reply: "Spotted ang IT/Programmer, suki! :) Isang mainit na 'Hello World' mula kay PiliBot. Sana walang bugs ang araw mo ngayon!" },
+        { keys: ['adobo', 'best food', 'paborito'],
+          reply: "Adobo is life! :D Walang tatalo sa adobong manok na may toyo, suka, at bawang. Nasa PASO section namin 'yan, suki!" },
+        { keys: ['pumili ka', 'pumili ka + cart'],
+          reply: "Yan ang aming motto, suki! ^_^ 'Pumili ka + Cart.' Huwag kang mahiyang mag-add sa cart, walang bayad ang mag-window shopping!" },
+        { keys: ['pilipinas', 'philippines', 'pinoy', 'filipino'],
+          reply: "Proud to be Pinoy! <3 Ang PiliKart ay ginawa para suportahan ang lokal na negosyo at mga gawang Pinoy. Salamat sa pagmamahal sa sariling atin." },
+        { keys: ['tanginamo', 'gago', 'bobo', 'pangit', 'putangina', 'bad words', 'galit', 'inis'],
+          reply: "Naku po, suki! :( Baka magalit si Lola. Kalmado lang tayo, ha? Andito ako para tumulong, hindi para makipag-away. :)" },
+        { keys: ['god bless', 'dasal', 'pray', 'simbang gabi'],
+          reply: "God bless din sa iyo, suki! :) Ingat ka palagi at salamat sa pagtangkilik sa PiliKart. <3" },
+        { keys: ['secret', 'password', 'admin', 'hack'],
+          reply: "Sshhh! ;) Wala akong alam diyan, suki. Wala kang narinig sa akin. Basta mag-shopping ka na lang!" }
+    ],
 
     _refundOrderId: null,
     _refundProof: '',
@@ -2865,30 +3159,55 @@ const app = {
         document.getElementById('pilibot-window').classList.toggle('hidden');
     },
 
-    sendBotMsg(e) {
-        e.preventDefault();
-        const input = document.getElementById('pb-text');
-        const chat = document.getElementById('pb-chat');
-        if (!input.value) return;
+   sendBotMsg(e) {
+    e.preventDefault();
 
-        chat.innerHTML += `<div class="pb-msg user">${input.value}</div>`;
-        const q = input.value.toLowerCase();
-        input.value = '';
+    const input = document.getElementById('pb-text');
+    const chat  = document.getElementById('pb-chat');
+
+    if (!input.value.trim()) return;
+
+    const userMessage = input.value.trim();
+    chat.innerHTML += `<div class="pb-msg user">${this.esc(userMessage)}</div>`;
+
+    // 🟢 Normalize: lowercase + strip punctuation + collapse spaces + pad with spaces
+    const q = ' ' + userMessage
+        .toLowerCase()
+        .replace(/[^a-z0-9\s]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim() + ' ';
+
+    input.value = '';
+    chat.scrollTop = chat.scrollHeight;
+
+    setTimeout(() => {
+        let reply = "Hmm, di ko pa alam 'yan, suki! :) Subukan mong itanong ang delivery, GCash, orders, products, o Budget Mode.";
+
+        const match = this.botBrain.find(bot =>
+            bot.keys.some(k => {
+                const cleanKey = k.toLowerCase()
+                    .replace(/[^a-z0-9\s]/g, ' ')
+                    .replace(/\s+/g, ' ')
+                    .trim();
+                if (!cleanKey) return false;
+
+                // Multi-word phrases → match anywhere
+                if (cleanKey.includes(' ')) return q.includes(' ' + cleanKey);
+                // Single words → require word boundaries (surrounding spaces)
+                return q.includes(' ' + cleanKey + ' ');
+            })
+        );
+
+        if (match) {
+            reply = typeof match.reply === 'function'
+                ? match.reply.call(this)
+                : match.reply;
+        }
+
+        chat.innerHTML += `<div class="pb-msg">${reply}</div>`;
         chat.scrollTop = chat.scrollHeight;
-
-        setTimeout(() => {
-            let reply = "Hmm, di ko pa alam 'yan, suki! Subukan mong itanong ang delivery, GCash, o Budget Mode.";
-            if (q.includes('deliver')) reply = `Ang delivery fee ay depende sa iyong barangay. Pumunta sa checkout para makita ang exact fee.`;
-            if (q.includes('gcash')) reply = "Oo naman! Tumatanggap kami ng GCash — i-upload lang ang screenshot ng receipt mo sa checkout.";
-            if (q.includes('budget')) reply = "Gamitin ang Budget Mode sa itaas ng menu para itago ang mga mas mahal na items.";
-            if (q.includes('order')) reply = "Pumunta sa 'Mga Order Ko' para masubaybayan ang biyahe ng order mo.";
-            if (q.includes('paso') || q.includes('pagkain') || q.includes('food')) reply = "Ang PASO (pagkain) items ay pwede lang i-deliver sa loob ng Calamba, Laguna.";
-            if (q.includes('protect') || q.includes('spill') || q.includes('damage')) reply = "May 'Proteksyon sa spill/damage' checkbox sa checkout — ₱50 kada ₱200 ng subtotal mo. Pwede mong piliin o hindi.";
-
-            chat.innerHTML += `<div class="pb-msg">${reply}</div>`;
-            chat.scrollTop = chat.scrollHeight;
-        }, 600);
-    },
+    }, 600);
+},
 
         // ============================================================
     // BAYANIHAN CART
