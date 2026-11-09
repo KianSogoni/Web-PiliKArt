@@ -1518,6 +1518,10 @@
             <button class="cart-close-btn" onclick="app.toggleNotifications()" aria-label="Close">✕</button>
         </div>
         <div id="notifications-list" style="flex: 1; overflow-y: auto; padding: 16px;"></div>
+    
+        <div id="notif-show-all-container" class="hidden" style="padding: 16px; border-top: 1px solid var(--line); text-align: center; background: var(--surface); flex-shrink: 0;">
+            <button id="notif-toggle-btn" class="btn btn-ghost btn-block" onclick="app.toggleNotificationsView()">Show All Notifications</button>
+        </div>
     </div>
 </div>
  

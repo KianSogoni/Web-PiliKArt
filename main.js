@@ -143,7 +143,16 @@ const app = {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ order_id: this._refundOrderId, reason: reason, proof: this._refundProof })
             });
-            const data = await res.json();
+            
+            const text = await res.text();
+            let data;
+            try {
+                data = JSON.parse(text);
+            } catch (err) {
+                console.error("Server returned non-JSON response:", text);
+                return this.showToast('Server Error: Check console for details.');
+            }
+
             if (data.ok) {
                 this.closeModal('refund-modal');
                 this.showToast('Refund request submitted! Hintayin ang approval.');
@@ -152,7 +161,9 @@ const app = {
             } else {
                 this.showToast(data.error || 'Failed to submit refund.');
             }
-        } catch (e) { this.showToast('Connection error'); }
+        } catch (e) { 
+            this.showToast('Connection error. Please try again.'); 
+        }
     },
 
     async renderAdminUsers() {
@@ -401,18 +412,32 @@ const app = {
     toggleNotifications(force = false) {
         const d = document.getElementById('notifications-drawer');
         if (!d) return;
-        if (force) { d.classList.add('hidden'); return; }
+        if (force) { 
+            d.classList.add('hidden'); 
+            d.classList.remove('closing'); 
+            return; 
+        }
+        
         if (d.classList.contains('hidden')) {
-            d.classList.remove('hidden');
+            d.classList.remove('hidden', 'closing');
             this.renderNotifications();
-        } else {
-            d.classList.add('hidden');
+        } 
+        else {
+            d.classList.add('closing');
+            setTimeout(() => { 
+                d.classList.add('hidden'); 
+                d.classList.remove('closing'); 
+            }, 800);
         }
     },
 
     renderNotifications() {
         const list = document.getElementById('notifications-list');
-        if (!list) return;
+        const showAllContainer = document.getElementById('notif-show-all-container');
+        const toggleBtn = document.getElementById('notif-toggle-btn');
+        
+        if (!list || !showAllContainer || !toggleBtn) return;
+
         if (!this.notifications || this.notifications.length === 0) {
             list.innerHTML = `
                 <div class="empty-state" style="padding: 40px 16px;">
@@ -423,18 +448,31 @@ const app = {
                     <h3 style="font-size:18px;color:var(--ink);">Wala pang notifications</h3>
                     <p style="font-size:13px;color:var(--muted);">Mga update sa iyong account, order, at Bayanihan Cart ay dito lalabas.</p>
                 </div>`;
+            showAllContainer.classList.add('hidden');
             return;
         }
+
+        const limit = 10;
+        const displayNotifs = this.notifShowAll ? this.notifications : this.notifications.slice(0, limit);
+
+        if (this.notifications.length > limit) {
+            showAllContainer.classList.remove('hidden');
+            toggleBtn.textContent = this.notifShowAll ? 'Show Less' : 'Show All Notifications';
+        } else {
+            showAllContainer.classList.add('hidden');
+        }
+
         const iconFor = (msg) => {
             const m = (msg || '').toLowerCase();
-            if (m.includes('refund')) return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>';
+            if (m.includes('refund')) return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 20V4h6a5 5 0 0 1 0 10H7" /><path d="M4 8h10" /><path d="M4 12h10" /></svg>';
             if (m.includes('order') || m.includes('deliver') || m.includes('shipping')) return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>';
             if (m.includes('bayanihan') || m.includes('group') || m.includes('cart') || m.includes('join') || m.includes('invite')) return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>';
             if (m.includes('profile') || m.includes('password') || m.includes('account')) return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
             if (m.includes('product') || m.includes('item')) return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>';
             return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>';
         };
-        list.innerHTML = this.notifications.map(n => {
+
+        list.innerHTML = displayNotifs.map(n => {
             const unread = !Number(n.is_read);
             return `<div class="notif-item ${unread ? 'unread' : ''}" onclick="app.handleNotifClick(${n.id}, ${n.order_id || 0})">
                 <div class="notif-icon">${iconFor(n.message)}</div>
@@ -444,7 +482,13 @@ const app = {
                 </div>
             </div>`;
         }).join('');
+        
         this.markNotificationsRead();
+    },
+
+    toggleNotificationsView() {
+        this.notifShowAll = !this.notifShowAll;
+        this.renderNotifications();
     },
 
     relativeTime(str) {
@@ -521,6 +565,7 @@ const app = {
     editingProductId: null,
     protectionEnabled: false,
     bayanihan: { list: [], invites: [], current: null, activeGroupId: null },
+    notifShowAll: false,
 
     deptIcons: {
         paso: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10h16v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8z"/><path d="M2 10h20"/><path d="M8 6c0-2 1-3 2-3s2 1 2 3"/><path d="M14 6c0-2 1-3 2-3s2 1 2 3"/></svg>',
@@ -2867,8 +2912,10 @@ setupTrail(containerId, options = {}) {
         // Initialize Header Button Icon based on saved theme
         this.updateThemeButton();
     },
-
-    toggleBot() { document.getElementById('pilibot-window').classList.toggle('hidden'); },
+    
+    toggleBot() { 
+        document.getElementById('pilibot-window').classList.toggle('hidden'); 
+    },
 
     sendBotMsg(e) {
         e.preventDefault();
