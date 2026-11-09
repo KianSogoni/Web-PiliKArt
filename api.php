@@ -1238,52 +1238,54 @@ switch ($action) {
         out($g); 
 
     case 'request-refund':
-        $uid = (int)($_SESSION['user_id'] ?? 0);
-        if (!$uid) out(['error' => 'Not logged in'], 401);
-        
-        $oid = (int)($in['order_id'] ?? 0);
-        $reason = trim($in['reason'] ?? '');
-        $proof = (string)($in['proof'] ?? '');
+        try {
+            $uid = (int)($_SESSION['user_id'] ?? 0);
+            if (!$uid) out(['error' => 'Not logged in'], 401);
+            
+            $oid = (int)($in['order_id'] ?? 0);
+            $reason = trim($in['reason'] ?? '');
+            $proof = (string)($in['proof'] ?? '');
 
-        if (!$oid || !$reason) out(['error' => 'Kulang ang detalye ng refund.'], 400);
-        if (strlen($proof) < 50) out(['error' => 'Kailangang mag-upload ng litrato bilang patunay.'], 400);
+            if (!$oid || !$reason) out(['error' => 'Kulang ang detalye ng refund.'], 400);
+            if (strlen($proof) < 50) out(['error' => 'Kailangang mag-upload ng litrato bilang patunay.'], 400);
 
-        // Check if order exists, belongs to user, and is Delivered
-        $s = $pdo->prepare('SELECT status, refund_status FROM orders WHERE id=? AND user_id=?');
-        $s->execute([$oid, $uid]);
-        $order = $s->fetch();
+            $s = $pdo->prepare('SELECT status, refund_status, delivered_at, created_at FROM orders WHERE id=? AND user_id=?');
+            $s->execute([$oid, $uid]);
+            $order = $s->fetch();
 
-        if (!$order) out(['error' => 'Order not found.'], 404);
-        if ($order['status'] !== 'Delivered') out(['error' => 'Pwede lang mag-refund kapag Delivered na ang order.'], 400);
-        if ($order['refund_status'] !== 'none') out(['error' => 'May existing refund request na ang order na ito.'], 400);
+            if (!$order) out(['error' => 'Order not found.'], 404);
+            if ($order['status'] !== 'Delivered') out(['error' => 'Pwede lang mag-refund kapag Delivered na ang order.'], 400);
+            if ($order['refund_status'] !== 'none' && $order['refund_status'] !== null) out(['error' => 'May existing refund request na ang order na ito.'], 400);
 
-        $s = $pdo->prepare("
-            SELECT COUNT(*) FROM order_items oi 
-            INNER JOIN products p ON oi.product_id = p.id 
-            WHERE oi.order_id = ? AND p.category = 'paso'
-        ");
-        $s->execute([$oid]);
-        $hasPaso = (int)$s->fetchColumn() > 0;
+            $s = $pdo->prepare("
+                SELECT COUNT(*) FROM order_items oi 
+                INNER JOIN products p ON oi.product_id = p.id 
+                WHERE oi.order_id = ? AND p.category = 'paso'
+            ");
+            $s->execute([$oid]);
+            $hasPaso = (int)$s->fetchColumn() > 0;
 
+            $deliveryTime = $order['delivered_at'] ? strtotime($order['delivered_at']) : strtotime($order['created_at']);
+            if ($deliveryTime === false) $deliveryTime = time(); // Fallback
+            $hoursElapsed = (time() - $deliveryTime) / 3600;
 
-        $deliveryTime = $order['delivered_at'] ? strtotime($order['delivered_at']) : strtotime($order['created_at']);
-        $hoursElapsed = (time() - $deliveryTime) / 3600;
+            if ($hasPaso && $hoursElapsed > 24) {
+                out(['error' => 'Lumipas na ang 24-oras na refund window para sa PASO (pagkain) items.'], 400);
+            } elseif (!$hasPaso && $hoursElapsed > (24 * 7)) {
+                out(['error' => 'Lumipas na ang 7-araw na refund window para sa mga item na ito.'], 400);
+            }
 
-        if ($hasPaso && $hoursElapsed > 24) {
-            out(['error' => 'Lumipas na ang 24-oras na refund window para sa PASO (pagkain) items.'], 400);
-        } elseif (!$hasPaso && $hoursElapsed > (24 * 7)) {
-            out(['error' => 'Lumipas na ang 7-araw na refund window para sa mga item na ito.'], 400);
+            // Save the refund request (Using single quotes for SQL ENUM)
+            $pdo->prepare("UPDATE orders SET refund_status='requested', refund_reason=?, refund_proof=? WHERE id=?")
+                ->execute([$reason, $proof, $oid]);
+            
+            notifyAdmins($pdo, $oid, "Refund Request: May nag-request ng refund sa Order #$oid.");
+            notify($pdo, $uid, $oid, "Natanggap na namin ang refund request mo para sa Order #$oid. Hintayin ang approval ng admin.");
+
+            out(['ok' => true]);
+        } catch (Exception $e) {
+            out(['error' => 'Database Error: ' . $e->getMessage()], 500);
         }
-
-        // Save the refund request
-        $pdo->prepare('UPDATE orders SET refund_status="requested", refund_reason=?, refund_proof=? WHERE id=?')
-            ->execute([$reason, $proof, $oid]);
-        
-        // Notify Admin (Optional, but good practice)
-        notifyAdmins($pdo, $oid, "Refund Request: May nag-request ng refund sa Order #$oid.");
-        notify($pdo, $uid, $oid, "Natanggap na namin ang refund request mo para sa Order #$oid. Hintayin ang approval ng admin.");
-
-        out(['ok' => true]);
 
     case 'admin-handle-refund':
         $oid = (int)($in['order_id'] ?? 0);
