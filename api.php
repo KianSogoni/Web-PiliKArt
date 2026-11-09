@@ -217,7 +217,10 @@ switch ($action) {
             $hasPaso = false;
             foreach ($items as $it) {
                 $p = $prods[$it['id']] ?? null;
-                if (!$p || $p['sold_out'] || $p['stock'] < $it['qty']) out(['error' => "Kulang ang stock."], 400);
+                if (!$p || $p['sold_out'] || $p['stock'] < $it['qty']) {
+                    $itemName = $p ? $p['name'] : 'Item';
+                    out(['error' => "Kulang ang stock para sa $itemName. (Available: " . ($p['stock'] ?? 0) . ")"], 400);
+                }
                 if (strtolower($p['category']) === 'paso') $hasPaso = true;
                 
                 // 🟢 SECURE VARIATION PRICE CALCULATION
@@ -911,6 +914,16 @@ switch ($action) {
         $items = $s->fetchAll();
         if (!$items) out(['error' => 'Walang laman ang cart'], 400);
         
+        $hasPaso = false;
+        foreach ($items as $it) {
+            $p = $pdo->prepare('SELECT category FROM products WHERE id=?');
+            $p->execute([$it['product_id']]);
+            if (strtolower($p->fetchColumn()) === 'paso') { $hasPaso = true; break; }
+        }
+        if ($hasPaso && stripos($g['delivery_address'], 'Calamba') === false) {
+            out(['error' => 'Ang PASO (pagkain) items ay pwede lang i-deliver sa loob ng Calamba, Laguna. Palitan ang delivery address ng group cart.'], 400);
+        }
+
         $subtotal = 0; $pids = [];
         foreach ($items as $it) { $subtotal += $it['price'] * $it['qty']; $pids[] = $it['product_id']; }
         

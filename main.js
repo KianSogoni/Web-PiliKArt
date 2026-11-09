@@ -1411,6 +1411,89 @@ const app = {
 
     toggleProtection(checked) { this.protectionEnabled = checked; this.renderCheckoutSummary(); },
 
+    async attemptCheckout() {
+        if (!this.user) {
+            this.toggleCart(true);
+            this.go('checkout');
+            return;
+        }
+        
+        const selectedCart = this.cart.filter(c => c.selected);
+        
+        for (let c of selectedCart) {
+            const p = this.products.find(x => x.id === c.id);
+            if (!p || p.stock <= 0 || p.stock < c.qty) {
+                this.showToast(`Sorry suki, ubos na o kulang ang stock ng ${c.name}.`);
+                await this.refreshData(); 
+                this.checkCartStock();
+                return; 
+            }
+        }
+
+        const pasoItems = selectedCart.filter(c => (c.category || '').toLowerCase() === 'paso');
+        
+        if (pasoItems.length === 0) {
+            this.toggleCart(true);
+            this.go('checkout');
+            return;
+        }
+
+        let profileCity = '';
+        if (this.user.address) {
+            try {
+                const addr = JSON.parse(this.user.address);
+                profileCity = addr.city || '';
+            } catch(e) { profileCity = this.user.address; }
+        }
+
+        if (profileCity && profileCity.toLowerCase() !== 'calamba') {
+            // Populate the scrollable list of triggering PASO items
+            const listContainer = document.getElementById('paso-restriction-items');
+            if (listContainer) {
+                listContainer.innerHTML = pasoItems.map(c => `
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px dashed var(--line); last-child: border-bottom: none;">
+                        <div style="display: flex; gap: 12px; align-items: center;">
+                            <img src="${this.esc(c.image || '')}" style="width: 36px; height: 36px; border-radius: 8px; object-fit: cover; background: #fff;">
+                            <span style="font-size: 13px; font-weight: 800; color: var(--ink);">${this.esc(c.name)}</span>
+                        </div>
+                        <span style="font-size: 13px; font-weight: 800; color: var(--brand);">${c.qty}x</span>
+                    </div>
+                `).join('');
+            }
+            document.getElementById('paso-restriction-modal').classList.remove('hidden');
+        } else {
+            this.toggleCart(true);
+            this.go('checkout');
+        }
+    },
+
+    pasoEditLocation() {
+        this.closeModal('paso-restriction-modal');
+        this.toggleCart(true);
+        this.go('account');
+    },
+
+    pasoDeleteItems() {
+        this.closeModal('paso-restriction-modal');
+        this.cart = this.cart.filter(c => (c.category || '').toLowerCase() !== 'paso');
+        this.saveCart();
+        this.renderCart();
+        this.showToast('Inalis ang mga PASO items sa iyong cart.');
+        this.toggleCart(true);
+        this.go('checkout');
+    },
+
+    pasoConvertToBayanihan() {
+        this.closeModal('paso-restriction-modal');
+        this.promptBayanihanFromCart();
+    },
+
+    pasoUseBayanihan() {
+        this.closeModal('paso-restriction-modal');
+        this.toggleCart(true);
+        this.go('bayanihan');
+    },
+
     renderCheckoutSummary() {
         const el = document.getElementById('checkout-summary');
         if (!el) return;
@@ -1607,7 +1690,13 @@ const app = {
                 this.cart = this.cart.filter(c => !c.selected); this.saveCart();
                 this.gcashBase64 = ''; this.protectionEnabled = false;
                 this.resetCheckoutForm(); this.go('success'); this.refreshData();
-            } else { this.showToast(data.error || 'Hindi natuloy ang order. Subukan ulit, suki.'); }
+            } else { 
+                this.showToast(data.error || 'Hindi natuloy ang order. Subukan ulit, suki.'); 
+            }
+            if (data.error && (data.error.includes('stock') || data.error.includes('Kulang'))) {
+                await this.refreshData();
+                this.checkCartStock();
+            }
         } catch (err) { this.showToast('Walang koneksyon sa server. Subukan ulit mamaya.'); } 
         finally { this.orderBusy = false; btn.disabled = false; btn.classList.remove('loading'); btn.innerHTML = label; }
     },

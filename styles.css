@@ -759,3 +759,19 @@ html.theme-switching .auth-slider-bg, html.theme-switching .nd-toggle-pill, html
     -webkit-appearance: none;
     margin: 0;
 }
+
+.admin-fees-grid-custom {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+}
+
+@media (max-width: 1100px) {
+    .admin-fees-grid-custom { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 800px) {
+    .admin-fees-grid-custom { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 500px) {
+    .admin-fees-grid-custom { grid-template-columns: 1fr; }
+}
