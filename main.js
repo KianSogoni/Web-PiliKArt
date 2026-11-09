@@ -163,24 +163,111 @@ const app = {
         try {
             const res = await fetch('api.php?action=admin-get-users');
             const users = await res.json();
-            grid.innerHTML = users.map(u => `
+            
+            // Apply filters
+            const filteredUsers = users.filter(u => {
+                const query = this.adminUserFilter.search;
+                const matchSearch = u.name.toLowerCase().includes(query) || 
+                                    u.email.toLowerCase().includes(query) || 
+                                    (u.phone && u.phone.includes(query));
+                const matchRole = this.adminUserFilter.role === 'all' || u.role === this.adminUserFilter.role;
+                return matchSearch && matchRole;
+            });
+
+            if (filteredUsers.length === 0) {
+                grid.innerHTML = '<p style="text-align:center; color:var(--muted); grid-column: 1/-1; padding: 20px;">No users found matching your criteria.</p>';
+                return;
+            }
+
+            grid.innerHTML = filteredUsers.map(u => `
                 <div class="admin-inv-card" style="flex-direction: column; align-items: flex-start; gap: 8px;">
                     <div style="display:flex; justify-content:space-between; width:100%; align-items:center;">
                         <h4 style="font-size:16px;">${this.esc(u.name)}</h4>
-                        <span class="meta-chip stock-high" style="font-size: 11px;">${u.order_count} Order(s)</span>
+                        <span class="meta-chip ${u.role === 'admin' ? 'stock-low' : 'stock-high'}" style="font-size: 11px; font-weight:800; text-transform:uppercase;">${u.role}</span>
                     </div>
-                    <div style="font-size: 12px; color: var(--muted); font-weight: 600; line-height: 1.6;">
+                    <div style="font-size: 12px; color: var(--muted); font-weight: 600; line-height: 1.6; word-break: break-word;">
                         <div>📧 ${this.esc(u.email)}</div>
                         <div>📱 ${this.esc(u.phone || 'No phone')}</div>
                         <div>📍 ${this.esc(this.formatAddress(u.address) || 'No address')}</div>
                     </div>
-                    <div style="margin-top: 4px; display:flex; justify-content:space-between; width:100%;">
-                        <span style="font-size: 10px; color: var(--brand); font-weight: 800; text-transform: uppercase;">${u.role}</span>
-                        <span style="font-size: 10px; color: var(--muted);">${new Date(u.created_at).toLocaleDateString()}</span>
+                    <div style="margin-top: 8px; display:flex; justify-content:space-between; align-items:center; width:100%; border-top: 1px dashed var(--line); padding-top: 12px;">
+                        <span style="font-size: 11px; font-weight:800; color: var(--muted);">${u.order_count} Order(s)</span>
+                        ${u.id === this.user.id 
+                            ? '<span style="font-size: 11px; color: var(--muted); font-style: italic;">Current Session</span>' 
+                            : `<button class="btn btn-ghost" style="padding: 4px 12px; font-size: 11px; border-radius: 6px;" onclick='app.openRoleChangeModal(${u.id}, "${u.role}", "${this.esc(u.name)}")'>Change Role</button>`
+                        }
                     </div>
                 </div>
             `).join('');
-        } catch (e) { grid.innerHTML = '<p>Error loading users.</p>'; }
+        } catch (e) { 
+            grid.innerHTML = '<p>Error loading users.</p>'; 
+            console.error(e); 
+        }
+    },
+
+    filterAdminUsers() {
+        this.adminUserFilter.search = document.getElementById('admin-user-search').value.toLowerCase().trim();
+        this.adminUserFilter.role = document.getElementById('admin-user-role-filter').value;
+        this.renderAdminUsers();
+    },
+
+    openRoleChangeModal(userId, currentRole, userName) {
+        this._rcTargetId = userId;
+        document.getElementById('rc-user-name').textContent = userName;
+        document.getElementById('rc-new-role').value = currentRole;
+        
+        // Clear passwords
+        document.getElementById('rc-admin-pass').value = '';
+        document.getElementById('rc-confirm-pass').value = '';
+        
+        document.getElementById('role-change-modal').classList.remove('hidden');
+        document.getElementById('rc-admin-pass').focus();
+    },
+
+    async submitRoleChange() {
+        if (!this._rcTargetId) return;
+
+        const newRole = document.getElementById('rc-new-role').value;
+        const adminPass = document.getElementById('rc-admin-pass').value;
+        const confirmPass = document.getElementById('rc-confirm-pass').value;
+
+        // Client-side Validation
+        if (!adminPass) return this.showToast('Enter your password to verify.');
+        if (adminPass !== confirmPass) return this.showToast('Passwords do not match.');
+        
+        // Removed the 6-character limit check here
+
+        const btn = document.querySelector('#role-change-modal .btn-brand');
+        const ogText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = 'Verifying...';
+
+        try {
+            const res = await fetch('api.php?action=admin-update-user-role', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    user_id: this._rcTargetId,
+                    new_role: newRole,
+                    admin_password: adminPass,
+                    confirm_password: confirmPass
+                })
+            });
+            const data = await res.json();
+
+            if (data.ok) {
+                this.closeModal('role-change-modal');
+                this.showToast('User role updated successfully!');
+                await this.renderAdminUsers(); // Reload the grid
+            } else {
+                this.showToast(data.error || 'Failed to update role.');
+            }
+        } catch (e) {
+            this.showToast('Connection error. Please try again.');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = ogText;
+        }
     },
 
     _analyticsLimit: 5,
@@ -295,6 +382,101 @@ const app = {
             this._piliLeafTimer = setTimeout(() => { btn.classList.remove('is-leaf'); }, 1500);
         }
     },
+
+    /* ============================================================
+   NOTIFICATIONS
+   ============================================================ */
+    updateNotifBadge() {
+        const badge = document.getElementById('notif-badge');
+        if (!badge) return;
+        const unread = (this.notifications || []).filter(n => !Number(n.is_read)).length;
+        if (unread > 0) {
+            badge.textContent = unread > 99 ? '99+' : String(unread);
+            badge.classList.remove('hidden');
+        } else {
+            badge.classList.add('hidden');
+        }
+    },
+
+    toggleNotifications(force = false) {
+        const d = document.getElementById('notifications-drawer');
+        if (!d) return;
+        if (force) { d.classList.add('hidden'); return; }
+        if (d.classList.contains('hidden')) {
+            d.classList.remove('hidden');
+            this.renderNotifications();
+        } else {
+            d.classList.add('hidden');
+        }
+    },
+
+    renderNotifications() {
+        const list = document.getElementById('notifications-list');
+        if (!list) return;
+        if (!this.notifications || this.notifications.length === 0) {
+            list.innerHTML = `
+                <div class="empty-state" style="padding: 40px 16px;">
+                    <svg viewBox="0 0 24 24" style="width:64px;height:64px;stroke:var(--muted);fill:none;stroke-width:1.5;margin-bottom:8px;">
+                        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                        <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                    </svg>
+                    <h3 style="font-size:18px;color:var(--ink);">Wala pang notifications</h3>
+                    <p style="font-size:13px;color:var(--muted);">Mga update sa iyong account, order, at Bayanihan Cart ay dito lalabas.</p>
+                </div>`;
+            return;
+        }
+        const iconFor = (msg) => {
+            const m = (msg || '').toLowerCase();
+            if (m.includes('refund')) return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>';
+            if (m.includes('order') || m.includes('deliver') || m.includes('shipping')) return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>';
+            if (m.includes('bayanihan') || m.includes('group') || m.includes('cart') || m.includes('join') || m.includes('invite')) return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>';
+            if (m.includes('profile') || m.includes('password') || m.includes('account')) return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
+            if (m.includes('product') || m.includes('item')) return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>';
+            return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>';
+        };
+        list.innerHTML = this.notifications.map(n => {
+            const unread = !Number(n.is_read);
+            return `<div class="notif-item ${unread ? 'unread' : ''}" onclick="app.handleNotifClick(${n.id}, ${n.order_id || 0})">
+                <div class="notif-icon">${iconFor(n.message)}</div>
+                <div class="notif-content">
+                    <p>${this.esc(n.message)}</p>
+                    <div class="notif-time">${this.relativeTime(n.created_at)}</div>
+                </div>
+            </div>`;
+        }).join('');
+        this.markNotificationsRead();
+    },
+
+    relativeTime(str) {
+        if (!str) return '';
+        const d = new Date(String(str).replace(' ', 'T'));
+        if (isNaN(d.getTime())) return '';
+        const diff = Math.floor((Date.now() - d.getTime()) / 1000);
+        if (diff < 60) return 'Just now';
+        if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+        if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+        if (diff < 604800) return Math.floor(diff / 86400) + 'd ago';
+        return d.toLocaleDateString();
+    },
+
+    async markNotificationsRead() {
+        if (!this.notifications || !this.notifications.some(n => !Number(n.is_read))) return;
+        try {
+            await fetch('api.php?action=mark-read');
+            this.notifications.forEach(n => n.is_read = 1);
+            this.updateNotifBadge();
+        } catch (e) {}
+    },
+
+    handleNotifClick(id, orderId) {
+        this.toggleNotifications(true);
+        const n = this.notifications.find(x => Number(x.id) === Number(id));
+        if (!n) return;
+        const m = (n.message || '').toLowerCase();
+        if (m.includes('refund') || m.includes('order') || m.includes('deliver')) this.go('orders');
+        else if (m.includes('bayanihan') || m.includes('group') || m.includes('cart') || m.includes('invite')) this.go('bayanihan');
+        else if (m.includes('profile') || m.includes('password') || m.includes('account')) this.go('account');
+    },
     
     initLeavesAnimation() {
         const container = document.getElementById('leaves-container');
@@ -320,17 +502,21 @@ const app = {
     },
 
     user: null,
-    cart: (() => { try { const c = JSON.parse(localStorage.getItem('pk_cart') || '[]'); return c.map(item => ({ ...item, selected: item.selected !== undefined ? item.selected : true })); } catch(e) { return []; } })(),
+    cart: [],
     budget: null,
     products: [],
     orders: [],
+    notifications: [],
     fee: 0,
     feeSet: false,
     isSignUp: false,
     authBusy: false,
     gcashBase64: '',
     selectedCategory: 'all',
+    selectedTags: [],
+    availableTags: [],
     hoverTimeout: null,
+    adminUserFilter: { search: '', role: 'all' },
     adminOrderFilter: { search: '', status: 'all', dept: 'all', type: 'all' },
     editingProductId: null,
     protectionEnabled: false,
@@ -354,8 +540,21 @@ const app = {
             this.user = data.user;
             this.products = data.products || [];
             this.orders = data.orders || [];
+            this.notifications = data.notifications || [];
             this.fee = data.fee || 0;
             this.deliveryFeesRaw = data.deliveryFees || []; 
+
+            const cartKey = this.user ? `pk_cart_${this.user.id}` : 'pk_cart_guest';
+            try {
+                const savedCart = JSON.parse(localStorage.getItem(cartKey) || '[]');
+                // Map through to ensure old carts without 'selected' property still work
+                this.cart = savedCart.map(item => ({ 
+                    ...item, 
+                    selected: item.selected !== undefined ? item.selected : true 
+                }));
+            } catch(e) { 
+                this.cart = []; 
+            }
 
             this.lagunaData = {};
             this.deliveryFeesRaw.forEach(f => {
@@ -374,7 +573,10 @@ const app = {
                     }
                 } catch (e) { }
             }
-        } catch (e) { console.warn('Backend not connected or error:', e); }
+        } catch (e) { 
+            console.warn('Backend not connected or error:', e); 
+            this.cart = [];
+        }
 
         if (this.user) {
             if (this.user.role === 'admin') { this.go('admin'); this.renderAdmin(); }
@@ -383,12 +585,14 @@ const app = {
 
         this.renderCarousel();
         this.renderMenu();
-        this.renderCart();
+        this.initMenuFilters();
+        this.renderCart(); // Now renders the newly loaded user-specific cart
         this.checkTheme();
         this.updateNavDrawerAuthUI();
         this.sizeHeroVideo();
         this.initLeavesAnimation();
         this.checkCartStock();
+        this.updateNotifBadge();
         this.initLandingPage();
         this.initLandingInteractions();
         this.resetCarouselTimer();
@@ -416,6 +620,17 @@ const app = {
                     if (data.id) { this.bayanihan.current = data; this.renderGroupDetail(); }
                 } catch (e) {}
             }
+
+            try {
+                const nres = await fetch('api.php?action=get-notifications');
+                const ndata = await nres.json();
+                if (Array.isArray(ndata)) {
+                    this.notifications = ndata;
+                    this.updateNotifBadge();
+                    const drawer = document.getElementById('notifications-drawer');
+                    if (drawer && !drawer.classList.contains('hidden')) this.renderNotifications();
+                }
+            } catch (e) {}
         }, 10000);
     },
 
@@ -536,9 +751,16 @@ const app = {
     },
 
     go(view) {
+        const protectedViews = ['bayanihan', 'bayanihan-detail', 'account', 'orders'];
+        if (!this.user && protectedViews.includes(view)) {
+            this.showToast('Mag-sign in muna para ma-access ito, suki!');
+            this.openAuthModal('signin');
+            return;
+        }
+
         document.querySelectorAll('main > div').forEach(d => d.classList.add('hidden'));
         const target = document.getElementById('view-' + view);
-        const bare = (view === 'landing' || view === 'auth');
+        const bare = (view === 'landing');
         if (target) {
             target.classList.remove('hidden');
             if (!bare) { target.classList.remove('view-enter'); void target.offsetWidth; target.classList.add('view-enter'); }
@@ -615,8 +837,50 @@ const app = {
     navTo(view) { this.toggleNavDrawer(); this.go(view); },
     navToAccount() {
         this.toggleNavDrawer();
-        if (this.user) this.go('account');
-        else { this.go('auth'); this.setAuthMode('signup', false); }
+        if (this.user) {
+            this.go('account');
+        } else { 
+            this.showToast('Mag-sign in muna para ma-access ang account mo, suki!');
+            this.openAuthModal('signin'); 
+        }
+    },
+
+    populateAuthCities() {
+        const citySelect = document.getElementById('auth-city');
+        if (!citySelect) return;
+        citySelect.innerHTML = '<option value="" disabled selected>Pumili ng Lungsod</option>';
+        Object.keys(this.lagunaData).forEach(c => {
+            citySelect.innerHTML += `<option value="${c}">${c}</option>`;
+        });
+    },
+
+    updateAuthBrgyDropdown() {
+        const city = document.getElementById('auth-city').value;
+        const brgySelect = document.getElementById('auth-brgy');
+        if (!brgySelect) return;
+        brgySelect.innerHTML = '<option value="" disabled selected>Pumili ng Barangay</option>';
+        if (this.lagunaData[city]) {
+            Object.keys(this.lagunaData[city]).forEach(b => {
+                brgySelect.innerHTML += `<option value="${b}">${b}</option>`;
+            });
+        }
+    },
+
+    openAuthModal(mode = 'signin') {
+        const modal = document.getElementById('view-auth');
+        if (!modal) return;
+        modal.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+        this.setAuthMode(mode, false);
+        this.clearAuthError();
+        this.populateAuthCities();
+    },
+
+    closeAuthModal() {
+        const modal = document.getElementById('view-auth');
+        if (!modal) return;
+        modal.classList.add('hidden');
+        document.body.style.overflow = (this.currentView === 'landing') ? 'hidden' : 'auto';
     },
 
     updateNavDrawerAuthUI() {
@@ -656,6 +920,10 @@ const app = {
         clearTimeout(this._toastTimer);
         this._toastTimer = setTimeout(() => t.classList.remove('show'), 3600);
     },
+
+    showCredits() {
+        document.getElementById('credits-modal').classList.remove('hidden');
+    },
     
     initLandingPage() {
         const text = "Tuloy ka, suki! Dito, ang bawat pili ay may kasamang init ng tahanan.";
@@ -672,42 +940,53 @@ const app = {
             };
             setTimeout(typeWriter, 500);
         }
-        const landingScreen = document.getElementById('view-landing');
-        const glow = document.getElementById('landing-glow');
-        if (landingScreen && glow) {
-            landingScreen.addEventListener('mousemove', (e) => {
-                if (!landingScreen.classList.contains('hidden')) {
-                    const rect = landingScreen.getBoundingClientRect();
-                    glow.style.transform = `translate(${e.clientX - rect.left}px, ${e.clientY - rect.top}px)`;
-                }
-            });
-            landingScreen.addEventListener('mouseleave', () => { glow.style.transform = `translate(-50%, -50%)`; });
-        }
+        this.setupTrail('landing-glow', { particleClass: 'trail-amber' });
     },
 
     enterStore() {
-        const landing = document.getElementById('view-landing');
-        if (!landing) return;
-        landing.classList.add('is-entering');
-        setTimeout(() => { this.go('auth'); setTimeout(() => landing.classList.remove('is-entering'), 500); }, 800); 
-    },
-
-    initLandingInteractions() {
-        const landingScreen = document.getElementById('view-landing');
-        const glow = document.getElementById('landing-glow');
-        if (landingScreen && glow) {
-            landingScreen.addEventListener('mousemove', (e) => {
-                if (!landingScreen.classList.contains('hidden')) {
-                    const rect = landingScreen.getBoundingClientRect();
-                    glow.style.transform = `translate(${e.clientX - rect.left}px, ${e.clientY - rect.top}px)`;
-                }
-            });
+        if (this.user) {
+            this.go(this.user.role === 'admin' ? 'admin' : 'home');
+        } else {
+            this.openAuthModal('signin');
         }
     },
 
+initLandingInteractions() {
+    this.setupTrail('menu-cursor-glow', { particleClass: 'trail-brand' });
+},
+
+setupTrail(containerId, options = {}) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    const parent = container.parentElement;
+    if (!parent) return;
+
+    let lastSpawn = 0;
+    const spawnInterval = options.spawnInterval || 22;   // ~45 particles/sec
+    const lifetime      = options.lifetime      || 750;
+
+    parent.addEventListener('mousemove', (e) => {
+        if (parent.classList.contains('hidden')) return;
+        const now = performance.now();
+        if (now - lastSpawn < spawnInterval) return;
+        lastSpawn = now;
+
+        const rect = parent.getBoundingClientRect();
+        const particle = document.createElement('div');
+        particle.className = 'trail-particle ' + (options.particleClass || '');
+        particle.style.left = (e.clientX - rect.left) + 'px';
+        particle.style.top  = (e.clientY - rect.top)  + 'px';
+        container.appendChild(particle);
+
+        setTimeout(() => particle.remove(), lifetime);
+    });
+},
+
     handleAuth() {
-        if (this.user) fetch('api.php?action=logout').then(() => location.reload());
-        else { this.go('auth'); this.setAuthMode('signin', false); }
+        if (this.user) {  
+            fetch('api.php?action=logout').then(() => location.reload());
+        }
+        else { this.openAuthModal('signin'); }
     },
 
     setAuthMode(mode, animate = true) {
@@ -726,7 +1005,10 @@ const app = {
         $('auth-submit-label').textContent = next ? 'Gawa na!' : 'Pasok na!';
         $('auth-pass').setAttribute('autocomplete', next ? 'new-password' : 'current-password');
         this.clearAuthError();
-        $('auth-pass').value = ''; $('auth-name').value = ''; $('auth-email').value = '';
+        $('auth-confirm-pass').value = '';
+        $('auth-city').value = ''; 
+        $('auth-brgy').value = ''; 
+        $('auth-street').value = '';
         if ($('auth-pass').type === 'text') $('auth-pass').type = 'password';
 
         if (animate) {
@@ -746,7 +1028,14 @@ const app = {
         p.focus();
     },
 
-    continueAsGuest() { this.go('home'); this.showToast('Tuloy ka, bisita! Mag-ikot ka lang nang dahan-dahan.'); },
+    continueAsGuest() { 
+        this.closeAuthModal(); 
+        if (this.currentView === 'landing') {
+            this.go('home');
+        }
+        this.showToast('Tuloy ka, bisita! Mag-ikot ka lang nang dahan-dahan.'); 
+    },
+
     clearAuthError() {
         const err = document.getElementById('auth-error');
         if (err) { err.classList.remove('show'); err.textContent = ''; }
@@ -769,14 +1058,32 @@ const app = {
         const name = el('auth-name').value.trim();
         const email = el('auth-email').value.trim();
         const password = el('auth-pass').value;
+        
+        const confirmPassword = el('auth-confirm-pass').value;
+        const city = el('auth-city').value;
+        const brgy = el('auth-brgy').value;
+        const street = el('auth-street').value.trim();
 
         if (this.isSignUp && !name) return this.authFail('Ilagay ang buong pangalan mo.', 'auth-name');
         if (!/^\S+@\S+\.\S+$/.test(email)) return this.authFail('Mali ang email format.', 'auth-email');
         if (!password) return this.authFail('Ilagay ang password.', 'auth-pass');
         if (this.isSignUp && password.length < 6) return this.authFail('Password: hindi bababa sa 6 characters.', 'auth-pass');
+        
+        if (this.isSignUp && password !== confirmPassword) return this.authFail('Hindi nagtutugma ang password at confirm password.', 'auth-confirm-pass');
+        if (this.isSignUp && !city) return this.authFail('Pumili ng Lungsod.', 'auth-city');
+        if (this.isSignUp && !brgy) return this.authFail('Pumili ng Barangay.', 'auth-brgy');
+        if (this.isSignUp && !street) return this.authFail('Ilagay ang House no., Street, o Subd.', 'auth-street');
 
         const payload = { email, password };
-        if (this.isSignUp) payload.name = name; else payload.role = 'customer';
+        if (this.isSignUp) {
+            payload.name = name;
+            payload.confirm_password = confirmPassword;
+            payload.city = city;
+            payload.brgy = brgy;
+            payload.street = street;
+        } else {
+            payload.role = 'customer';
+        }
 
         this.authBusy = true;
         try {
@@ -785,6 +1092,7 @@ const app = {
             if (!res.ok || !data.ok) { this.authBusy = false; return this.authFail(data.error || 'Hindi makapasok. Subukan ulit.'); }
             await new Promise(r => setTimeout(r, 400));
             el('auth-form').reset();
+            this.closeAuthModal();
             this.showToast(this.isSignUp ? 'Maligayang pagdating sa PiliKart, suki!' : 'Welcome back, suki! Tuloy ka.');
             await this.init();
             this.authBusy = false;
@@ -892,26 +1200,64 @@ const app = {
         this.renderMenu();
     },
 
+    syncMaxPrice(source) {
+        const topMax = document.getElementById('budget-input');
+        const advMax = document.getElementById('filter-max-price');
+
+        if (source === 'top') {
+            advMax.value = topMax.value;
+        } else if (source === 'adv') {
+            topMax.value = advMax.value;
+        }
+        
+        this.renderMenu();
+    },
+
     renderMenu() {
         const qInput = document.getElementById('search-input');
-        const bInput = document.getElementById('budget-input');
-        if (!qInput || !bInput) return;
+        if (!qInput) return;
 
         const q = qInput.value.toLowerCase();
-        const budget = parseFloat(bInput.value) || Infinity;
+        
+        const maxBudget = parseFloat(document.getElementById('budget-input').value) || Infinity;
+        const minPrice = parseFloat(document.getElementById('filter-min-price').value) || 0;
+        const maxPrice = parseFloat(document.getElementById('filter-max-price').value) || Infinity;
+        const sortBy = document.getElementById('filter-sort').value;
+        const inStockOnly = document.getElementById('filter-in-stock').checked;
+        const bestSellerOnly = document.getElementById('filter-best-seller').checked;
 
         const categoryMeta = { paso: { label: 'PASO' }, nipa: { label: 'NIPA' }, habi: { label: 'HABI' }, apollo: { label: 'APOLLO' } };
-        const sig = this.selectedCategory + '|' + this.products.length;
+        const sig = this.selectedCategory + '|' + this.products.length + '|' + this.selectedTags.join(',');
         const animate = sig !== this._menuSig;
         this._menuSig = sig;
 
-        const html = this.products.filter(p => {
+        let filtered = this.products.filter(p => {
             const cat = p.category ? p.category.toLowerCase() : '';
+            const pTags = (p.tags || '').toLowerCase();
+            
             const matchCat = this.selectedCategory === 'all' || cat === this.selectedCategory.toLowerCase();
-            const matchQ = p.name.toLowerCase().includes(q) || (p.tags && p.tags.toLowerCase().includes(q));
-            const matchB = p.price <= budget;
-            return matchCat && matchQ && matchB;
-        }).map((p, idx) => {
+            const matchQ = p.name.toLowerCase().includes(q) || pTags.includes(q);
+            const matchBudget = p.price <= maxBudget;
+            
+            const matchMin = p.price >= minPrice;
+            const matchMax = p.price <= maxPrice;
+            const matchStock = inStockOnly ? p.stock > 0 : true;
+            const matchBestSeller = bestSellerOnly ? Number(p.best_seller) === 1 : true;
+            
+            const matchTags = this.selectedTags.length === 0 || this.selectedTags.every(tag => pTags.includes(tag.toLowerCase()));
+
+            return matchCat && matchQ && matchBudget && matchMin && matchMax && matchStock && matchBestSeller && matchTags;
+        });
+
+        if (sortBy === 'price-asc') {
+            filtered.sort((a, b) => a.price - b.price);
+        } else if (sortBy === 'price-desc') {
+            filtered.sort((a, b) => b.price - a.price);
+        } else if (sortBy === 'best-seller') {
+            filtered.sort((a, b) => Number(b.best_seller) - Number(a.best_seller));
+        }
+
+        const html = filtered.map((p, idx) => {
             const catKey = (p.category || 'paso').toLowerCase();
             const meta = categoryMeta[catKey] || { label: catKey.toUpperCase() };
             const icon = this.deptIcons[catKey] || '';
@@ -951,18 +1297,96 @@ const app = {
                             <span class="prod-price-label">Presyo</span>
                             <span class="prod-price-val">₱${formattedPrice}</span>
                         </div>
-                        <button class="btn btn-brand add-btn" onclick="app.addToCart(${p.id}, this)" ${out ? 'disabled' : ''}>${out ? 'Ubos na' : '+ Add'}</button>
+                        <button class="btn btn-brand add-btn" onclick="app.addToCart(${p.id}, this)" ${out ? 'disabled' : ''} style="display:flex; align-items:center; justify-content:center; gap:6px;">
+                            ${out ? 'Ubos na' : `
+                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="9" cy="21" r="1"></circle>
+                                    <circle cx="20" cy="21" r="1"></circle>
+                                    <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+                                </svg>
+                                Add
+                            `}
+                        </button>
                     </div>
                 </div>`;
         }).join('');
 
-        document.getElementById('product-grid').innerHTML = html || this.emptyState('search', 'Hmm, wala pa kaming nahanap', 'Subukan ang ibang salita o kategorya — baka nasa kabilang sulok lang ang hinahanap mo.');
+        document.getElementById('product-grid').innerHTML = html || this.emptyState('search', 'Hmm, wala pa kaming nahanap', 'Subukan ang ibang salita o bawasan ang mga filter.');
+    },
+
+    showAllTags: false,
+
+    initMenuFilters() {
+        const tagSet = new Set();
+        this.products.forEach(p => {
+            if (p.tags) {
+                p.tags.split(',').forEach(t => {
+                    const cleanTag = t.trim();
+                    if (cleanTag) tagSet.add(cleanTag);
+                });
+            }
+        });
+        this.availableTags = Array.from(tagSet).sort();
+        
+        const container = document.getElementById('filter-tags-container');
+        if (!container) return;
+
+        // Only show first 15 tags unless "Show All" is clicked
+        const tagsToShow = this.showAllTags ? this.availableTags : this.availableTags.slice(0, 15);
+
+        let html = tagsToShow.map(tag => {
+            const isActive = this.selectedTags.includes(tag);
+            return `<button class="filter-tag-btn ${isActive ? 'active' : ''}" onclick="app.toggleMenuTag('${this.esc(tag)}')">${this.esc(tag)}</button>`;
+        }).join('');
+
+        // Add the Show More/Less button
+        if (this.availableTags.length > 15) {
+            html += `<button class="btn btn-ghost" style="font-size: 11px; padding: 6px 16px; border-radius: 99px; margin-left: 8px;" onclick="app.showAllTags = !app.showAllTags; app.initMenuFilters();">
+                ${this.showAllTags ? 'Show Less' : `Show All ${this.availableTags.length} Tags`}
+            </button>`;
+        }
+
+        container.innerHTML = html;
+    },
+
+    toggleMenuTag(tag) {
+        if (this.selectedTags.includes(tag)) {
+            this.selectedTags = this.selectedTags.filter(t => t !== tag);
+        } else {
+            this.selectedTags.push(tag);
+        }
+        this.initMenuFilters(); 
+        this.renderMenu();      
+    },
+
+    clearMenuFilters() {
+        this.selectedTags = [];
+        document.getElementById('search-input').value = '';
+        document.getElementById('budget-input').value = '';
+        document.getElementById('filter-min-price').value = '';
+        document.getElementById('filter-max-price').value = ''; // 🟢 Added this
+        document.getElementById('filter-sort').value = 'default';
+        document.getElementById('filter-in-stock').checked = false;
+        document.getElementById('filter-best-seller').checked = false;
+        
+        this.selectedCategory = 'all';
+        document.querySelectorAll('.dept-pill').forEach(p => p.classList.remove('active'));
+        document.querySelector('.dept-pill').classList.add('active'); 
+        
+        this.initMenuFilters();
+        this.renderMenu();
     },
 
     pendingCartItem: null,
     pendingQty: 1,
 
     addToCart(id, btn) {
+        if (!this.user) {
+            this.showToast('Mag-sign in muna para makapag-add ng items, suki!');
+            this.openAuthModal('signin');
+            return; // Stop the function here so the modal doesn't open
+        }
+
         const p = this.products.find(x => x.id === id);
         if (!p || p.stock <= 0) return;
         this.pendingCartItem = p;
@@ -1104,7 +1528,7 @@ const app = {
         this.renderAddConfirmModal();
     },
 
-    confirmAddToCart() {
+    confirmAddToCart(isBuyNow = false) {
         if (!this.pendingCartItem) return;
         const p = this.pendingCartItem;
 
@@ -1117,6 +1541,11 @@ const app = {
         });
         const variationStr = selectedOptions.join(', ');
         const finalPrice = Number(p.price) + modifier; 
+
+        // 🟢 NEW: If buying now, deselect all other items in the cart
+        if (isBuyNow) {
+            this.cart.forEach(c => c.selected = false);
+        }
 
         const item = this.cart.find(x => x.id === p.id && (x.variation || '') === variationStr);
         
@@ -1135,6 +1564,11 @@ const app = {
         
         const varText = variationStr ? ` (${variationStr})` : '';
         this.showToast(`${p.name}${varText} (${this.pendingQty}x) — nasa basket mo na!`);
+
+        if (isBuyNow) {
+            this.toggleCart(true); // Ensure sidebar is closed
+            setTimeout(() => this.go('checkout'), 300); // Short delay so the toast shows first
+        }
     },
 
     closeAddModal() {
@@ -1154,7 +1588,14 @@ const app = {
         return `<div class="empty-state">${icons[kind] || ''}<h3 class="font-display">${title}</h3><p>${text}</p>${btnLabel ? `<button class="btn btn-brand" onclick="${btnAction}">${btnLabel}</button>` : ''}</div>`;
     },
 
-    saveCart() { localStorage.setItem('pk_cart', JSON.stringify(this.cart)); this.renderCart(); if (this.currentView === 'cart') this.renderCartPage(); },
+    saveCart() { 
+        const cartKey = this.user ? `pk_cart_${this.user.id}` : 'pk_cart_guest';
+        
+        localStorage.setItem(cartKey, JSON.stringify(this.cart)); 
+        
+        this.renderCart(); 
+        if (this.currentView === 'cart') this.renderCartPage(); 
+    },
 
     renderCart() {
         const count = this.cart.reduce((s, x) => s + x.qty, 0);
@@ -1218,7 +1659,7 @@ const app = {
     },
 
     async promptBayanihanFromCart() {
-        if (!this.user) { this.toggleCart(true); this.showToast('Mag-login muna para makagawa ng Bayanihan Cart.'); this.go('auth'); return; }
+        if (!this.user) { this.toggleCart(true); this.showToast('Mag-login muna para makagawa ng Bayanihan Cart.'); this.openAuthModal('signin'); return; }
         if (this.cart.length === 0) { this.toggleCart(true); this.go('bayanihan'); return; }
 
         await this.loadGroups();
@@ -1414,7 +1855,8 @@ const app = {
     async attemptCheckout() {
         if (!this.user) {
             this.toggleCart(true);
-            this.go('checkout');
+            this.showToast('Mag-sign in muna para makapag-checkout, suki!');
+            this.openAuthModal('signin');
             return;
         }
         
@@ -1596,8 +2038,14 @@ const app = {
             this.user = data.user; this.products = data.products || []; this.orders = data.orders || []; this.fee = data.fee || this.fee;
             this.deliveryFeesRaw = data.deliveryFees || [];
             this.lagunaData = {};
+            this.notifications = data.notifications || [];
             this.deliveryFeesRaw.forEach(f => { if (!this.lagunaData[f.city]) this.lagunaData[f.city] = {}; this.lagunaData[f.city][f.barangay] = parseInt(f.fee); });
-            this.updateFaqDeliveryInfo(); this.renderMenu(); this.renderCart(); this.renderCarousel();
+            this.updateFaqDeliveryInfo(); 
+            this.renderMenu(); 
+            this.initMenuFilters();
+            this.renderCart(); 
+            this.renderCarousel();
+            this.updateNotifBadge();
         } catch (e) { console.warn('Refresh failed', e); }
     },
 
@@ -1650,6 +2098,11 @@ const app = {
     },
 
     async submitOrder() {
+        if (!this.user) {
+            this.showToast('Mag-sign in muna para makapag-order, suki!');
+            this.openAuthModal('signin');
+            return;
+        }
         if (this.orderBusy) return;
         const selectedCart = this.cart.filter(c => c.selected);
         if (!selectedCart.length) return this.showToast('Walang napiling item, suki!');
@@ -1675,7 +2128,8 @@ const app = {
 
         const payload = {
             items: selectedCart.map(c => ({ id: c.id, qty: c.qty, variation: c.variation || '', price: c.price })),
-            name, phone: cleanPhone, address, payment, proof: this.gcashBase64, fee: this.fee, protection_fee: protectionFee
+            name, phone: cleanPhone, address, payment, proof: this.gcashBase64, fee: this.fee, 
+            protection_fee_enabled: this.protectionEnabled
         };
 
         const btn = document.getElementById('co-submit'); const label = btn.innerHTML;
@@ -1756,6 +2210,11 @@ const app = {
 
     renderOrders() {
         const list = document.getElementById('orders-list');
+        if (!this.user) { 
+            this.showToast('Mag-sign in muna para makita ang orders mo, suki!');
+            this.openAuthModal('signin');
+            return; 
+        }
         if (!this.user) { list.innerHTML = this.emptyState('login', 'Mag-login muna tayo, suki', 'Para makita ang mga order mo, mag-sign in sa iyong account.', 'Mag-sign in', 'app.handleAuth()'); return; }
 
         const displayOrders = this.user.role === 'admin' ? this.orders.filter(o => o.user_id === this.user.id) : this.orders;
@@ -1813,7 +2272,11 @@ const app = {
     },
 
     renderAccount() {
-        if (!this.user) { this.go('auth'); return; }
+        if (!this.user) { 
+            this.showToast('Mag-sign in muna para ma-access ang account mo, suki!');
+            this.openAuthModal('signin'); 
+            return; 
+        }
         document.getElementById('acc-name').value = this.user.name || '';
         document.getElementById('acc-email').value = this.user.email || '';
         document.getElementById('acc-phone').value = this.user.phone || '';
@@ -1938,7 +2401,25 @@ const app = {
                 ${o.refund_status === 'approved' ? `<div style="padding:8px; background:rgba(63,122,69,0.1); color:var(--leaf); border-radius:8px; font-size:11px; font-weight:800; text-align:center;">✓ Refund Approved</div>` : ''}
                 ${o.refund_status === 'rejected' ? `<div style="padding:8px; background:rgba(229,96,77,0.1); color:#e5604d; border-radius:8px; font-size:11px; font-weight:800; text-align:center;">✕ Refund Rejected</div>` : ''}
                 <div class="admin-order-footer"><div class="admin-order-total"><span>Total:</span><b>${this.money(o.total)}</b>${(o.protection_fee && o.protection_fee > 0) ? `<small style="display:block; font-size:10px; color:var(--muted); font-weight:700;">incl. ${this.money(o.protection_fee)} protection</small>` : ''}</div><div class="admin-order-payment">${o.payment === 'gcash' ? (o.payment_proof ? `<button class="btn btn-ghost" style="padding:4px 8px; font-size:11px;" onclick="app.viewProof('${o.payment_proof}')">View GCash Proof</button>` : '<span class="pay-badge" style="background:rgba(47,140,255,0.15); color:#2f8cff;">GCash</span>') : '<span class="pay-badge">COD</span>'}</div></div>
-                <div class="admin-order-actions"><select class="input" style="padding:8px; font-size:12px; flex:1;" onchange="app.updateOrderStatus(${o.id}, this.value)"><option ${o.status === 'Pending' ? 'selected' : ''}>Pending</option><option ${o.status === 'Shipping' ? 'selected' : ''}>Shipping</option><option ${o.status === 'Out for Delivery' ? 'selected' : ''}>Out for Delivery</option><option ${o.status === 'Delivered' ? 'selected' : ''}>Delivered</option></select><button class="btn btn-danger" style="padding:8px 12px; font-size:12px;" onclick="app.deleteOrder(${o.id})">Delete</button></div>
+                <div class="admin-order-actions" style="position: relative;">
+                    <div style="flex: 1; position: relative;">
+                        <div class="input" style="padding:8px; font-size:12px; cursor:pointer; display:flex; justify-content:space-between; align-items:center; background-color: var(--surface); color: var(--ink);" onclick="app.toggleStatusDropdown(event, ${o.id})">
+                            <span>${this.esc(o.status)}</span>
+                            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                        </div>
+                        <div class="status-dropdown-menu hidden" id="status-dropdown-${o.id}" style="position:absolute; bottom: 100%; left:0; right:0; background:var(--surface); border:1px solid var(--line); border-radius:8px; margin-bottom:4px; z-index:100; box-shadow:var(--shadow); overflow:hidden;">
+                            ${['Pending', 'Shipping', 'Out for Delivery', 'Delivered'].map(st => `
+                                <div style="padding:10px; font-size:12px; cursor:pointer; color:var(--ink); border-bottom: 1px solid var(--line); ${o.status === st ? 'background:var(--surface2); font-weight:800;' : ''}" 
+                                     onclick="app.selectOrderStatus(${o.id}, '${st}')" 
+                                     onmouseover="this.style.background='var(--surface2)'" 
+                                     onmouseout="this.style.background='${o.status === st ? 'var(--surface2)' : 'transparent'}'">
+                                    ${st}
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    <button class="btn btn-danger" style="padding:8px 12px; font-size:12px;" onclick="app.deleteOrder(${o.id})">Delete</button>
+                </div>
             </div>`;
         }).join('') || '<div class="empty-state"><h3>No orders found</h3><p>Try adjusting your search or filter.</p></div>';
     },
@@ -2118,9 +2599,44 @@ const app = {
     viewProof(src) { document.getElementById('proof-img').src = src; document.getElementById('proof-modal').classList.remove('hidden'); },
     
     async updateOrderStatus(id, status) {
-        await fetch('api.php?action=admin-update-order', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ order_id: id, status }) });
-        this.showToast('Status updated');
+        try {
+            const res = await fetch('api.php?action=admin-update-order', { 
+                method: 'POST', 
+                headers: {'Content-Type': 'application/json'}, 
+                body: JSON.stringify({ order_id: id, status }) 
+            });
+            const data = await res.json();
+            
+            if (data.ok) {
+                this.showToast(`Status updated to ${status}`);
+            } else {
+                this.showToast(data.error || 'Failed to update status');
+            }
+        } catch (e) {
+            this.showToast('Connection error while updating status');
+        }
+        
+        // Always reload data to ensure UI reflects the actual database state
         await this.reloadAdminData();
+    },
+
+    toggleStatusDropdown(e, id) {
+        e.stopPropagation();
+        const menu = document.getElementById(`status-dropdown-${id}`);
+        if (!menu) return;
+        const isHidden = menu.classList.contains('hidden');
+        
+        // Close all other dropdowns
+        document.querySelectorAll('.status-dropdown-menu').forEach(m => m.classList.add('hidden'));
+        
+        if (isHidden) menu.classList.remove('hidden');
+    },
+
+    selectOrderStatus(id, status) {
+        // Close all dropdowns
+        document.querySelectorAll('.status-dropdown-menu').forEach(m => m.classList.add('hidden'));
+        // Trigger the update
+        this.updateOrderStatus(id, status);
     },
 
     async deleteOrder(id) {
@@ -2177,16 +2693,56 @@ const app = {
         const next = html.getAttribute('data-theme') === 'sunset' ? 'day' : 'sunset';
         html.classList.add('theme-switching'); void html.offsetWidth; 
         html.setAttribute('data-theme', next); localStorage.setItem('pk_theme', next);
+        
+        // Update Nav Drawer toggle pill
         const pillWrap = document.getElementById('nd-theme-pill')?.parentElement;
         if (pillWrap) pillWrap.classList.toggle('is-sunset', next === 'sunset');
-        clearTimeout(this._themeTimeout); this._themeTimeout = setTimeout(() => { html.classList.remove('theme-switching'); }, 800); 
+        
+        // Update Header Button Icon
+        this.updateThemeButton();
+
+        clearTimeout(this._themeTimeout); 
+        this._themeTimeout = setTimeout(() => { html.classList.remove('theme-switching'); }, 800); 
+    },
+
+    setTheme(theme) {
+        const html = document.documentElement;
+        if (html.getAttribute('data-theme') === theme) return;
+        html.classList.add('theme-switching');
+        void html.offsetWidth;
+        html.setAttribute('data-theme', theme);
+        localStorage.setItem('pk_theme', theme);
+        const pillWrap = document.getElementById('nd-theme-pill')?.parentElement;
+        if (pillWrap) pillWrap.classList.toggle('is-sunset', theme === 'sunset');
+        this.updateThemeButtons();
+        clearTimeout(this._themeTimeout);
+        this._themeTimeout = setTimeout(() => html.classList.remove('theme-switching'), 800);
+    },
+
+    updateThemeButton() {
+        const theme = document.documentElement.getAttribute('data-theme') || 'day';
+        const sunIcon = document.getElementById('theme-icon-sun');
+        const sunsetIcon = document.getElementById('theme-icon-sunset');
+        if (sunIcon && sunsetIcon) {
+            if (theme === 'sunset') {
+                sunIcon.style.display = 'none';
+                sunsetIcon.style.display = 'block';
+            } else {
+                sunIcon.style.display = 'block';
+                sunsetIcon.style.display = 'none';
+            }
+        }
     },
 
     checkTheme() {
         const saved = localStorage.getItem('pk_theme') || 'day';
         document.documentElement.setAttribute('data-theme', saved);
+        
         const pillWrap = document.getElementById('nd-theme-pill')?.parentElement;
         if (pillWrap) pillWrap.classList.toggle('is-sunset', saved === 'sunset');
+        
+        // Initialize Header Button Icon based on saved theme
+        this.updateThemeButton();
     },
 
     toggleBot() { document.getElementById('pilibot-window').classList.toggle('hidden'); },
@@ -2274,8 +2830,13 @@ const app = {
             else this.showToast(data.error || 'Failed');
         } catch (e) { this.showToast('Connection error'); }
     },
+
     async renderBayanihan() {
-        if (!this.user) { this.go('auth'); return; }
+        if (!this.user) { 
+            this.showToast('Mag-sign in muna para makagawa ng Bayanihan Cart, suki!');
+            this.openAuthModal('signin'); 
+            return; 
+        }
         await this.loadGroups();
         const invEl = document.getElementById('bayanihan-invites');
         if (this.bayanihan.invites && this.bayanihan.invites.length) {
@@ -2737,15 +3298,31 @@ const app = {
         const grid = document.getElementById('admin-groups-grid'); if (!grid) return;
         grid.innerHTML = '<p style="text-align:center; color:var(--muted); padding:20px;">Loading...</p>';
         try {
-            const res = await fetch('api.php?action=admin-list-groups'); const groups = await res.json();
-            const filter = (document.getElementById('admin-group-status')?.value) || 'all'; const filtered = filter === 'all' ? groups : groups.filter(g => g.status === filter);
-            if (!filtered.length) { grid.innerHTML = '<div class="empty-state"><h3>Walang Bayanihan Cart</h3><p>Wala pang gumawa ng group cart.</p></div>'; return; }
+            const res = await fetch('api.php?action=admin-list-groups'); 
+            const groups = await res.json();
+
+            if (groups.error) {
+                grid.innerHTML = `<p style="text-align:center; color:#e5604d; padding:20px; font-weight:800;">Error: ${groups.error}</p>`;
+                return;
+            }
+
+            const filter = (document.getElementById('admin-group-status')?.value) || 'all'; 
+            const filtered = filter === 'all' ? groups : groups.filter(g => g.status === filter);
+            
+            if (!filtered.length) { 
+                grid.innerHTML = '<div class="empty-state"><h3>Walang Bayanihan Cart</h3><p>Wala pang gumawa ng group cart.</p></div>'; 
+                return; 
+            }
+            
             grid.innerHTML = filtered.map(g => {
                 const statusClass = g.status === 'open' ? 'status-pending' : g.status === 'ordered' ? 'status-delivered' : g.status === 'cancelled' ? 'status-out' : 'status-shipping';
                 const hasGcash = parseInt(g.gcash_paid_count) > 0;
                 return `<div class="admin-order-card" style="cursor:pointer;" onclick="app.viewAdminGroup(${g.id})"><div class="admin-order-header"><div><h4>${this.esc(g.name)}</h4><span class="admin-order-date">Host: ${this.esc(g.host_name)}</span></div><span class="order-status ${statusClass}">${this.esc(g.status)}</span></div><div style="padding:12px; background:var(--surface2); border-radius:12px; text-align:center;"><div style="font-size:10px; font-weight:800; color:var(--muted); text-transform:uppercase;">Code</div><div style="font-size:22px; font-weight:900; letter-spacing:4px; color:var(--brand); font-family:'Baloo 2';">${this.esc(g.code)}</div></div><div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; font-size:12px; font-weight:700;"><div>👥 Members: <b>${g.member_count}</b></div><div>⏳ Pending: <b>${g.pending_count}</b></div><div>💰 Subtotal: <b style="color:var(--brand);">${this.money(g.subtotal)}</b></div><div>✅ Verified: <b>${g.verified_count}/${g.member_count}</b></div></div>${hasGcash ? `<div style="padding:8px 12px; background:rgba(47,140,255,0.1); border-left:3px solid #2f8cff; border-radius:6px; font-size:11px; font-weight:800; color:#2f8cff;">📱 ${g.gcash_paid_count} member(s) paid via GCash — cart locked from cancellation</div>` : ''}</div>`;
             }).join('');
-        } catch (e) { grid.innerHTML = '<p>Error loading groups.</p>'; }
+        } catch (e) { 
+            grid.innerHTML = '<p style="text-align:center; color:#e5604d;">Error loading groups. Check console for details.</p>'; 
+            console.error('Bayanihan Error:', e); 
+        }
     },
 
     async viewAdminGroup(gid) {
@@ -2821,17 +3398,11 @@ const app = {
     },
 }
 
-// Menu glow follows mouse
-document.addEventListener('mousemove', e => {
-    const g = document.getElementById('menu-cursor-glow'); const sec = document.getElementById('home-menu-section');
-    if (!g || !sec) return;
-    const rect = sec.getBoundingClientRect();
-    if (e.clientX < rect.left || e.clientX > rect.right || e.clientY < rect.top || e.clientY > rect.bottom) return;
-    g.style.transform = `translate(${e.clientX - rect.left - 200}px, ${e.clientY - rect.top - 200}px)`;
-});
-
 window.addEventListener('resize', () => app.sizeHeroVideo());
 window.addEventListener('orientationchange', () => setTimeout(() => app.sizeHeroVideo(), 300));
 window.addEventListener('load', () => app.sizeHeroVideo());
+document.addEventListener('click', () => {
+    document.querySelectorAll('.status-dropdown-menu').forEach(m => m.classList.add('hidden'));
+});
 window.app = app;
 document.addEventListener('DOMContentLoaded', () => app.init());

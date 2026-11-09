@@ -16,6 +16,21 @@ function resetGroupPayments($pdo, $gid) {
     $pdo->prepare('UPDATE group_cart_members SET paid=0, paid_amount=0, payer_verified=0 WHERE group_cart_id=?')
         ->execute([$gid]);
 }
+
+function notify($pdo, $userId, $orderId, $message) {
+    if (!$userId) return;
+    try {
+        $pdo->prepare('INSERT INTO notifications (user_id, order_id, message) VALUES (?,?,?)')
+            ->execute([$userId, (int)$orderId, $message]);
+    } catch (Exception $e) {}
+}
+
+function notifyAdmins($pdo, $orderId, $message) {
+    try {
+        $admins = $pdo->query("SELECT id FROM users WHERE role='admin' AND is_archived=0")->fetchAll(PDO::FETCH_COLUMN);
+        foreach ($admins as $aid) notify($pdo, $aid, $orderId, $message);
+    } catch (Exception $e) {}
+}
  
 if (strpos($action, 'admin-') === 0 && ($_SESSION['role'] ?? '') !== 'admin') {
     out(['error' => 'Admins only'], 403);
@@ -76,7 +91,7 @@ switch ($action) {
             unset($o);
             
             try {
-                $stmt = $pdo->prepare('SELECT * FROM notifications WHERE user_id=? AND is_read=0');
+                $stmt = $pdo->prepare('SELECT * FROM notifications WHERE user_id=? ORDER BY created_at DESC, id DESC LIMIT 50');
                 $stmt->execute([$user['id']]);
                 $notifs = $stmt->fetchAll();
             } catch (Exception $e) {
@@ -105,22 +120,37 @@ switch ($action) {
         $name  = trim($in['name'] ?? '');
         $email = trim(strtolower($in['email'] ?? ''));
         $pw    = (string)($in['password'] ?? '');
+        
+        // 🟢 Extract new fields
+        $confirm_pw = (string)($in['confirm_password'] ?? '');
+        $city = trim($in['city'] ?? '');
+        $brgy = trim($in['brgy'] ?? '');
+        $street = trim($in['street'] ?? '');
 
         if ($name === '') out(['error' => 'Ilagay ang buong pangalan mo.'], 400);
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) out(['error' => 'Mali ang email format.'], 400);
         if (strlen($pw) < 6) out(['error' => 'Password: hindi bababa sa 6 characters.'], 400);
+        
+        if ($pw !== $confirm_pw) out(['error' => 'Hindi nagtutugma ang password at confirm password.'], 400);
+        if ($city === '' || $brgy === '' || $street === '') {
+            out(['error' => 'Kumpletuhin ang address (Lungsod, Barangay, at Street).'], 400);
+        }
 
         $stmt = $pdo->prepare('SELECT id FROM users WHERE email=?');
         $stmt->execute([$email]);
         if ($stmt->fetch()) out(['error' => 'Ginagamit na ang email na ito. Mag-sign in na lang.'], 409);
 
         $hash = password_hash($pw, PASSWORD_DEFAULT);
+
+        $address = json_encode(['street' => $street, 'brgy' => $brgy, 'city' => $city]);
+
         $stmt = $pdo->prepare('INSERT INTO users (name, email, phone, address, password_hash, role) VALUES (?,?,?,?,?,?)');
-        $stmt->execute([$name, $email, '', '', $hash, 'customer']);
+        $stmt->execute([$name, $email, '', $address, $hash, 'customer']);
         $uid = (int)$pdo->lastInsertId();
 
         session_regenerate_id(true);
         $_SESSION = ['user_id' => $uid, 'role' => 'customer', 'name' => $name];
+        notify($pdo, $uid, 0, 'Maligayang pagdating sa PiliKart, suki! Ang account mo ay handa na. Salamat sa pagsali!');
         out(['ok' => true, 'role' => 'customer']);
 
     case 'login':
@@ -172,6 +202,7 @@ switch ($action) {
         $stmt->execute([$name, $email, $cleanPhone, $address, $_SESSION['user_id']]);
         
         $_SESSION['name'] = $name;
+        notify($pdo, (int)$_SESSION['user_id'], 0, 'Na-update na ang iyong profile information.');
         out(['ok' => true]);
 
     case 'change-password':
@@ -193,6 +224,7 @@ switch ($action) {
         $hash = password_hash($new, PASSWORD_DEFAULT);
         $stmt = $pdo->prepare('UPDATE users SET password_hash=? WHERE id=?');
         $stmt->execute([$hash, $_SESSION['user_id']]);
+        notify($pdo, (int)$_SESSION['user_id'], 0, 'Matagumpay na nabago ang password ng iyong account.');
         out(['ok' => true]);
  
     case 'place-order':
@@ -265,9 +297,12 @@ switch ($action) {
             }
 
             $fee = isset($in['fee']) ? (int)$in['fee'] : (int)$pdo->query("SELECT `value` FROM settings WHERE `key`='delivery_fee'")->fetchColumn();
-            $protectionFee = isset($in['protection_fee']) ? (int)$in['protection_fee'] : 0;
-            if ($protectionFee < 0) $protectionFee = 0;
+            $protectionFee = 0;
+            if (!empty($in['protection_fee_enabled'])) {
+                $protectionFee = ceil($subtotal / 200) * 50;
+            }
             $total = $subtotal + $fee + $protectionFee;
+
  
             $pdo->beginTransaction();
             $stmt = $pdo->prepare('INSERT INTO orders (user_id, customer_name, phone, address, payment, payment_proof, subtotal, delivery_fee, protection_fee, total) VALUES (?,?,?,?,?,?,?,?,?,?)');
@@ -302,28 +337,37 @@ switch ($action) {
             if ($pdo->inTransaction()) $pdo->rollBack();
             out(['error' => 'Database Error: ' . $e->getMessage()], 500);
         }
+        notifyAdmins($pdo, $oid, "Bagong order #$oid mula kay {$in['name']} — total ₱$total.");
  
     case 'admin-update-order':
-        if ($in['status'] === 'Delivered') {
+        $oid = (int)$in['order_id'];
+        $status = $in['status'];
+
+        if ($status === 'Delivered') {
             $stmt = $pdo->prepare('UPDATE orders SET status=?, delivered_at=NOW() WHERE id=?');
         } else {
             $stmt = $pdo->prepare('UPDATE orders SET status=?, delivered_at=NULL WHERE id=?');
         }
-        $stmt->execute([$in['status'], $in['order_id']]);
+        $stmt->execute([$status, $oid]);
         
         $stmt = $pdo->prepare('SELECT user_id FROM orders WHERE id=?');
-        $stmt->execute([$in['order_id']]);
-        // ... rest of the code
-        if($uid = $stmt->fetchColumn()){
-            try {
-                $pdo->prepare('INSERT INTO notifications (user_id, order_id, message) VALUES (?,?,?)')->execute([$uid, $in['order_id'], "Update sa order #{$in['order_id']}: ngayon ay {$in['status']}."]);
-            } catch (Exception $e) {}
+        $stmt->execute([$oid]);
+        $uid = $stmt->fetchColumn();
+
+        if ($uid) {
+            notify($pdo, (int)$uid, $oid, "Update sa order #$oid: ngayon ay $status.");
         }
+
         out(['ok' => true]);
  
     case 'admin-delete-order':
-        $pdo->prepare('DELETE FROM order_items WHERE order_id=?')->execute([$in['order_id']]);
-        $pdo->prepare('DELETE FROM orders WHERE id=?')->execute([$in['order_id']]);
+        $oid = (int)$in['order_id'];
+        $s = $pdo->prepare('SELECT user_id FROM orders WHERE id=?');
+        $s->execute([$oid]);
+        $uid = $s->fetchColumn();
+        $pdo->prepare('DELETE FROM order_items WHERE order_id=?')->execute([$oid]);
+        $pdo->prepare('DELETE FROM orders WHERE id=?')->execute([$oid]);
+        if ($uid) notify($pdo, (int)$uid, 0, "Ang order #$oid ay na-delete na ng admin.");
         out(['ok' => true]);
  
     case 'admin-edit-product':
@@ -355,10 +399,15 @@ switch ($action) {
             trim($in['options'] ?? ''),
             $pid
         ]);
+        notifyAdmins($pdo, 0, "Na-update ang product: $name.");
         out(['ok' => true]);
  
     case 'admin-delete-product':
         $pdo->prepare('UPDATE products SET is_archived=1 WHERE id=?')->execute([$in['id']]);
+        $s = $pdo->prepare('SELECT name FROM products WHERE id=?');
+        $s->execute([$in['id']]);
+        $pname = $s->fetchColumn() ?: 'Item';
+        notifyAdmins($pdo, 0, "Na-archive ang product: $pname.");
         out(['ok' => true]);
  
     case 'admin-add-product':
@@ -375,6 +424,7 @@ switch ($action) {
             $in['tags'],
             $in['options'] ?? ''
         ]);
+        notifyAdmins($pdo, 0, "Naidagdag ang bagong product: {$in['name']}.");
         out(['ok' => true]);
     
     case 'admin-get-analytics':
@@ -427,13 +477,52 @@ switch ($action) {
 
     case 'admin-get-users':
         $stmt = $pdo->query("
-            SELECT u.name, u.email, u.phone, u.address, u.role, u.created_at, COUNT(o.id) AS order_count
+            SELECT u.id, u.name, u.email, u.phone, u.address, u.role, u.created_at, COUNT(o.id) AS order_count
             FROM users u
             LEFT JOIN orders o ON u.id = o.user_id
             GROUP BY u.id
             ORDER BY u.id ASC
         ");
         out($stmt->fetchAll());
+
+    case 'admin-update-user-role':
+        $uid = (int)($_SESSION['user_id'] ?? 0);
+        $targetUserId = (int)($in['user_id'] ?? 0);
+        $newRole = $in['new_role'] ?? '';
+        $adminPass = (string)($in['admin_password'] ?? '');
+        $confirmPass = (string)($in['confirm_password'] ?? '');
+
+        if (!$targetUserId) out(['error' => 'Invalid user.'], 400);
+        if (!in_array($newRole, ['admin', 'customer'], true)) out(['error' => 'Invalid role.'], 400);
+        if ($adminPass !== $confirmPass) out(['error' => 'Passwords do not match.'], 400);
+        
+        if ($targetUserId === $uid) out(['error' => 'You cannot change your own role to avoid locking yourself out.'], 400);
+
+        $stmt = $pdo->prepare('SELECT password_hash, name FROM users WHERE id=?');
+        $stmt->execute([$uid]);
+        $admin = $stmt->fetch();
+
+        $isValid = false;
+        if ($admin) {
+            if (password_verify($adminPass, $admin['password_hash']) || $admin['password_hash'] === $adminPass) {
+                $isValid = true;
+            }
+        }
+
+        if (!$isValid) {
+            out(['error' => 'Incorrect password. Verification failed.'], 401);
+        }
+
+        $pdo->prepare('UPDATE users SET role=? WHERE id=?')->execute([$newRole, $targetUserId]);
+
+        $stmt = $pdo->prepare('SELECT name FROM users WHERE id=?');
+        $stmt->execute([$targetUserId]);
+        $targetName = $stmt->fetchColumn() ?: 'User';
+
+        notifyAdmins($pdo, 0, "Nagbago ang role ni $targetName to " . strtoupper($newRole) . " (Verified by {$admin['name']}).");
+        notify($pdo, $targetUserId, 0, "Ang iyong account role ay nabago sa " . strtoupper($newRole) . " ng admin.");
+
+        out(['ok' => true]);
         
     case 'mark-read':
         if (!empty($_SESSION['user_id'])) {
@@ -442,6 +531,15 @@ switch ($action) {
             } catch (Exception $e) {}
         }
         out(['ok' => true]);
+
+        case 'get-notifications':
+            $uid = (int)($_SESSION['user_id'] ?? 0);
+            if (!$uid) out([]);
+            try {
+                $stmt = $pdo->prepare('SELECT * FROM notifications WHERE user_id=? ORDER BY created_at DESC, id DESC LIMIT 50');
+                $stmt->execute([$uid]);
+                out($stmt->fetchAll());
+            } catch (Exception $e) { out([]); }
     
     // ============================================================
     // BAYANIHAN CART
@@ -493,6 +591,7 @@ switch ($action) {
         $pdo->prepare('INSERT INTO group_cart_members (group_cart_id, user_id, role, status) VALUES (?,?,?,?)')
             ->execute([$gid, $uid, 'host', 'approved']);
         $pdo->commit();
+        notify($pdo, $uid, 0, "Nagawa na ang iyong Bayanihan Cart \"$name\"! I-share ang code na $code sa mga kaibigan.");
         out(['ok' => true, 'id' => $gid, 'code' => $code, 'name' => $name]);
 
     case 'group-get':
@@ -576,6 +675,7 @@ switch ($action) {
             $pdo->prepare('INSERT INTO group_cart_members (group_cart_id, user_id, role, status) VALUES (?,?,?,?)')
                 ->execute([$g['id'], $uid, 'member', 'pending']);
         }
+        notify($pdo, (int)$g['host_id'], 0, "May nag-request sumali sa iyong Bayanihan Cart \"{$g['name']}\". I-approve o i-reject sa cart detail.");
         out(['ok' => true, 'id' => (int)$g['id']]);
 
     case 'group-approve-member':
@@ -587,6 +687,9 @@ switch ($action) {
         if (!$s->fetch()) out(['error' => 'Only host'], 403);
         $pdo->prepare('UPDATE group_cart_members SET status="approved" WHERE id=? AND group_cart_id=?')
             ->execute([$mid, $gid]);
+        $s2 = $pdo->prepare('SELECT user_id FROM group_cart_members WHERE id=?');
+        $s2->execute([$mid]);
+        if ($uid2 = $s2->fetchColumn()) notify($pdo, (int)$uid2, 0, "Na-approve ka na sa Bayanihan Cart! Makakapag-add ka na ng items.");
         resetGroupPayments($pdo, $gid);
         out(['ok' => true]);
 
@@ -612,6 +715,8 @@ switch ($action) {
         }
         $pdo->prepare('DELETE FROM group_cart_members WHERE id=? AND group_cart_id=?')
             ->execute([$mid, $gid]);
+        if ($tgt && $tgt['status'] !== 'invited') notify($pdo, (int)$tgt['user_id'], 0, "Hindi na-approve ang join request mo sa isang Bayanihan Cart.");
+        elseif ($tgt) notify($pdo, (int)$tgt['user_id'], 0, "Kinansela ang invite mo sa isang Bayanihan Cart.");
         out(['ok' => true]);
 
     case 'group-invite':
@@ -638,6 +743,7 @@ switch ($action) {
             $pdo->prepare('INSERT INTO group_cart_members (group_cart_id, user_id, role, status) VALUES (?,?,?,?)')
                 ->execute([$gid, $target, 'member', 'invited']);
         }
+        notify($pdo, (int)$target, 0, "Iniimbitahan ka ni host na sumali sa isang Bayanihan Cart. Tingnan ang invites sa Bayanihan page.");
         out(['ok' => true]);
 
     case 'group-my-invites':
@@ -659,6 +765,9 @@ switch ($action) {
         $pdo->prepare('UPDATE group_cart_members SET status="approved" WHERE group_cart_id=? AND user_id=? AND status="invited"')
             ->execute([$gid, $uid]);
         resetGroupPayments($pdo, $gid);
+        $s2 = $pdo->prepare('SELECT host_id, name FROM group_carts WHERE id=?');
+        $s2->execute([$gid]);
+        if ($g2 = $s2->fetch()) notify($pdo, (int)$g2['host_id'], 0, "Tinanggap ng isang miyembro ang invite sa iyong Bayanihan Cart \"{$g2['name']}\".");
         out(['ok' => true]);
 
     case 'group-decline-invite':
@@ -666,6 +775,9 @@ switch ($action) {
         $gid = (int)($in['group_id'] ?? 0);
         $pdo->prepare('DELETE FROM group_cart_members WHERE group_cart_id=? AND user_id=? AND status="invited"')
             ->execute([$gid, $uid]);
+        $s2 = $pdo->prepare('SELECT host_id, name FROM group_carts WHERE id=?');
+        $s2->execute([$gid]);
+        if ($g2 = $s2->fetch()) notify($pdo, (int)$g2['host_id'], 0, "Tinanggihan ng isang miyembro ang invite sa iyong Bayanihan Cart \"{$g2['name']}\".");
         out(['ok' => true]);
 
     case 'group-add-item':
@@ -689,13 +801,18 @@ switch ($action) {
         $s->execute([$pid]);
         $p = $s->fetch();
         if (!$p) out(['error' => 'Product not found'], 404);
-        if ($p['sold_out'] || $p['stock'] < $qty) out(['error' => 'Kulang ang stock'], 400);
-        $s = $pdo->prepare('SELECT id FROM group_cart_items WHERE group_cart_id=? AND user_id=? AND product_id=? AND variation=?');
+        
+        $s = $pdo->prepare('SELECT id, qty FROM group_cart_items WHERE group_cart_id=? AND user_id=? AND product_id=? AND variation=?');
         $s->execute([$gid, $uid, $pid, $var]);
-        $exId = $s->fetchColumn();
-        if ($exId) {
-            $pdo->prepare('UPDATE group_cart_items SET qty=qty+? WHERE id=?')->execute([$qty, $exId]);
+        $ex = $s->fetch();
+        
+        if ($ex) {
+            // 🟢 Fix: Check combined quantity against stock
+            $newQty = $ex['qty'] + $qty;
+            if ($p['sold_out'] || $p['stock'] < $newQty) out(['error' => 'Kulang ang stock'], 400);
+            $pdo->prepare('UPDATE group_cart_items SET qty=? WHERE id=?')->execute([$newQty, $ex['id']]);
         } else {
+            if ($p['sold_out'] || $p['stock'] < $qty) out(['error' => 'Kulang ang stock'], 400);
             $pdo->prepare('INSERT INTO group_cart_items (group_cart_id,user_id,product_id,name,price,qty,variation) VALUES (?,?,?,?,?,?,?)')
                 ->execute([$gid, $uid, $pid, $p['name'], $p['price'], $qty, $var]);
         }
@@ -724,6 +841,12 @@ switch ($action) {
         if ($new <= 0) {
             $pdo->prepare('DELETE FROM group_cart_items WHERE id=?')->execute([$iid]);
         } else {
+            $s = $pdo->prepare('SELECT stock, sold_out FROM products WHERE id=? AND is_archived=0');
+            $s->execute([$it['product_id']]);
+            $prod = $s->fetch();
+            if (!$prod || $prod['sold_out'] || $prod['stock'] < $new) {
+                out(['error' => 'Kulang ang stock para sa item na ito.'], 400);
+            }
             $pdo->prepare('UPDATE group_cart_items SET qty=? WHERE id=?')->execute([$new, $iid]);
         }
         out(['ok' => true]);
@@ -821,6 +944,11 @@ switch ($action) {
         
         $pdo->prepare('UPDATE group_cart_members SET payment_method=?, payment_proof=?, paid=1, paid_amount=?, payer_verified=? WHERE group_cart_id=? AND user_id=?')
             ->execute([$method, $method === 'gcash' ? $proof : '', $amount, $verified, $gid, $uid]);
+        $s2 = $pdo->prepare('SELECT host_id, name FROM group_carts WHERE id=?');
+        $s2->execute([$gid]);
+        if ($g2 = $s2->fetch()) {
+            notify($pdo, (int)$g2['host_id'], 0, "May nagbayad na miyembro sa iyong Bayanihan Cart \"{$g2['name']}\". I-verify sa cart detail.");
+        }
         out(['ok' => true]);
 
     case 'group-verify-payment':
@@ -836,6 +964,12 @@ switch ($action) {
         if (!$s->fetch()) out(['error' => 'Member not found'], 404);
         $pdo->prepare('UPDATE group_cart_members SET payer_verified=?, paid=? WHERE id=?')
             ->execute([$verify, $verify ? 1 : 0, $mid]);
+        $s2 = $pdo->prepare('SELECT user_id FROM group_cart_members WHERE id=?');
+        $s2->execute([$mid]);
+        if ($memberUid = $s2->fetchColumn()) {
+            if ($verify) notify($pdo, (int)$memberUid, 0, "Na-verify na ng host ang iyong bayad sa Bayanihan Cart. Salamat!");
+            else notify($pdo, (int)$memberUid, 0, "Na-unverify ng host ang iyong bayad sa Bayanihan Cart. Kontakin ang host.");
+        }
         out(['ok' => true]);
 
     case 'group-set-delivery':
@@ -885,6 +1019,12 @@ switch ($action) {
         if ($qty <= 0) {
             $pdo->prepare('DELETE FROM group_cart_items WHERE id=?')->execute([$iid]);
         } else {
+            $s = $pdo->prepare('SELECT stock, sold_out FROM products WHERE id=? AND is_archived=0');
+            $s->execute([$it['product_id']]);
+            $prod = $s->fetch();
+            if (!$prod || $prod['sold_out'] || $prod['stock'] < $qty) {
+                out(['error' => 'Kulang ang stock para sa item na ito.'], 400);
+            }
             $pdo->prepare('UPDATE group_cart_items SET qty=?, variation=? WHERE id=?')->execute([$qty, $var, $iid]);
         }
         out(['ok' => true]);
@@ -976,6 +1116,15 @@ switch ($action) {
             }
         }
 
+        foreach ($aggregatedItems as $it) {
+            $s = $pdo->prepare('SELECT * FROM products WHERE id=? AND is_archived=0');
+            $s->execute([$it['product_id']]);
+            $p = $s->fetch();
+            if (!$p || $p['sold_out'] || $p['stock'] < $it['qty']) {
+                out(['error' => "Kulang ang stock para sa item na {$it['name']}. (Available: " . ($p['stock'] ?? 0) . ")"], 400);
+            }
+        }
+
         $pdo->beginTransaction();
         try {
             $pdo->prepare('INSERT INTO orders (user_id, customer_name, phone, address, payment, payment_proof, subtotal, delivery_fee, protection_fee, total, is_group_order, group_cart_id, group_contributors, status) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)')
@@ -993,10 +1142,7 @@ switch ($action) {
             }
             $pdo->prepare('UPDATE group_carts SET status="ordered", order_id=? WHERE id=?')->execute([$oid, $gid]);
             foreach ($contribs as $c) {
-                try {
-                    $pdo->prepare('INSERT INTO notifications (user_id, order_id, message) VALUES (?,?,?)')
-                        ->execute([$c['user_id'], $oid, "Bayanihan order #$oid ay nakumpirma na!"]);
-                } catch (Exception $e) {}
+                notify($pdo, (int)$c['user_id'], (int)$oid, "Bayanihan order #$oid ay nakumpirma na! Track it in My Orders.");
             }
             $pdo->commit();
             out(['ok' => true, 'order_id' => $oid]);
@@ -1020,6 +1166,9 @@ switch ($action) {
         $pdo->prepare('DELETE FROM group_cart_members WHERE id=?')->execute([$me['id']]);
         $pdo->prepare('DELETE FROM group_cart_items WHERE group_cart_id=? AND user_id=?')->execute([$gid, $uid]);
         resetGroupPayments($pdo, $gid);
+        $s2 = $pdo->prepare('SELECT host_id, name FROM group_carts WHERE id=?');
+        $s2->execute([$gid]);
+        if ($g2 = $s2->fetch()) notify($pdo, (int)$g2['host_id'], 0, "May miyembrong umalis sa iyong Bayanihan Cart \"{$g2['name']}\".");
         out(['ok' => true]);
 
     case 'group-cancel':
@@ -1041,6 +1190,11 @@ switch ($action) {
             out(['error' => "Hindi ma-cancel: may $gcashPaid member na nagbayad via GCash. Kailangang i-refund muna."], 400);
         }
         $pdo->prepare('UPDATE group_carts SET status="cancelled" WHERE id=?')->execute([$gid]);
+        $s2 = $pdo->prepare('SELECT user_id FROM group_cart_members WHERE group_cart_id=? AND status="approved"');
+        $s2->execute([$gid]);
+        foreach ($s2->fetchAll(PDO::FETCH_COLUMN) as $memberUid) {
+            notify($pdo, (int)$memberUid, 0, "Kinansela ng host ang Bayanihan Cart \"{$g['name']}\".");
+        }
         out(['ok' => true]);
 
     // ============================================================
@@ -1126,10 +1280,8 @@ switch ($action) {
             ->execute([$reason, $proof, $oid]);
         
         // Notify Admin (Optional, but good practice)
-        try {
-            $pdo->prepare('INSERT INTO notifications (user_id, order_id, message) VALUES (?,?,?)')
-                ->execute([1, $oid, "Refund Request: May nag-request ng refund sa Order #$oid."]);
-        } catch (Exception $e) {}
+        notifyAdmins($pdo, $oid, "Refund Request: May nag-request ng refund sa Order #$oid.");
+        notify($pdo, $uid, $oid, "Natanggap na namin ang refund request mo para sa Order #$oid. Hintayin ang approval ng admin.");
 
         out(['ok' => true]);
 
@@ -1149,13 +1301,10 @@ switch ($action) {
         $s = $pdo->prepare('SELECT user_id FROM orders WHERE id=?');
         $s->execute([$oid]);
         if ($uid = $s->fetchColumn()) {
-            try {
-                $msg = $action === 'approve' 
-                    ? "Magandang balita! Na-approve na ang refund request mo para sa Order #$oid." 
-                    : "Paumanhin, pero na-reject ang refund request mo para sa Order #$oid. Kontakin kami kung may tanong ka.";
-                $pdo->prepare('INSERT INTO notifications (user_id, order_id, message) VALUES (?,?,?)')
-                    ->execute([$uid, $oid, $msg]);
-            } catch (Exception $e) {}
+            $msg = $action === 'approve' 
+                ? "Magandang balita! Na-approve na ang refund request mo para sa Order #$oid." 
+                : "Paumanhin, pero na-reject ang refund request mo para sa Order #$oid. Kontakin kami kung may tanong ka.";
+            notify($pdo, (int)$uid, (int)$oid, $msg);
         }
         
         out(['ok' => true]);
