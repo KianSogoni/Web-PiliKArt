@@ -1199,7 +1199,7 @@
                             </div>
                         </div>
                     </div>
-
+                    
                     <!-- NEW OPTIONS FIELD -->
                     <div class="form-group">
                         <label>Options (JSON Format)</label>
@@ -1390,8 +1390,16 @@
                 <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </button>
         </div>
+            <div style="padding-bottom: 12px; margin-bottom: 12px; border-bottom: 1px dashed var(--line); display: flex; align-items: center;">
+                <label class="cart-checkbox-wrap" style="margin: 0;">
+                    <input type="checkbox" id="cart-sidebar-select-all" onchange="app.toggleAllCartItems(this.checked)">
+                    <span class="cart-checkbox-custom" style="width: 20px; height: 20px;"></span>
+                    <span class="cart-select-all-text" style="font-size: 13px;">Piliin Lahat</span>
+                </label>
+            </div>
+
             <div id="cart-items" class="cart-items"></div>
-            
+                
             <div class="cart-foot" id="cart-foot">
                 <div class="sum-row"><span>Subtotal</span><span id="cart-subtotal">&#8369;0.00</span></div>
                 <div class="sum-row"><span>Shipping fee</span><span id="cart-fee">Soon</span></div>
