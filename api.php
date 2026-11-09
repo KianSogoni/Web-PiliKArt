@@ -219,13 +219,39 @@ switch ($action) {
                 $p = $prods[$it['id']] ?? null;
                 if (!$p || $p['sold_out'] || $p['stock'] < $it['qty']) out(['error' => "Kulang ang stock."], 400);
                 if (strtolower($p['category']) === 'paso') $hasPaso = true;
-                $subtotal += $p['price'] * $it['qty'];
+                
+                // 🟢 SECURE VARIATION PRICE CALCULATION
+                $unitPrice = (float)$p['price'];
+                $varStr = $it['variation'] ?? '';
+                if (!empty($p['options']) && !empty($varStr)) {
+                    $optionsObj = json_decode($p['options'], true);
+                    if ($optionsObj) {
+                        $parts = explode(', ', $varStr);
+                        foreach ($parts as $part) {
+                            $kv = explode(': ', $part);
+                            if (count($kv) === 2) {
+                                $group = $kv[0];
+                                $choice = $kv[1];
+                                if (isset($optionsObj[$group])) {
+                                    // Check if it's an object with prices (like Size) instead of a simple array (like Color)
+                                    if (!is_array($optionsObj[$group]) || array_keys($optionsObj[$group]) !== range(0, count($optionsObj[$group]) - 1)) {
+                                        if (isset($optionsObj[$group][$choice])) {
+                                            $unitPrice += (float)$optionsObj[$group][$choice];
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                $subtotal += $unitPrice * $it['qty'];
                 $lines[] = [
                     'id' => $p['id'], 
                     'name' => $p['name'], 
-                    'price' => $p['price'], 
+                    'price' => $unitPrice, 
                     'qty' => $it['qty'],
-                    'variation' => $it['variation'] ?? '' // NEW
+                    'variation' => $varStr 
                 ];
             }
 
@@ -297,11 +323,6 @@ switch ($action) {
         $pdo->prepare('DELETE FROM orders WHERE id=?')->execute([$in['order_id']]);
         out(['ok' => true]);
  
-    case 'admin-update-product':
-        $stmt = $pdo->prepare('UPDATE products SET stock=?, price=?, sold_out=? WHERE id=?');
-        $stmt->execute([$in['stock'], $in['price'], $in['stock'] == 0 ? 1 : 0, $in['id']]);
-        out(['ok' => true]);
-
     case 'admin-edit-product':
         $pid = (int)($in['id'] ?? 0);
         if ($pid <= 0) out(['error' => 'Invalid product.'], 400);
@@ -328,7 +349,7 @@ switch ($action) {
             $stock <= 0 ? 1 : 0,
             (int)($in['best_seller'] ?? 0),
             trim($in['tags'] ?? ''),
-            trim($in['options'] ?? ''), // NEW
+            trim($in['options'] ?? ''),
             $pid
         ]);
         out(['ok' => true]);
@@ -349,7 +370,7 @@ switch ($action) {
             $in['stock'], 
             (int)($in['best_seller'] ?? 0),
             $in['tags'],
-            $in['options'] ?? '' // NEW
+            $in['options'] ?? ''
         ]);
         out(['ok' => true]);
     
