@@ -3,6 +3,10 @@ const app = {
         document.getElementById('cc-title').textContent = title;
         document.getElementById('cc-message').innerHTML = message; 
         const btn = document.getElementById('cc-confirm-btn');
+        const cancelBtn = btn.previousElementSibling;
+        
+        // Force the cancel button to be visible and functional
+        if (cancelBtn) cancelBtn.style.display = 'flex'; 
         btn.textContent = btnText;
         
         const newBtn = btn.cloneNode(true);
@@ -16,6 +20,40 @@ const app = {
         this.updateBodyScrollLock();
     },
     
+    showAlert(title, message) {
+        document.getElementById('cc-title').textContent = title;
+        document.getElementById('cc-message').innerHTML = message; 
+        const btn = document.getElementById('cc-confirm-btn');
+        const cancelBtn = btn.previousElementSibling;
+        
+        // Hide the cancel button for alerts
+        if (cancelBtn) cancelBtn.style.display = 'none';
+        btn.textContent = 'OK';
+        
+        const newBtn = btn.cloneNode(true);
+        btn.parentNode.replaceChild(newBtn, btn);
+        newBtn.onclick = () => {
+            this.closeModal('custom-confirm-modal');
+        };
+        
+        document.getElementById('custom-confirm-modal').classList.remove('hidden');
+        this.updateBodyScrollLock();
+    },
+
+    updateBudgetFromCart(val) {
+        const num = parseFloat(val);
+        this.budget = isNaN(num) || num <= 0 ? null : num;
+        
+        // Sync the budget to the main menu inputs
+        const topMax = document.getElementById('budget-input');
+        const advMax = document.getElementById('filter-max-price');
+        if (topMax) topMax.value = this.budget || '';
+        if (advMax) advMax.value = this.budget || '';
+        
+        this.renderMenu();
+        this.renderCart();
+    },
+
     botBrain: [
         // ==================== GREETINGS ====================
         { keys: ['hi', 'hello', 'hey', 'yo', 'sup', "what's up", "whats up", 'uy', 'psst'],
@@ -568,6 +606,7 @@ const app = {
     hoverTimeout: null,
     adminUserFilter: { search: '', role: 'all' },
     adminOrderFilter: { search: '', status: 'all', dept: 'all', type: 'all' },
+    adminInventoryFilter: { search: '', category: 'all', stockStatus: 'all', sort: 'default' },
     editingProductId: null,
     protectionEnabled: false,
     bayanihan: { list: [], invites: [], current: null, activeGroupId: null },
@@ -1066,7 +1105,7 @@ const app = {
     },
     
     initLandingPage() {
-        const text = "Tuloy ka, suki! Dito, ang bawat pili ay may kasamang init ng tahanan.";
+        const text = "Dahan-dahan lang sa pamimili — walang nagmamadali dito.";
         const el = document.getElementById('typewriter-text');
         if (el) {
             el.innerHTML = '<span class="type-cursor"></span>';
@@ -1233,7 +1272,7 @@ setupTrail(containerId, options = {}) {
             await new Promise(r => setTimeout(r, 400));
             el('auth-form').reset();
             this.closeAuthModal();
-            this.showToast(this.isSignUp ? 'Maligayang pagdating sa PiliKart, suki!' : 'Welcome back, suki! Tuloy ka.');
+            this.showToast(this.isSignUp ? 'Welcome sa PiliKart, suki! Ready na ang account mo. Salamat sa pagsali.' : 'Welcome back, suki! Tuloy ka.');
             await this.init();
             this.authBusy = false;
         } catch (err) {
@@ -1243,7 +1282,17 @@ setupTrail(containerId, options = {}) {
     },
 
     prefillCheckout() {
-        if (!this.user) return;
+        const guestNote = document.getElementById('co-guest-note');
+        
+        if (this.user) {
+            // Hide guest note if logged in
+            if (guestNote) guestNote.classList.add('hidden');
+        } else {
+            // Show guest note if not logged in and stop prefilling
+            if (guestNote) guestNote.classList.remove('hidden');
+            return;
+        }
+
         let addrObj = { street: '', brgy: '', city: '' };
         try {
             if (this.user.address && this.user.address.trim().startsWith('{')) addrObj = JSON.parse(this.user.address);
@@ -1252,12 +1301,14 @@ setupTrail(containerId, options = {}) {
 
         const set = (id, v) => { const f = document.getElementById(id); if (f && !f.value && v) f.value = v; };
         set('co-name', this.user.name); set('co-phone', this.user.phone);
+        
         const citySelect = document.getElementById('co-city');
         if (addrObj.city) {
             citySelect.value = addrObj.city; this.updateBrgyDropdown();
             if (addrObj.brgy) { document.getElementById('co-brgy').value = addrObj.brgy; this.updateShippingFee(); }
         }
         set('co-street', addrObj.street);
+        
         const noAddrNote = document.getElementById('co-no-address-note');
         if (noAddrNote) {
             if (!addrObj.city && !addrObj.brgy && !addrObj.street) noAddrNote.classList.remove('hidden');
@@ -1317,7 +1368,7 @@ setupTrail(containerId, options = {}) {
     handleCarouselClick(index, productId) {
         if (index !== this.carouselIndex) { this.setCarouselSlide(index); return; }
         if (productId && productId !== 'null') this.addToCart(productId);
-        else this.showToast('Sorry, hindi mahanap ang item na ito sa menu.');
+        else this.showToast('hmm, hindi namin makita iyan sa menu.');
     },
 
     prevCarouselSlide() { const len = this._carouselItems ? this._carouselItems.length : 0; if (len === 0) return; this.carouselIndex = (this.carouselIndex - 1 + len) % len; this.renderCarousel(); this.resetCarouselTimer(); },
@@ -1353,106 +1404,117 @@ setupTrail(containerId, options = {}) {
         this.renderMenu();
     },
 
-    renderMenu() {
-        const qInput = document.getElementById('search-input');
-        if (!qInput) return;
+renderMenu() {
+    const qInput = document.getElementById('search-input');
+    const bInput = document.getElementById('budget-input');
+    if (!qInput || !bInput) return;
 
-        const q = qInput.value.toLowerCase();
-        
-        const maxBudget = parseFloat(document.getElementById('budget-input').value) || Infinity;
-        const minPrice = parseFloat(document.getElementById('filter-min-price').value) || 0;
-        const maxPrice = parseFloat(document.getElementById('filter-max-price').value) || Infinity;
-        const sortBy = document.getElementById('filter-sort').value;
-        const inStockOnly = document.getElementById('filter-in-stock').checked;
-        const bestSellerOnly = document.getElementById('filter-best-seller').checked;
+    const q = qInput.value.toLowerCase();
+    const minPrice = parseFloat(document.getElementById('filter-min-price')?.value) || 0;
 
-        const categoryMeta = { paso: { label: 'PASO' }, nipa: { label: 'NIPA' }, habi: { label: 'HABI' }, apollo: { label: 'APOLLO' } };
-        const sig = this.selectedCategory + '|' + this.products.length + '|' + this.selectedTags.join(',');
-        const animate = sig !== this._menuSig;
-        this._menuSig = sig;
+    // Max price: take the smaller of budget-input and filter-max-price
+    let maxPrice = parseFloat(bInput.value) || Infinity;
+    const advMax = parseFloat(document.getElementById('filter-max-price')?.value);
+    if (!isNaN(advMax) && advMax < maxPrice) maxPrice = advMax;
 
-        let filtered = this.products.filter(p => {
-            const cat = p.category ? p.category.toLowerCase() : '';
-            const pTags = (p.tags || '').toLowerCase();
-            
-            const matchCat = this.selectedCategory === 'all' || cat === this.selectedCategory.toLowerCase();
-            const matchQ = p.name.toLowerCase().includes(q) || pTags.includes(q);
-            const matchBudget = p.price <= maxBudget;
-            
-            const matchMin = p.price >= minPrice;
-            const matchMax = p.price <= maxPrice;
-            const matchStock = inStockOnly ? p.stock > 0 : true;
-            const matchBestSeller = bestSellerOnly ? Number(p.best_seller) === 1 : true;
-            
-            const matchTags = this.selectedTags.length === 0 || this.selectedTags.every(tag => pTags.includes(tag.toLowerCase()));
+    const sortBy        = document.getElementById('filter-sort')?.value || 'default';
+    const inStockOnly   = document.getElementById('filter-in-stock')?.checked || false;
+    const bestSellerOnly= document.getElementById('filter-best-seller')?.checked || false;
 
-            return matchCat && matchQ && matchBudget && matchMin && matchMax && matchStock && matchBestSeller && matchTags;
-        });
+    // Budget tracker for cart sidebar
+    this.budget = maxPrice === Infinity ? null : maxPrice;
+    this.updateCartBudgetUI();
 
-        if (sortBy === 'price-asc') {
-            filtered.sort((a, b) => a.price - b.price);
-        } else if (sortBy === 'price-desc') {
-            filtered.sort((a, b) => b.price - a.price);
-        } else if (sortBy === 'best-seller') {
-            filtered.sort((a, b) => Number(b.best_seller) - Number(a.best_seller));
+    const categoryMeta = { paso: { label: 'PASO' }, nipa: { label: 'NIPA' }, habi: { label: 'HABI' }, apollo: { label: 'APOLLO' } };
+
+    // 1. Filter
+    let filtered = this.products.filter(p => {
+        const cat = p.category ? p.category.toLowerCase() : '';
+        const matchCat  = this.selectedCategory === 'all' || cat === this.selectedCategory.toLowerCase();
+        const matchQ    = p.name.toLowerCase().includes(q) || (p.tags && p.tags.toLowerCase().includes(q));
+        const matchPrice= p.price >= minPrice && p.price <= maxPrice;
+
+        let matchTags = true;
+        if (this.selectedTags.length > 0) {
+            const productTags = (p.tags || '').split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
+            matchTags = this.selectedTags.some(tag => productTags.includes(tag.toLowerCase()));
         }
 
-        const html = filtered.map((p, idx) => {
-            const catKey = (p.category || 'paso').toLowerCase();
-            const meta = categoryMeta[catKey] || { label: catKey.toUpperCase() };
-            const icon = this.deptIcons[catKey] || '';
-            const formattedPrice = Number(p.price).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-            const out = p.stock <= 0;
-            const stockPill = out ? '<span class="stock-pill out">Ubos na</span>' : (p.stock <= 5 ? `<span class="stock-pill">${p.stock} na lang!</span>` : '');
-            let stockClass = 'stock-high';
-            if (p.stock <= 0) stockClass = 'stock-out';
-            else if (p.stock <= 10) stockClass = 'stock-low';
-            const isBestSeller = Number(p.best_seller) === 1;
-            const bestSellerPill = isBestSeller ? `<span class="best-seller-pill">⭐ Suki's Choice</span>` : '';
+        const matchStock      = !inStockOnly || p.stock > 0;
+        const matchBestSeller = !bestSellerOnly || Number(p.best_seller) === 1;
 
-            return `
-                <div class="card product-card ${out ? 'is-out' : ''} ${animate ? 'enter' : ''}" style="--i:${idx}">
-                    <div class="prod-badges-row">
-                        <span class="dept-badge ${catKey}">${icon} ${meta.label}</span>
-                        <div class="badges-right">${bestSellerPill} ${stockPill}</div>
-                    </div>
-                    <div class="prod-img-wrap">
-                        <img src="${p.image}" class="product-img" alt="${p.name}" loading="lazy">
-                    </div>
-                    <div class="prod-info">
-                        <h3 class="prod-title">${p.name}</h3>
-                        <p class="prod-tagline">${p.tagline || 'Quality finds from PiliKart'}</p>
-                        <div class="prod-expanded-details">
-                            <p class="prod-desc">${p.description}</p>
-                            <div class="prod-meta">
-                                <div class="tags-wrap">
-                                    ${(p.tags || '').split(',').map(t => t.trim()).filter(Boolean).map(t => `<span class="meta-chip tag">${this.esc(t)}</span>`).join('')}
-                                </div>
-                                <span class="meta-chip stock ${stockClass}"><strong>${p.stock}</strong><span>in stock</span></span>
+        return matchCat && matchQ && matchPrice && matchTags && matchStock && matchBestSeller;
+    });
+
+    // 2. Sort
+    if (sortBy === 'price-asc')       filtered.sort((a, b) => a.price - b.price);
+    else if (sortBy === 'price-desc') filtered.sort((a, b) => b.price - a.price);
+    else if (sortBy === 'name-asc')   filtered.sort((a, b) => a.name.localeCompare(b.name));
+    else if (sortBy === 'name-desc')  filtered.sort((a, b) => b.name.localeCompare(a.name));
+
+    // 3. Render
+    const sig = this.selectedCategory + '|' + this.products.length;
+    const animate = sig !== this._menuSig;
+    this._menuSig = sig;
+
+    const html = filtered.map((p, idx) => {
+        const catKey = (p.category || 'paso').toLowerCase();
+        const meta = categoryMeta[catKey] || { label: catKey.toUpperCase() };
+        const icon = this.deptIcons[catKey] || '';
+        const formattedPrice = Number(p.price).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        const out = p.stock <= 0;
+        const stockPill = out ? '<span class="stock-pill out">Ubos na</span>' : (p.stock <= 5 ? `<span class="stock-pill">${p.stock} na lang!</span>` : '');
+        let stockClass = 'stock-high';
+        if (p.stock <= 0) stockClass = 'stock-out';
+        else if (p.stock <= 10) stockClass = 'stock-low';
+        const isBestSeller = Number(p.best_seller) === 1;
+        const bestSellerPill = isBestSeller ? `<span class="best-seller-pill">⭐ Suki's Choice</span>` : '';
+
+        return `
+            <div class="card product-card ${out ? 'is-out' : ''} ${animate ? 'enter' : ''}" style="--i:${idx}">
+                <div class="prod-badges-row">
+                    <span class="dept-badge ${catKey}">${icon} ${meta.label}</span>
+                    <div class="badges-right">${bestSellerPill} ${stockPill}</div>
+                </div>
+                <div class="prod-img-wrap">
+                    <img src="${p.image}" class="product-img" alt="${p.name}" loading="lazy">
+                </div>
+                <div class="prod-info">
+                    <h3 class="prod-title">${p.name}</h3>
+                    <p class="prod-tagline">${p.tagline || 'Quality finds from PiliKart'}</p>
+                    <div class="prod-expanded-details">
+                        <p class="prod-desc">${p.description}</p>
+                        <div class="prod-meta">
+                            <span class="meta-chip stock ${stockClass}"><strong>${p.stock}</strong><span>in stock</span></span>
+                            <div class="tags-wrap">
+                                ${(p.tags || '').split(',').map(t => t.trim()).filter(Boolean).map(t => `<span class="meta-chip tag">${this.esc(t)}</span>`).join('')}
                             </div>
                         </div>
                     </div>
-                    <div class="prod-footer">
-                        <div>
-                            <span class="prod-price-label">Presyo</span>
-                            <span class="prod-price-val">₱${formattedPrice}</span>
-                        </div>
-                        <button class="btn btn-brand add-btn" onclick="app.addToCart(${p.id}, this)" ${out ? 'disabled' : ''} style="display:flex; align-items:center; justify-content:center; gap:6px;">
-                            ${out ? 'Ubos na' : `
-                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                                    <circle cx="9" cy="21" r="1"></circle>
-                                    <circle cx="20" cy="21" r="1"></circle>
-                                    <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
-                                </svg>
-                                Add
-                            `}
-                        </button>
+                </div>
+                <div class="prod-footer" style="gap: 8px;">
+                    <div>
+                        <span class="prod-price-label">Presyo</span>
+                        <span class="prod-price-val">₱${formattedPrice}</span>
                     </div>
-                </div>`;
-        }).join('');
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        ${out 
+                            ? `<button class="btn btn-brand add-btn" disabled style="height: 44px; padding: 0 16px; border-radius: 99px;">Ubos na</button>`
+                            : `
+                            <!-- Add to Cart (SVG + Text) -->
+                            <button class="btn btn-brand add-btn" onclick="app.addToCart(${p.id}, this)" style="height: 44px; padding: 0 20px; border-radius: 99px; display: flex; align-items: center; gap: 6px; flex-shrink: 0; transition: transform 0.2s;" title="Add to Cart">
+                                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
+                                Add
+                            </button>
+                            `
+                        }
+                    </div>
+                </div>
+            </div>`;
+    }).join('');
 
-        document.getElementById('product-grid').innerHTML = html || this.emptyState('search', 'Hmm, wala pa kaming nahanap', 'Subukan ang ibang salita o bawasan ang mga filter.');
-    },
+    document.getElementById('product-grid').innerHTML = html || this.emptyState('search', 'Hmm, wala pa kaming nahanap', 'Subukan ang ibang salita o kategorya — baka nasa kabilang sulok lang ang hinahanap mo.');
+},
 
     showAllTags: false,
 
@@ -1471,22 +1533,11 @@ setupTrail(containerId, options = {}) {
         const container = document.getElementById('filter-tags-container');
         if (!container) return;
 
-        // Only show first 15 tags unless "Show All" is clicked
-        const tagsToShow = this.showAllTags ? this.availableTags : this.availableTags.slice(0, 15);
-
-        let html = tagsToShow.map(tag => {
+        // Render all tags in a single horizontal row
+        container.innerHTML = this.availableTags.map(tag => {
             const isActive = this.selectedTags.includes(tag);
-            return `<button class="filter-tag-btn ${isActive ? 'active' : ''}" onclick="app.toggleMenuTag('${this.esc(tag)}')">${this.esc(tag)}</button>`;
+            return `<button class="filter-tag-btn ${isActive ? 'active' : ''}" style="flex-shrink: 0;" onclick="app.toggleMenuTag('${this.esc(tag)}')">${this.esc(tag)}</button>`;
         }).join('');
-
-        // Add the Show More/Less button
-        if (this.availableTags.length > 15) {
-            html += `<button class="btn btn-ghost" style="font-size: 11px; padding: 6px 16px; border-radius: 99px; margin-left: 8px;" onclick="app.showAllTags = !app.showAllTags; app.initMenuFilters();">
-                ${this.showAllTags ? 'Show Less' : `Show All ${this.availableTags.length} Tags`}
-            </button>`;
-        }
-
-        container.innerHTML = html;
     },
 
     toggleMenuTag(tag) {
@@ -1522,7 +1573,7 @@ setupTrail(containerId, options = {}) {
 
     addToCart(id, btn) {
         if (!this.user) {
-            this.showToast('Mag-sign in muna para makapag-add ng items, suki!');
+            this.showToast('Sign in muna, suki — para ma-save namin ang cart mo.');
             this.openAuthModal('signin');
             return; // Stop the function here so the modal doesn't open
         }
@@ -1685,7 +1736,18 @@ setupTrail(containerId, options = {}) {
         const variationStr = selectedOptions.join(', ');
         const finalPrice = Number(p.price) + modifier; 
 
-        // 🟢 NEW: If buying now, deselect all other items in the cart
+        // 🟢 BUDGET RESTRICTION CHECK (Now triggers a popup)
+        if (this.budget) {
+            let newTotal = finalPrice * this.pendingQty;
+            if (!isBuyNow) {
+                newTotal += this.cart.filter(c => c.selected).reduce((s, x) => s + x.price * x.qty, 0);
+            }
+            if (newTotal > this.budget) {
+                this.showAlert('Budget Exceeded', `Hindi mo na kayang idagdag ang item na ito dahil lalampas na ang iyong gastos sa budget na <b>${this.money(this.budget)}</b>.<br><br>Mangyaring i-adjust ang iyong budget sa cart sidebar o bawasan ang mga napiling item.`);
+                return;
+            }
+        }
+
         if (isBuyNow) {
             this.cart.forEach(c => c.selected = false);
         }
@@ -1709,12 +1771,10 @@ setupTrail(containerId, options = {}) {
         this.showToast(`${p.name}${varText} (${this.pendingQty}x) — nasa basket mo na!`);
 
         if (isBuyNow) {
-            this.toggleCart(true); // Ensure sidebar is closed
+            this.toggleCart(true);
             setTimeout(() => {
-                // 🟢 FIX: Call attemptCheckout instead of go('checkout') 
-                // This forces the PASO restriction check to run
                 this.attemptCheckout(); 
-            }, 300); // Short delay so the toast shows first
+            }, 300); 
         }
     },
 
@@ -1747,42 +1807,57 @@ setupTrail(containerId, options = {}) {
         
         this.renderCart(); 
         if (this.currentView === 'cart') this.renderCartPage(); 
+        if (this.currentView === 'checkout') this.renderCheckoutSummary(); // 🟢 Add this line
+    },
+
+    updateCartBudgetUI() {
+        const budgetContainer = document.getElementById('cart-budget-mode');
+        if (!budgetContainer) return;
+
+        const budget = this.budget;
+        const budgetInput = document.getElementById('cart-budget-input');
+        
+        if (budget && budget > 0) {
+            budgetContainer.style.display = 'block';
+            
+            if (budgetInput && document.activeElement !== budgetInput) {
+                budgetInput.value = budget;
+            }
+            
+            const selectedCart = this.cart.filter(c => c.selected);
+            const spent = selectedCart.reduce((s, x) => s + x.price * x.qty, 0);
+            const remaining = budget - spent;
+            
+            document.getElementById('cart-budget-spent').textContent = this.money(spent);
+            
+            const remEl = document.getElementById('cart-budget-remaining');
+            const bar = document.getElementById('cart-budget-bar');
+            
+            if (remaining >= 0) {
+                remEl.textContent = `${this.money(remaining)} pa!`;
+                remEl.style.color = 'var(--leaf)';
+                bar.style.background = 'linear-gradient(90deg, #f0a93b, #d95b33)'; // Orange gradient
+                bar.style.width = `${Math.min(100, (spent / budget) * 100)}%`;
+            } else {
+                remEl.textContent = `Lumampas ng ${this.money(Math.abs(remaining))}!`;
+                remEl.style.color = '#e5604d';
+                bar.style.background = '#e5604d'; // Red for overbudget
+                bar.style.width = '100%';
+            }
+        } else {
+            budgetContainer.style.display = 'none';
+            if (budgetInput) budgetInput.value = '';
+        }
     },
 
     renderCart() {
-        let needsSave = false;
-        this.cart.forEach(c => { 
-            if (c.selected === undefined || c.selected === null) { 
-                c.selected = true; 
-                needsSave = true; 
-            }
-            // 🟢 Auto-deselect out of stock items
-            const p = this.products.find(x => x.id === c.id);
-            const isOutOfStock = !p || p.stock <= 0 || p.stock < c.qty;
-            if (isOutOfStock && c.selected) {
-                c.selected = false;
-                needsSave = true;
-            }
-        });
-        if (needsSave) {
-            const cartKey = this.user ? `pk_cart_${this.user.id}` : 'pk_cart_guest';
-            localStorage.setItem(cartKey, JSON.stringify(this.cart));
-        }
-
         const count = this.cart.reduce((s, x) => s + x.qty, 0);
         const badge = document.getElementById('cart-badge');
         if (badge) badge.textContent = count;
-        
-        // 🟢 Hide Select All if cart is empty
-        const selectAllContainer = document.getElementById('cart-sidebar-select-all-container');
-        if (selectAllContainer) {
-            if (this.cart.length === 0) selectAllContainer.classList.add('hidden');
-            else selectAllContainer.classList.remove('hidden');
-        }
-
         const itemsDiv = document.getElementById('cart-items');
         const foot = document.getElementById('cart-foot');
         
+        // Update Sidebar Select All state
         const selectAllSidebar = document.getElementById('cart-sidebar-select-all');
         if (selectAllSidebar) {
             selectAllSidebar.checked = this.cart.length > 0 && this.cart.every(c => c.selected);
@@ -1790,27 +1865,23 @@ setupTrail(containerId, options = {}) {
 
         if (itemsDiv) {
             itemsDiv.innerHTML = this.cart.map((c, i) => {
-                const p = this.products.find(x => x.id === c.id);
-                const maxStock = p?.stock || 0;
-                const isOutOfStock = !p || p.stock <= 0 || p.stock < c.qty;
-
+                const maxStock = this.products.find(x => x.id === c.id)?.stock || 9999;
                 return `
-                <div class="cart-row-card" style="animation-delay:${i * 80}ms; ${c.selected ? '' : 'opacity: 0.6;'} ${isOutOfStock ? 'border-color: #e5604d; background: rgba(229, 96, 77, 0.05);' : ''}">
-                    <label class="cart-checkbox-wrap" style="margin-right: 0px; ${isOutOfStock ? 'pointer-events: none; opacity: 0.5;' : ''}">
-                        <input type="checkbox" ${c.selected ? 'checked' : ''} ${isOutOfStock ? 'disabled' : ''} onchange="app.toggleCartItem(${c.id}, ${c.variation ? `'${this.esc(c.variation)}'` : 'null'})">
+                <div class="cart-row-card" style="animation-delay:${i * 80}ms; ${c.selected ? '' : 'opacity: 0.6;'}">
+                    <label class="cart-checkbox-wrap" style="margin-right: 0px;">
+                        <input type="checkbox" ${c.selected ? 'checked' : ''} onchange="app.toggleCartItem(${c.id}, ${c.variation ? `'${this.esc(c.variation)}'` : 'null'})">
                         <span class="cart-checkbox-custom" style="width: 20px; height: 20px;"></span>
                     </label>
-                    <img class="cart-card-thumb" src="${this.esc(c.image || '')}" alt="${this.esc(c.name)}" style="${isOutOfStock ? 'filter: grayscale(1);' : ''}">
+                    <img class="cart-card-thumb" src="${this.esc(c.image || '')}" alt="${this.esc(c.name)}">
                     <div class="cart-card-info">
-                        <b class="cart-card-title" style="font-size: 14px;">${this.esc(c.name)}</b>
+                        <b class="cart-card-title">${this.esc(c.name)}</b>
                         ${c.variation ? `<small style="display:block; font-size:11px; color:var(--brand); margin-top:2px;">${this.esc(c.variation)}</small>` : ''}
-                        <span class="cart-card-price" style="font-size: 14px; ${isOutOfStock ? 'color: var(--muted); text-decoration: line-through;' : ''}">₱${(c.price * c.qty).toFixed(2)}</span>
-                        ${isOutOfStock ? `<small style="color: #e5604d; font-weight: 800; font-size: 11px; display: block; margin-top: 2px;">Kulang/Ubos na stock</small>` : ''}
+                        <span class="cart-card-price" style="font-size: 14px;">₱${(c.price * c.qty).toFixed(2)}</span>
                     </div>
                     <div class="cart-card-qty" style="gap: 6px;">
-                        <button class="qty-circle-btn" style="width: 24px; height: 24px; font-size: 14px; ${isOutOfStock ? 'pointer-events:none; opacity:0.5;' : ''}" onclick="app.updateQty(${c.id}, ${c.variation ? `'${this.esc(c.variation)}'` : 'null'}, -1)">−</button>
-                        <input type="number" class="qty-input-sm" value="${c.qty}" min="1" max="${maxStock}" ${isOutOfStock ? 'disabled' : ''} onchange="app.updateQtyInput(${c.id}, ${c.variation ? `'${this.esc(c.variation)}'` : 'null'}, this.value)">
-                        <button class="qty-circle-btn" style="width: 24px; height: 24px; font-size: 14px; ${isOutOfStock ? 'pointer-events:none; opacity:0.5;' : ''}" onclick="app.updateQty(${c.id}, ${c.variation ? `'${this.esc(c.variation)}'` : 'null'}, 1)">+</button>
+                        <button class="qty-circle-btn" style="width: 24px; height: 24px; font-size: 14px;" onclick="app.updateQty(${c.id}, ${c.variation ? `'${this.esc(c.variation)}'` : 'null'}, -1)">−</button>
+                        <input type="number" class="qty-input-sm" value="${c.qty}" min="1" max="${maxStock}" onchange="app.updateQtyInput(${c.id}, ${c.variation ? `'${this.esc(c.variation)}'` : 'null'}, this.value)">
+                        <button class="qty-circle-btn" style="width: 24px; height: 24px; font-size: 14px;" onclick="app.updateQty(${c.id}, ${c.variation ? `'${this.esc(c.variation)}'` : 'null'}, 1)">+</button>
                         <button class="qty-circle-btn" style="width: 24px; height: 24px; color:#e5604d; border-color:rgba(229,96,77,0.3); margin-left:2px;" onclick="app.removeFromCart(${c.id}, ${c.variation ? `'${this.esc(c.variation)}'` : 'null'})" title="Alisin">
                             <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                         </button>
@@ -1838,6 +1909,8 @@ setupTrail(containerId, options = {}) {
             setHTML('cart-fee', '<span style="color:var(--muted); font-style:italic; font-weight:700;">--</span>');
             setHTML('cart-total', this.money(subtotal) + ' <small style="font-size:10px; color:var(--muted); font-weight:600; font-family:\'Nunito\',sans-serif;">+ shipping</small>');
         }
+
+        this.updateCartBudgetUI();
     },
 
     async promptBayanihanFromCart() {
@@ -1904,12 +1977,19 @@ setupTrail(containerId, options = {}) {
         const i = this.cart.find(x => x.id === id && (x.variation || '') === (variation || ''));
         if (i) {
             const p = this.products.find(x => x.id === id);
-            // 🟢 Check if we are incrementing and if we've hit the stock limit
             if (d > 0 && p && i.qty >= p.stock) {
-                this.showToast(`Sorry suki, ${p.stock} lang ang available stock namin.`);
+                this.showToast(`Pasensya na, suki — ${p.stock} na lang ang stock namin.`);
                 return;
             }
-
+            if (d > 0 && i.selected && this.budget) {
+                const currentTotal = this.cart.filter(c => c.selected).reduce((s, x) => s + x.price * x.qty, 0);
+                if (currentTotal + i.price > this.budget) {
+                    this.showToast(`Hindi na kasya sa budget mo (₱${this.budget})!`);
+                    this.renderCart();
+                    if (this.currentView === 'cart') this.renderCartPage();
+                    return;
+                }
+            }
             i.qty += d;
             if (i.qty <= 0) this.cart = this.cart.filter(x => !(x.id === id && (x.variation || '') === (variation || '')));
             this.saveCart();
@@ -1921,14 +2001,22 @@ setupTrail(containerId, options = {}) {
         if (i) {
             let qty = parseInt(val);
             if (isNaN(qty) || qty < 1) qty = 1;
-
-            // 🟢 Clamp the typed value to the max stock
             const p = this.products.find(x => x.id === id);
             if (p && qty > p.stock) {
                 qty = p.stock;
-                this.showToast(`Sorry suki, ${p.stock} lang ang available stock namin.`);
+                this.showToast(`Pasensya na, suki — ${p.stock} na lang ang stock namin.`);
             }
-
+            // Check budget if increasing quantity
+            if (i.selected && this.budget && qty > i.qty) {
+                const currentTotal = this.cart.filter(c => c.selected).reduce((s, x) => s + x.price * x.qty, 0);
+                const newTotal = currentTotal + (i.price * (qty - i.qty));
+                if (newTotal > this.budget) {
+                    this.showToast(`Hindi na kasya sa budget mo (₱${this.budget})!`);
+                    this.renderCart();
+                    if (this.currentView === 'cart') this.renderCartPage();
+                    return; 
+                }
+            }
             i.qty = qty;
             this.saveCart();
         }
@@ -2042,13 +2130,27 @@ setupTrail(containerId, options = {}) {
         }, 'Clear');
     },
     toggleCartItem(id, variation) { 
-        const item = this.cart.find(x => x.id === id && (x.variation || '') === (variation || '')); 
+        const item = this.cart.find(x => x.id === id && (x.variation || '') === (variation || ''));
         if (item) { 
+            // If trying to select, check if it exceeds budget
+            if (!item.selected && this.budget) {
+                const currentTotal = this.cart.filter(c => c.selected).reduce((s, x) => s + x.price * x.qty, 0);
+                const newTotal = currentTotal + (item.price * item.qty);
+                if (newTotal > this.budget) {
+                    this.showToast(`Hindi na kasya sa budget mo (₱${this.budget})!`);
+                    // Force a re-render to immediately uncheck the box visually
+                    this.renderCart();
+                    if (this.currentView === 'cart') this.renderCartPage();
+                    return;
+                }
+            }
             item.selected = !item.selected; 
             this.saveCart(); 
             this.renderCart();
+            if (this.currentView === 'cart') this.renderCartPage();
         } 
     },
+
     toggleAllCartItems(checked) { this.cart.forEach(c => c.selected = checked); this.saveCart(); },
 
     updateCartPageSummary() {
@@ -2080,6 +2182,15 @@ setupTrail(containerId, options = {}) {
         
         const selectedCart = this.cart.filter(c => c.selected);
         
+        // 🟢 CHECK BUDGET FIRST
+        if (this.budget) {
+            const subtotal = selectedCart.reduce((s, x) => s + x.price * x.qty, 0);
+            if (subtotal > this.budget) {
+                this.showAlert('Budget Exceeded', `Lumampas na ang iyong gastos (<b>${this.money(subtotal)}</b>) sa budget na <b>${this.money(this.budget)}</b>.<br><br>Mangyaring bawasan ang mga napiling item o i-adjust ang iyong budget sa cart sidebar.`);
+                return;
+            }
+        }
+
         for (let c of selectedCart) {
             const p = this.products.find(x => x.id === c.id);
             if (!p || p.stock <= 0 || p.stock < c.qty) {
@@ -2107,7 +2218,6 @@ setupTrail(containerId, options = {}) {
         }
 
         if (profileCity && profileCity.toLowerCase() !== 'calamba') {
-            // Populate the scrollable list of triggering PASO items
             const listContainer = document.getElementById('paso-restriction-items');
             if (listContainer) {
                 listContainer.innerHTML = pasoItems.map(c => `
@@ -2387,7 +2497,7 @@ setupTrail(containerId, options = {}) {
                 await this.refreshData();
                 this.checkCartStock();
             }
-        } catch (err) { this.showToast('Walang koneksyon sa server. Subukan ulit mamaya.'); } 
+        } catch (err) { this.showToast('Walang signal sa server. Try mo ulit mamaya.'); } 
         finally { this.orderBusy = false; btn.disabled = false; btn.classList.remove('loading'); btn.innerHTML = label; }
     },
 
@@ -2551,9 +2661,9 @@ setupTrail(containerId, options = {}) {
         try {
             const res = await fetch('api.php?action=update-profile', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, email, phone: cleanPhone, address }) });
             const data = await res.json();
-            if (data.ok) { this.showToast('Na-update na ang iyong profile!'); await this.refreshData(); this.updateNavDrawerAuthUI(); } 
+            if (data.ok) { this.showToast('Updated na ang profile mo, suki!'); await this.refreshData(); this.updateNavDrawerAuthUI(); } 
             else { this.showToast(data.error || 'Hindi na-update ang profile.'); }
-        } catch (e) { this.showToast('Walang koneksyon sa server.'); }
+        } catch (e) { this.showToast('Walang signal sa server. Try mo ulit mamaya.'); }
     },
 
     async changePassword() {
@@ -2585,16 +2695,36 @@ setupTrail(containerId, options = {}) {
     switchAdminTab(tab, btn) {
         document.querySelectorAll('.admin-tab-btn').forEach(b => { b.className = 'btn btn-ghost admin-tab-btn'; });
         btn.className = 'btn btn-brand admin-tab-btn';
-        ['orders', 'stock', 'add', 'users', 'analytics', 'bayanihan', 'fees'].forEach(t => { const el = document.getElementById('admin-' + t); if (el) el.classList.add('hidden'); });
+        
+        ['orders', 'stock', 'users', 'analytics', 'bayanihan', 'fees'].forEach(t => { const el = document.getElementById('admin-' + t); if (el) el.classList.add('hidden'); });
+        
         const target = document.getElementById('admin-' + tab);
         if (target) target.classList.remove('hidden');
         if (tab === 'users') this.renderAdminUsers();
+        if (tab === 'stock') this.renderAdminInventory();
         if (tab === 'analytics') this.renderAdminAnalytics();
         if (tab === 'bayanihan') this.renderAdminBayanihan();
         if (tab === 'fees') this.renderAdminFees(); 
     },
 
-    toggleAdvancedFilters() { document.getElementById('admin-advanced-filters').classList.toggle('hidden'); },
+toggleAdvancedMenuFilters(btn) {
+    const panel = document.getElementById('advanced-filter-panel');
+    if (!panel) return;
+    
+    const isOpen = panel.dataset.open === 'true';
+    
+    if (isOpen) {
+        panel.dataset.open = 'false';
+        panel.style.gridTemplateRows = '0fr';
+        panel.style.opacity = '0';
+        if (btn) btn.classList.remove('active');
+    } else {
+        panel.dataset.open = 'true';
+        panel.style.gridTemplateRows = '1fr';
+        panel.style.opacity = '1';
+        if (btn) btn.classList.add('active');
+    }
+},
 
     filterAdminOrders() {
         this.adminOrderFilter.search = document.getElementById('admin-order-search').value.toLowerCase();
@@ -2660,14 +2790,52 @@ setupTrail(containerId, options = {}) {
         }).join('') || '<div class="empty-state"><h3>No orders found</h3><p>Try adjusting your search or filter.</p></div>';
     },
 
+    filterAdminInventory() {
+        this.adminInventoryFilter.search = document.getElementById('admin-inv-search').value.toLowerCase().trim();
+        this.adminInventoryFilter.category = document.getElementById('admin-inv-category').value;
+        this.adminInventoryFilter.stockStatus = document.getElementById('admin-inv-stock-status').value;
+        this.adminInventoryFilter.sort = document.getElementById('admin-inv-sort').value;
+        this.renderAdminInventory();
+    },
+
     renderAdminInventory() {
         const container = document.getElementById('admin-inventory-container');
         if (!container) return;
+        
         const categories = { paso: { name: 'PASO (Food Essentials)' }, nipa: { name: 'NIPA (Home Essentials)' }, habi: { name: 'HABI (Fashion)' }, apollo: { name: 'APOLLO (Technologies)' } };
+        
         let html = '';
         for (const [key, meta] of Object.entries(categories)) {
-            const prods = this.products.filter(p => (p.category || '').toLowerCase() === key);
-            if (prods.length === 0) continue;
+            if (this.adminInventoryFilter.category !== 'all' && this.adminInventoryFilter.category !== key) continue;
+
+            let prods = this.products.filter(p => (p.category || '').toLowerCase() === key);
+            
+            if (this.adminInventoryFilter.search) {
+                prods = prods.filter(p => p.name.toLowerCase().includes(this.adminInventoryFilter.search));
+            }
+
+            if (this.adminInventoryFilter.stockStatus === 'in-stock') {
+                prods = prods.filter(p => p.stock > 10);
+            } else if (this.adminInventoryFilter.stockStatus === 'low-stock') {
+                prods = prods.filter(p => p.stock > 0 && p.stock <= 10);
+            } else if (this.adminInventoryFilter.stockStatus === 'out-of-stock') {
+                prods = prods.filter(p => p.stock <= 0);
+            }
+
+            if (this.adminInventoryFilter.sort === 'name-asc') {
+                prods.sort((a, b) => a.name.localeCompare(b.name));
+            } else if (this.adminInventoryFilter.sort === 'price-asc') {
+                prods.sort((a, b) => a.price - b.price);
+            } else if (this.adminInventoryFilter.sort === 'price-desc') {
+                prods.sort((a, b) => b.price - a.price);
+            } else if (this.adminInventoryFilter.sort === 'stock-asc') {
+                prods.sort((a, b) => a.stock - b.stock);
+            } else if (this.adminInventoryFilter.sort === 'stock-desc') {
+                prods.sort((a, b) => b.stock - a.stock);
+            }
+
+            if (prods.length === 0) continue; 
+
             html += `
                 <div class="admin-inventory-section">
                     <div class="admin-inv-header"><h3><span class="inv-dept-ic ${key}">${this.deptIcons[key]}</span> ${meta.name}</h3></div>
@@ -2682,7 +2850,8 @@ setupTrail(containerId, options = {}) {
                             </div>`).join('')}</div>
                 </div>`;
         }
-        container.innerHTML = html || '<div class="empty-state"><h3>Walang laman ang inventory</h3><p>Mag-add ka ng item sa "Add Item" tab.</p></div>';
+        
+        container.innerHTML = html || '<div class="empty-state"><h3>No products found</h3><p>Try adjusting your search or filter.</p></div>';
     },
 
     async reloadAdminData() { await this.refreshData(); this.renderAdmin(); },
@@ -2745,7 +2914,7 @@ setupTrail(containerId, options = {}) {
         groupDiv.style.cssText = 'background:var(--bg); padding:12px; border-radius:12px; border:1px solid var(--line);';
         groupDiv.innerHTML = `
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                <input type="text" class="input pe-opt-name" placeholder="Option Name (e.g. Size)" value="${this.esc(groupName)}" style="padding:6px 10px; font-size:13px; width:75%; font-weight:800;">
+                <input type="text" class="input pe-opt-name" placeholder="Specification Name (e.g. Size)" value="${this.esc(groupName)}" style="padding:6px 10px; font-size:13px; width:75%; font-weight:800;">
                 <button type="button" class="qty-circle-btn" onclick="this.closest('.pe-option-group').remove()" style="color:#e5604d; border-color:rgba(229,96,77,0.3);" title="Remove Group">✕</button>
             </div>
             <div class="pe-opt-choices-container" style="display:flex; flex-direction:column; gap:8px; margin-bottom:10px;"></div>
@@ -2913,6 +3082,17 @@ setupTrail(containerId, options = {}) {
         }, 'Archive');
     },
 
+    openAddProductModal() {
+        document.getElementById('admin-add-form').reset();
+        document.getElementById('add-product-modal').classList.remove('hidden');
+        this.updateBodyScrollLock();
+    },
+
+    closeAddProductModal() {
+        document.getElementById('add-product-modal').classList.add('hidden');
+        this.updateBodyScrollLock();
+    },
+
     async addProduct(e) {
         if (e) e.preventDefault();
         const payload = {
@@ -2930,7 +3110,11 @@ setupTrail(containerId, options = {}) {
         try {
             const res = await fetch('api.php?action=admin-add-product', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
             const data = await res.json();
-            if (data.ok) { this.showToast('Product added successfully!'); document.getElementById('admin-add-form').reset(); await this.reloadAdminData(); } 
+            if (data.ok) { 
+                this.showToast('Product added successfully!'); 
+                this.closeAddProductModal();
+                await this.reloadAdminData(); 
+            } 
             else { this.showToast(data.error || 'Failed to add product.'); }
         } catch (err) { this.showToast('Connection error.'); }
     },
@@ -2961,7 +3145,7 @@ setupTrail(containerId, options = {}) {
         localStorage.setItem('pk_theme', theme);
         const pillWrap = document.getElementById('nd-theme-pill')?.parentElement;
         if (pillWrap) pillWrap.classList.toggle('is-sunset', theme === 'sunset');
-        this.updateThemeButtons();
+        this.updateThemeButton();
         clearTimeout(this._themeTimeout);
         this._themeTimeout = setTimeout(() => html.classList.remove('theme-switching'), 800);
     },
@@ -3216,6 +3400,7 @@ setupTrail(containerId, options = {}) {
         const itemsByUser = {}; g.items.forEach(it => { if (!itemsByUser[it.user_id]) itemsByUser[it.user_id] = { name: it.user_name, items: [] }; itemsByUser[it.user_id].items.push(it); });
         const hostMember = g.members.find(m => m.role === 'host');
         const isOrdered = g.status === 'ordered'; const isCancelled = g.status === 'cancelled'; const orderStatus = g.order_status || 'Pending';
+        const isDeliverySet = !!(g.customer_name && g.phone && g.delivery_address);
 
         const topCards = `
             <div style="display:flex; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
@@ -3252,26 +3437,57 @@ setupTrail(containerId, options = {}) {
 
         let deliveredHighlight = '';
         if (isOrdered) {
-            deliveredHighlight = `<div class="co-card" style="margin-bottom:20px; border-color:var(--leaf);"><h3 style="color:var(--leaf); display:flex; justify-content:space-between; align-items:center;"><span>🏘️ Bayanihan Order Summary</span><span class="order-status ${orderStatus === 'Delivered' ? 'status-delivered' : 'status-pending'}">${orderStatus}</span></h3><p style="color:var(--muted); margin-bottom:16px;">Order #${g.order_id} — Here is what everyone contributed:</p><div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">${Object.entries(itemsByUser).map(([uid, grp]) => `<div style="background:var(--bg); padding:16px; border-radius:14px; border:1px solid var(--line);"><div style="font-weight:800; color:var(--brand); margin-bottom:8px; display:flex; align-items:center; gap:6px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>${this.esc(grp.name)}</div>${grp.items.map(it => `<div style="display:flex; justify-content:space-between; font-size:13px; font-weight:600; margin-bottom:4px;"><span>${it.qty}× ${this.esc(it.name)}</span><span>${this.money(it.price * it.qty)}</span></div>`).join('')}</div>`).join('')}</div></div>`;
+            deliveredHighlight = `<div class="co-card" style="margin-bottom:20px; border-color:var(--leaf);"><h3 style="color:var(--leaf); display:flex; justify-content:space-between; align-items:center;"><span style="display:flex; align-items:center; gap:8px;"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> Bayanihan Order Summary</span><span class="order-status ${orderStatus === 'Delivered' ? 'status-delivered' : 'status-pending'}">${orderStatus}</span></h3><p style="color:var(--muted); margin-bottom:16px;">Order #${g.order_id} — Here is what everyone contributed:</p><div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">${Object.entries(itemsByUser).map(([uid, grp]) => `<div style="background:var(--bg); padding:16px; border-radius:14px; border:1px solid var(--line);"><div style="font-weight:800; color:var(--brand); margin-bottom:8px; display:flex; align-items:center; gap:6px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>${this.esc(grp.name)}</div>${grp.items.map(it => `<div style="display:flex; justify-content:space-between; font-size:13px; font-weight:600; margin-bottom:4px;"><span>${it.qty}× ${this.esc(it.name)}</span><span>${this.money(it.price * it.qty)}</span></div>`).join('')}</div>`).join('')}</div></div>`;
         }
 
         const editable = isHost && g.status === 'open' && !isReadOnly;
         let currentAddr = { city: '', brgy: '', street: '' };
-        try { if (g.delivery_address && g.delivery_address.trim().startsWith('{')) currentAddr = JSON.parse(g.delivery_address); else if (g.delivery_address) currentAddr.street = g.delivery_address; } catch(e) {}
+        let hasSavedAddr = false;
+        
+        // 1. Check if group cart already has a saved address
+        if (g.delivery_address) {
+            try { 
+                if (g.delivery_address.trim().startsWith('{')) currentAddr = JSON.parse(g.delivery_address);
+                else currentAddr.street = g.delivery_address; 
+                if (currentAddr.city || currentAddr.brgy || currentAddr.street) hasSavedAddr = true;
+            } catch(e) {}
+        }
         
         const defaultRecipientName = g.customer_name || (hostMember ? hostMember.name : '');
         const defaultMemberObj = approvedMembers.find(m => m.name === defaultRecipientName);
         const defaultRecipientPhone = g.phone || (defaultMemberObj ? defaultMemberObj.phone : '');
-        const memberOptions = approvedMembers.map(m => `<option value="${this.esc(m.name)}|${this.esc(m.phone || '')}" ${defaultRecipientName === m.name ? 'selected' : ''}>${this.esc(m.name)} (${this.esc(m.phone || 'No phone')})</option>`).join('');
+
+        // 2. If no saved address, fallback to the recipient's saved profile address
+        if (!hasSavedAddr && defaultMemberObj && defaultMemberObj.address) {
+            try {
+                if (defaultMemberObj.address.trim().startsWith('{')) {
+                    currentAddr = JSON.parse(defaultMemberObj.address);
+                } else {
+                    currentAddr.street = defaultMemberObj.address;
+                }
+            } catch(e) {}
+        }
+
+        // 3. Remove phone number from dropdown
+        const memberOptions = approvedMembers.map(m => `<option value="${this.esc(m.name)}" ${defaultRecipientName === m.name ? 'selected' : ''}>${this.esc(m.name)}</option>`).join('');
+        
         const cityOptions = Object.keys(this.lagunaData).map(c => `<option value="${c}" ${currentAddr.city === c ? 'selected' : ''}>${c}</option>`).join('');
         let brgyOptions = '<option value="" disabled selected>Pumili ng Barangay</option>';
-        if (currentAddr.city && this.lagunaData[currentAddr.city]) brgyOptions = Object.keys(this.lagunaData[currentAddr.city]).map(b => `<option value="${b}" ${currentAddr.brgy === b ? 'selected' : ''}>${b}</option>`).join('');
+        if (currentAddr.city && this.lagunaData[currentAddr.city]) {
+            brgyOptions = Object.keys(this.lagunaData[currentAddr.city]).map(b => `<option value="${b}" ${currentAddr.brgy === b ? 'selected' : ''}>${b}</option>`).join('');
+        }
 
         const deliveryHtml = `
             <div class="co-card" style="margin-bottom:0;">
-                <h3>📍 Delivery Details ${!editable ? '<small style="color:var(--muted); font-weight:600; font-size:11px;">(locked)</small>' : ''}</h3>
+                <h3><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg> Delivery Details ${!editable ? '<small style="color:var(--muted); font-weight:600; font-size:11px;">(locked)</small>' : ''}</h3>
                 <div class="co-row">
-                    <div class="co-field"><label>Recipient (Member)</label><select id="bg-member" class="input" ${editable ? '' : 'disabled'} onchange="app.updateGroupRecipient(this.value)"><option value="" disabled ${!defaultRecipientName ? 'selected' : ''}>Select member...</option>${memberOptions}</select></div>
+                    <div class="co-field">
+                        <label>Recipient (Member)</label>
+                        <select id="bg-member" class="input" ${editable ? '' : 'disabled'} onchange="app.updateGroupRecipient(this.value)">
+                            <option value="" disabled ${!defaultRecipientName ? 'selected' : ''}>Select member...</option>
+                            ${memberOptions}
+                        </select>
+                    </div>
                     <div class="co-field"><label>Contact Number</label><input type="text" id="bg-phone" class="input" value="${this.esc(defaultRecipientPhone || '')}" ${editable ? '' : 'disabled'} placeholder="Ilagay ang contact number"></div>
                 </div>
                 <div class="co-row">
@@ -3283,14 +3499,14 @@ setupTrail(containerId, options = {}) {
                     <div class="co-field"><label>Payment Method (Auto)</label><input type="text" class="input" value="${g.payment_summary}" readonly style="background:var(--bg); color:var(--brand); font-weight:800;"></div>
                 </div>
                 <div class="co-row">
-                    <div class="co-field"><label>Delivery Fee (₱)</label><input type="number" id="bg-fee" class="input" value="${deliveryFee}" ${editable ? '' : 'disabled'} readonly></div>
+                    <div class="co-field"><label>Delivery Fee (₱) <span style="color:var(--brand); font-weight:800; font-size:10px;">(Auto)</span></label><input type="number" id="bg-fee" class="input" value="${deliveryFee}" ${editable ? '' : 'disabled'} readonly></div>
                 </div>
                 ${editable ? '<button class="btn btn-ghost" style="margin-top:8px;" onclick="app.saveDeliveryDetails()">Save Delivery Details</button>' : ''}
             </div>`;
 
         const itemsHtml = `
             <div class="co-card" style="margin-bottom:0; height: 100%;">
-                <h3>🛒 Items (${g.items.length})</h3>
+                <h3><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg> Items (${g.items.length})</h3>
                 ${g.items.length === 0 ? '<p style="color:var(--muted); text-align:center; padding:20px;">Walang laman ang cart.</p>' : Object.entries(itemsByUser).map(([uid, grp]) => `
                     <div style="margin-bottom:16px; border-left:3px solid var(--brand); padding-left:12px;">
                         <div style="font-weight:800; color:var(--brand); margin-bottom:8px; font-size:13px;">Added by: ${this.esc(grp.name)}</div>
@@ -3305,12 +3521,22 @@ setupTrail(containerId, options = {}) {
 
         let splitSettings = '';
         if (isHost && g.status === 'open') {
-            splitSettings = `<div class="co-card" style="margin-bottom:0; height: 100%; display: flex; flex-direction: column;"><h3>⚖️ Split Method</h3><div class="pay-grid" style="grid-template-columns: 1fr; gap: 12px; flex: 1;">${[['equal', '👥 Equal', 'Pare-pareho ang bayad.'], ['by_adder', '🛒 By Items', 'Bayaran ang idinagdag + equal delivery.'], ['fixed_contribution', '📌 Fixed + Equal', 'Fixed amount sa may marka; rest split.'], ['one_payer', '💳 One Payer', 'Ang designated payer(s) ang sasagot.']].map(([v, l, d]) => `<button type="button" class="pay-opt ${g.split_method === v ? 'active' : ''}" onclick="app.setGroupSplit('${v}')" style="padding: 16px; text-align: left; display: flex; flex-direction: column; gap: 4px;"><b style="font-size: 16px;">${l}</b><small style="font-size: 12px; color: var(--muted);">${d}</small></button>`).join('')}</div></div>`;
+            splitSettings = `<div class="co-card" style="margin-bottom:0; height: 100%; display: flex; flex-direction: column;">
+                <h3><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18"/><path d="M3 7h18"/><path d="M6 7l-3 7a3 3 0 0 0 6 0z"/><path d="M18 7l-3 7a3 3 0 0 0 6 0z"/></svg> Split Method</h3>
+                <div class="pay-grid" style="grid-template-columns: 1fr; gap: 12px; flex: 1;">
+                    ${[['equal', '👥 Equal', 'Pare-pareho ang bayad.'], ['by_adder', '🛒 By Items', 'Bayaran ang idinagdag + equal delivery.'], ['fixed_contribution', '📌 Fixed + Equal', 'Fixed amount sa may marka; rest split.'], ['one_payer', '💳 One Payer', 'Ang designated payer(s) ang sasagot.']].map(([v, l, d]) => `
+                        <button type="button" class="pay-opt ${g.split_method === v ? 'active' : ''}" onclick="app.setGroupSplit('${v}')" style="padding: 16px; text-align: left; display: flex; flex-direction: column; gap: 4px;">
+                            <b style="font-size: 16px;">${l}</b>
+                            <small style="font-size: 12px; color: var(--muted);">${d}</small>
+                        </button>
+                    `).join('')}
+                </div>
+            </div>`;
         }
 
         let approvals = '';
         if (isHost && (pendingMembers.length || invitedMembers.length)) {
-            approvals = `<div class="co-card" style="margin-bottom:20px;"><h3>👥 Pending Members</h3>${pendingMembers.map(p => `<div style="display:flex; justify-content:space-between; align-items:center; padding:10px; background:var(--bg); border-radius:10px; margin-bottom:6px; gap:8px; flex-wrap:wrap;"><div><b>${this.esc(p.name)}</b> <span style="font-size:11px; color:var(--muted);">(requesting)</span></div><div style="display:flex; gap:6px;"><button class="btn btn-leaf" style="padding:4px 10px; font-size:11px;" onclick="app.approveMember(${p.id})">Approve</button><button class="btn btn-ghost" style="padding:4px 10px; font-size:11px;" onclick="app.rejectMember(${p.id})">Reject</button></div></div>`).join('')}${invitedMembers.map(p => `<div style="display:flex; justify-content:space-between; align-items:center; padding:10px; background:var(--bg); border-radius:10px; margin-bottom:6px; gap:8px; flex-wrap:wrap;"><div><b>${this.esc(p.name)}</b> <span style="font-size:11px; color:var(--muted);">(invited)</span></div><button class="btn btn-ghost" style="padding:4px 10px; font-size:11px;" onclick="app.rejectMember(${p.id})">Cancel Invite</button></div>`).join('')}</div>`;
+            approvals = `<div class="co-card" style="margin-bottom:20px;"><h3><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> Pending Members</h3>${pendingMembers.map(p => `<div style="display:flex; justify-content:space-between; align-items:center; padding:10px; background:var(--bg); border-radius:10px; margin-bottom:6px; gap:8px; flex-wrap:wrap;"><div><b>${this.esc(p.name)}</b> <span style="font-size:11px; color:var(--muted);">(requesting)</span></div><div style="display:flex; gap:6px;"><button class="btn btn-leaf" style="padding:4px 10px; font-size:11px;" onclick="app.approveMember(${p.id})">Approve</button><button class="btn btn-ghost" style="padding:4px 10px; font-size:11px;" onclick="app.rejectMember(${p.id})">Reject</button></div></div>`).join('')}${invitedMembers.map(p => `<div style="display:flex; justify-content:space-between; align-items:center; padding:10px; background:var(--bg); border-radius:10px; margin-bottom:6px; gap:8px; flex-wrap:wrap;"><div><b>${this.esc(p.name)}</b> <span style="font-size:11px; color:var(--muted);">(invited)</span></div><button class="btn btn-ghost" style="padding:4px 10px; font-size:11px;" onclick="app.rejectMember(${p.id})">Cancel Invite</button></div>`).join('')}</div>`;
         }
 
         const splitRows = split.map(s => {
@@ -3326,11 +3552,12 @@ setupTrail(containerId, options = {}) {
                 if (g.split_method === 'fixed_contribution') flagCtrl = `<div style="display:flex; align-items:center; gap:6px; margin-top:6px;"><span style="font-size:10px; font-weight:800; color:var(--muted);">₱ Fixed:</span><input type="number" class="input" style="width:60px; padding:2px 6px; font-size:11px; font-weight:800; border-radius:6px; border:1px solid var(--brand); background:var(--bg);" value="${m.fixed_share_amount || 0}" min="0"><button type="button" class="btn btn-leaf" style="padding: 4px 10px; font-size: 10px; border-radius: 6px; line-height: 1.2; box-shadow: none;" onclick="app.setMemberFixedAmount(${m.id}, this.previousElementSibling.value)">Save</button></div>`;
                 else if (g.split_method === 'one_payer') flagCtrl = `<label class="switch" style="transform:scale(0.6); margin-left:-5px; margin-top:6px;"><input type="checkbox" ${m.is_payer ? 'checked' : ''} onchange="app.setMemberFlag(${m.id}, 'is_payer', this.checked)"><span class="slider round"></span></label><span style="font-size:10px; font-weight:800; color:var(--muted); margin-left:-4px;">Payer</span>`;
             }
-            const canPaySelf = isMine && !m.paid && g.status === 'open' && s.amount > 0 && !isReadOnly;
+            const canPaySelf = isMine && !m.paid && g.status === 'open' && s.amount > 0 && !isReadOnly && isDeliverySet;
             const canVerify = isHost && m.paid && !verified && g.status === 'open' && !isReadOnly;
             const canHostMark = isHost && !m.paid && g.status === 'open' && !isReadOnly;
             let actions = '';
             if (canPaySelf) actions = `<button class="btn btn-brand" style="padding:6px 16px; font-size:12px; border-radius:99px; box-shadow:0 4px 10px rgba(217,91,51,0.3);" onclick="app.openPayShareModal(${m.id}, ${s.amount}, false)">Pay ${this.money(s.amount)}</button>`;
+            else if (isMine && !isDeliverySet && g.status === 'open' && !isReadOnly) actions = `<span style="color:var(--muted); font-size:11px; font-weight:800; text-align:right; line-height:1.2;">Waiting for<br>Delivery Details</span>`;
             else if (canVerify) actions = `<div style="display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end;">${m.payment_method === 'gcash' && m.payment_proof ? `<button class="btn btn-ghost" style="padding:6px 10px; font-size:11px; border-radius:99px;" onclick="app.viewProof('${m.payment_proof}')">View Proof</button>` : ''}<button class="btn btn-leaf" style="padding:6px 12px; font-size:11px; border-radius:99px;" onclick="app.verifyPayment(${m.id}, true)">Verify ✓</button></div>`;
             else if (canHostMark) actions = `<button class="btn btn-leaf" style="padding:6px 12px; font-size:11px; border-radius:99px;" onclick="app.openPayShareModal(${m.id}, ${s.amount}, true)">Mark Paid</button>`;
             else if (isHost && verified && g.status === 'open' && !isReadOnly) actions = `<div style="display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end;">${m.payment_method === 'gcash' && m.payment_proof ? `<button class="btn btn-ghost" style="padding:6px 10px; font-size:11px; border-radius:99px;" onclick="app.viewProof('${m.payment_proof}')">View Proof</button>` : ''}<button class="btn btn-ghost" style="padding:4px 10px; font-size:10px; border-radius:99px;" onclick="app.verifyPayment(${m.id}, false)">Unverify</button></div>`;
@@ -3343,13 +3570,16 @@ setupTrail(containerId, options = {}) {
 
         const splitBreakdownHtml = `
             <div class="co-card" style="margin-bottom:0; height: 100%; display: flex; flex-direction: column;">
-                <h3 style="margin-bottom: 16px;">💰 Split Breakdown</h3>
+                <h3 style="margin-bottom: 16px;"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 20V4h5a4 4 0 0 1 0 8H9" /><path d="M5 8h15" /></svg> Split Breakdown</h3>
                 <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 20px; background: var(--bg); padding: 12px; border-radius: 14px; border: 1px solid var(--line); text-align: center;">
                     <div><div style="font-size: 10px; font-weight: 800; color: var(--muted); text-transform: uppercase;">Method</div><div style="font-size: 13px; font-weight: 800; color: var(--ink);">${g.split_method === 'equal' ? 'Equal' : g.split_method === 'by_adder' ? 'By Items' : g.split_method === 'fixed_contribution' ? 'Fixed + Equal' : 'One Payer'}</div></div>
                     <div style="border-left: 1px solid var(--line); border-right: 1px solid var(--line);"><div style="font-size: 10px; font-weight: 800; color: var(--muted); text-transform: uppercase;">Subtotal</div><div style="font-size: 13px; font-weight: 800; color: var(--ink);">${this.money(subtotal)}</div></div>
                     <div><div style="font-size: 10px; font-weight: 800; color: var(--muted); text-transform: uppercase;">Delivery</div><div style="font-size: 13px; font-weight: 800; color: var(--ink);">${this.money(deliveryFee)}</div></div>
                 </div>
-                <div style="flex: 1;">${splitRows}</div>
+                <div style="flex: 1;">
+                    ${!isDeliverySet && g.status === 'open' ? `<div style="margin-bottom: 12px; padding: 10px; background: rgba(240, 169, 59, 0.15); border: 1px solid rgba(240, 169, 59, 0.4); border-radius: 8px; text-align: center; font-size: 12px; color: #d98c1d; font-weight: 800;">⏳ Hintayin munang i-save ng host ang delivery details para makapag-bayad.</div>` : ''}
+                    ${splitRows}
+                </div>
                 <div style="margin-top: 20px; padding-top: 16px; border-top: 2px dashed var(--line); display: flex; justify-content: space-between; align-items: center;"><span style="font-family: 'Baloo 2'; font-size: 20px; font-weight: 800; color: var(--ink);">TOTAL</span><span style="font-family: 'Baloo 2'; font-size: 26px; font-weight: 800; color: var(--brand);">${this.money(total)}</span></div>
                 ${!allPaid && g.status === 'open' ? '<div style="margin-top: 16px; padding: 10px; background: rgba(240, 169, 59, 0.1); border: 1px solid rgba(240, 169, 59, 0.3); border-radius: 8px; text-align: center; font-size: 12px; color: #d98c1d; font-weight: 800;">⏳ Hintayin munang magbayad at ma-verify ang lahat.</div>' : (allPaid && g.status === 'open' ? '<div style="margin-top: 16px; padding: 10px; background: rgba(63, 122, 69, 0.1); border: 1px solid rgba(63, 122, 69, 0.3); border-radius: 8px; text-align: center; font-size: 12px; color: var(--leaf); font-weight: 800;">✓ Lahat ay bayad at verified na!</div>' : '')}
                 ${shortfall > 0 && allPaid && g.status === 'open' ? `<div style="margin-top: 8px; padding: 10px; background: rgba(229, 96, 77, 0.1); border: 1px solid rgba(229, 96, 77, 0.3); border-radius: 8px; text-align: center; font-size: 12px; color: #e5604d; font-weight: 800;">⚠️ Kulang ng ${this.money(shortfall)} sa total.</div>` : ''}
@@ -3368,6 +3598,28 @@ setupTrail(containerId, options = {}) {
         document.querySelectorAll('.group-remove-btn').forEach(btn => {
             btn.addEventListener('click', (e) => { e.stopPropagation(); this.removeMember(parseInt(btn.dataset.memberId), btn.dataset.memberName, btn.dataset.gcashLocked === '1'); });
         });
+    },
+
+    async removeMember(memberId, name, gcashLocked) {
+        if (gcashLocked) {
+            return this.showToast('Hindi ma-remove: nagbayad na via GCash. I-refund muna.');
+        }
+        this.showConfirm(
+            'Remove Member',
+            `Sigurado ka bang aalisin si <b>${this.esc(name)}</b> sa Bayanihan Cart?`,
+            async () => {
+                const g = this.bayanihan.current;
+                const res = await fetch('api.php?action=group-reject-member', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ group_id: g.id, member_id: memberId })
+                });
+                const data = await res.json();
+                if (data.ok) { this.showToast('Naalis na si ' + name + '.'); this.openGroupDetail(g.id); }
+                else this.showToast(data.error || 'Failed');
+            },
+            'Remove'
+        );
     },
 
     openEditGroupItem(item) {
@@ -3400,7 +3652,56 @@ setupTrail(containerId, options = {}) {
         if (data.ok) { this.closeModal('edit-group-item-modal'); this.openGroupDetail(g.id); } else this.showToast(data.error || 'Failed');
     },
 
-    updateGroupRecipient(val) { const parts = val.split('|'); const phoneInput = document.getElementById('bg-phone'); phoneInput.value = parts[1] || ''; phoneInput.readOnly = false; },
+    updateGroupRecipient(val) { 
+        if (!this.bayanihan.current) return;
+        const member = this.bayanihan.current.members.find(m => m.name === val);
+        
+        if (member) {
+            // Auto-fill Phone
+            const phoneInput = document.getElementById('bg-phone');
+            if (phoneInput) {
+                phoneInput.value = member.phone || '';
+                phoneInput.readOnly = false;
+            }
+
+            // Auto-fill Address
+            let addr = { street: '', brgy: '', city: '' };
+            if (member.address) {
+                try {
+                    if (member.address.trim().startsWith('{')) {
+                        addr = JSON.parse(member.address);
+                    } else {
+                        addr.street = member.address;
+                    }
+                } catch(e) {}
+            }
+
+            const citySelect = document.getElementById('bg-city');
+            const brgySelect = document.getElementById('bg-brgy');
+            const streetInput = document.getElementById('bg-street');
+
+            if (citySelect && addr.city && this.lagunaData[addr.city]) {
+                // Set City
+                citySelect.value = addr.city;
+                
+                // Manually populate Barangays to ensure it stays editable and selects the right one
+                brgySelect.innerHTML = '<option value="" disabled>Pumili ng Barangay</option>';
+                Object.keys(this.lagunaData[addr.city]).forEach(b => {
+                    brgySelect.innerHTML += `<option value="${b}" ${addr.brgy === b ? 'selected' : ''}>${b}</option>`;
+                });
+                
+                // Update Fee based on the auto-selected Barangay
+                if (addr.brgy && this.lagunaData[addr.city][addr.brgy] !== undefined) {
+                    document.getElementById('bg-fee').value = this.lagunaData[addr.city][addr.brgy];
+                } else {
+                    document.getElementById('bg-fee').value = 0;
+                }
+            }
+            
+            if (streetInput) streetInput.value = addr.street || '';
+        }
+    },
+
     updateGroupBrgyDropdown() {
         const city = document.getElementById('bg-city').value; const brgySelect = document.getElementById('bg-brgy');
         brgySelect.innerHTML = '<option value="" disabled selected>Pumili ng Barangay</option>';
@@ -3568,8 +3869,14 @@ setupTrail(containerId, options = {}) {
                 return;
             }
 
+            const searchQuery = (document.getElementById('admin-group-search')?.value || '').toLowerCase().trim();
             const filter = (document.getElementById('admin-group-status')?.value) || 'all'; 
-            const filtered = filter === 'all' ? groups : groups.filter(g => g.status === filter);
+            
+            const filtered = groups.filter(g => {
+                const matchStatus = filter === 'all' || g.status === filter;
+                const matchSearch = g.name.toLowerCase().includes(searchQuery) || g.host_name.toLowerCase().includes(searchQuery);
+                return matchStatus && matchSearch;
+            });
             
             if (!filtered.length) { 
                 grid.innerHTML = '<div class="empty-state"><h3>Walang Bayanihan Cart</h3><p>Wala pang gumawa ng group cart.</p></div>'; 
@@ -3609,7 +3916,7 @@ setupTrail(containerId, options = {}) {
                         return `<div style="display:flex; justify-content:space-between; align-items:center; padding:10px; background:var(--bg); border-radius:10px; margin-bottom:6px; gap:8px; flex-wrap:wrap;"><div><b>${statusBadge} ${this.esc(m.name)}</b> <span style="font-size:11px; color:var(--muted);">${this.esc(m.email)}</span> ${m.role === 'host' ? '<span style="font-size:10px; color:var(--leaf); font-weight:800; margin-left:6px;">HOST</span>' : ''}</div><div style="font-size:12px;">${payBadge}</div></div>`;
                     }).join('')}
                 </div>
-                <div class="co-card"><h3>🛒 Items (${g.items.length})</h3>${g.items.length === 0 ? '<p style="text-align:center; color:var(--muted); padding:20px;">No items.</p>' : g.items.map(it => `<div style="display:flex; justify-content:space-between; align-items:center; padding:8px 12px; background:var(--surface2); border-radius:10px; margin-bottom:6px;"><div><b style="font-size:13px;">${this.esc(it.name)}</b><div style="font-size:11px; color:var(--muted);">by ${this.esc(it.user_name)} · ${it.qty} × ${this.money(it.price)}</div></div><div style="font-family:'Baloo 2'; font-weight:800;">${this.money(it.price * it.qty)}</div></div>`).join('')}</div>`;
+                <div class="co-card"><h3><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg> Items (${g.items.length})</h3>${g.items.length === 0 ? '<p style="text-align:center; color:var(--muted); padding:20px;">No items.</p>' : g.items.map(it => `<div style="display:flex; justify-content:space-between; align-items:center; padding:8px 12px; background:var(--surface2); border-radius:10px; margin-bottom:6px;"><div><b style="font-size:13px;">${this.esc(it.name)}</b><div style="font-size:11px; color:var(--muted);">by ${this.esc(it.user_name)} · ${it.qty} × ${this.money(it.price)}</div></div><div style="font-family:'Baloo 2'; font-weight:800;">${this.money(it.price * it.qty)}</div></div>`).join('')}</div>`;
             this.go('admin-group-detail');
         } catch (e) { this.showToast('Error loading group'); }
     },
