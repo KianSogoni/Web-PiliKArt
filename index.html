@@ -30,26 +30,24 @@
             </button>
 
             <button class="circle-nav-btn" id="theme-toggle-btn" onclick="app.toggleTheme()" title="Toggle Theme" aria-label="Toggle Theme">
+                <!-- Oak Mode: Strictly Sun + Wood Log -->
                 <svg id="theme-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="12" cy="12" r="5"/>
-                    <line x1="12" y1="1" x2="12" y2="3"/>
-                    <line x1="12" y1="21" x2="12" y2="23"/>
-                    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
-                    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
-                    <line x1="1" y1="12" x2="3" y2="12"/>
-                    <line x1="21" y1="12" x2="23" y2="12"/>
-                    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
-                    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+                    <!-- Sun -->
+                    <circle cx="12" cy="7" r="3"/>
+                    <path d="M12 2v1M12 11v1M7 7h1M16 7h1M8.5 3.5l.7.7M14.8 9.8l.7.7M15.5 3.5l-.7.7M9.2 9.8l-.7.7"/>
+                    <!-- Wood Log -->
+                    <rect x="6" y="15" width="12" height="5" rx="2.5"/>
+                    <path d="M9 17.5h6"/>
                 </svg>
+                
+                <!-- Forest Mode: Moon + Pine Tree -->
                 <svg id="theme-icon-sunset" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;">
-                    <path d="M17 18a5 5 0 0 0-10 0"/>
-                    <line x1="12" y1="9" x2="12" y2="2"/>
-                    <line x1="4.22" y1="10.22" x2="5.64" y2="11.64"/>
-                    <line x1="1" y1="18" x2="3" y2="18"/>
-                    <line x1="21" y1="18" x2="23" y2="18"/>
-                    <line x1="18.36" y1="11.64" x2="19.78" y2="10.22"/>
-                    <line x1="23" y1="22" x2="1" y2="22"/>
-                    <polyline points="16 5 12 9 8 5"/>
+                    <!-- Moon -->
+                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+                    <!-- Pine Tree -->
+                    <path d="M12 17v5" />
+                    <path d="M9 20l3-3 3 3" />
+                    <path d="M10 16l2-2 2 2" />
                 </svg>
             </button>
 
@@ -68,22 +66,24 @@
  
 <main id="main-content" style="display:none;">
     
-        <!-- LANDING PAGE -->
+            <!-- LANDING PAGE -->
     <div id="view-landing" class="landing-screen hidden">
         <!-- The interactive lantern/glow effect -->
         <div id="landing-glow"></div>
 
         <div class="landing-header max-w">
             <div class="brand light">pilikart<span>pumili ka + cart</span></div>
-            <div class="top-loc">CALAMBA, LAGUNA</div>
+            <div class="top-loc">ᜉᜎᜒ · CALAMBA, LAGUNA</div>
         </div>
  
-        <div class="landing-content">
-            <div class="landing-badge">MABUHAY, SUKI</div>
-            <h1 class="landing-title">Tuloy ka sa<br><span class="pk">PiliKArt!</span></h1>
-            <p class="landing-subtitle" id="typewriter-text"></p>
-            
-            <button class="btn btn-brand btn-large" onclick="app.enterStore()">PILI KA NA!</button>
+        <div class="landing-content max-w">
+            <div class="landing-badge"> ☀ MABUHAY, SUKI</div>
+            <h1 class="landing-title">Welcome to<br><span class="pk">PiliKArt!</span></h1>
+            <p class="landing-subtitle" id="typewriter-text"> Where you can choose to your hearts' desires.</p>
+            <div class="landing-cta-wrap">
+                <button class="btn btn-brand btn-large" onclick="app.enterStore()">PILI KA NA!</button>
+                <p class="landing-subtext">Mag-sign in, gumawa ng account, o mag-guest — ikaw ang pipili.</p>
+            </div>
         </div>
  
         <div class="marquee-container interactive-marquee">
@@ -644,12 +644,12 @@
             <!-- FAQ 6 -->
             <div class="faq-recipe-item" onclick="app.toggleAcc(this)">
                 <div class="faq-recipe-header">
-                    <h3>Ano ang Sunset Mode?</h3>
+                    <h3>Ano ang Forest Mode?</h3>
                     <svg class="acc-chevron" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
                 </div>
                 <div class="faq-recipe-body">
                     <p style="color: var(--ink); line-height: 1.7; font-size: 15px;">
-                        Ito ang dark theme ng PiliKart. Buksan ang navigation menu (hamburger icon sa taas) at i-tap ang "Sunset" para mas malamig at madaling tingnan ang system sa gabi. Naka-save ito sa browser mo.
+                        Ito ang dark theme ng PiliKart. Buksan ang navigation menu (hamburger icon sa taas) at i-tap ang <b>"Forest"</b> para mas malamig at madaling tingnan ang system sa gabi. Naka-save ito sa browser mo.
                     </p>
                 </div>
             </div>
@@ -1034,7 +1034,7 @@
         
         <div class="account-grid">
             <!-- Profile Details -->
-            <div class="card account-card">
+            <div class="card account-card" style="display: flex; flex-direction: column;">
                 <h3>Profile Details</h3>
                 <div class="form-group">
                     <label>Pangalan</label>
@@ -1060,47 +1060,100 @@
                         <option value="" disabled selected>Pumili ng Barangay</option>
                     </select>
                 </div>
-                <div class="form-group">
+                <div class="form-group" style="margin-bottom: 0;">
                     <label>Additional info (House no., Street, Bldg no., Subdivision)</label>
                     <input type="text" id="acc-street" class="input" placeholder="Hal. Blk 5 Lot 12, Villa Clara Subd.">
                 </div>
-                <button class="btn btn-brand" onclick="app.updateProfile()">Save Profile</button>
+                
+                <!-- 🟢 Wrapper with margin-top: auto pushes the button to the bottom -->
+                <div style="margin-top: auto; padding-top: 20px;">
+                    <button class="btn btn-brand" onclick="app.updateProfile()">Save Profile</button>
+                </div>
             </div>
 
-            <!-- Password & Logs -->
-            <div class="account-side">
-                <div class="card account-card">
+            <!-- Password & Quote Column -->
+            <div style="display: flex; flex-direction: column; gap: 30px;">
+                <div class="card account-card" style="margin: 0;">
                     <h3>Change Password</h3>
                     <div class="form-group">
                         <label>Current Password</label>
-                        <input type="password" id="acc-current-pass" class="input" placeholder="Ilagay ang kasalukuyang password">
+                        <div style="position: relative;">
+                            <input type="password" id="acc-current-pass" class="input" placeholder="Ilagay ang kasalukuyang password" autocomplete="new-password" style="padding-right: 46px;">
+                            <button type="button" class="auth-eye" aria-label="Ipakita ang password" onclick="app.toggleAccPasswords()" style="top: 50%; transform: translateY(-50%); right: 12px; color: var(--muted);">
+                                <svg class="acc-eye-show" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                    <circle cx="12" cy="12" r="3"/>
+                                </svg>
+                                <svg class="acc-eye-hide" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;">
+                                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                                    <line x1="1" y1="1" x2="23" y2="23"></line>
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="inline-error-msg" id="err-acc-current"></div>
                     </div>
                     <div class="form-group">
                         <label>New Password</label>
-                        <input type="password" id="acc-new-pass" class="input" placeholder="Min. 6 characters">
+                        <div style="position: relative;">
+                            <input type="password" id="acc-new-pass" class="input" placeholder="Min. 8 characters" autocomplete="new-password" style="padding-right: 46px;">
+                            <button type="button" class="auth-eye" aria-label="Ipakita ang password" onclick="app.toggleAccPasswords()" style="top: 50%; transform: translateY(-50%); right: 12px; color: var(--muted);">
+                                <svg class="acc-eye-show" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                    <circle cx="12" cy="12" r="3"/>
+                                </svg>
+                                <svg class="acc-eye-hide" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;">
+                                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                                    <line x1="1" y1="1" x2="23" y2="23"></line>
+                                </svg>
+                            </button>
+                        </div>
+                        <div id="acc-pass-req" class="pass-req-list" style="display: none;">
+                            <div class="req-item" id="acc-req-len"><span class="req-icon">○</span> At least 8 characters</div>
+                            <div class="req-item" id="acc-req-upper"><span class="req-icon">○</span> Uppercase letter (A-Z)</div>
+                            <div class="req-item" id="acc-req-lower"><span class="req-icon">○</span> Lowercase letter (a-z)</div>
+                            <div class="req-item" id="acc-req-num"><span class="req-icon">○</span> Number (0-9)</div>
+                            <div class="req-item" id="acc-req-spec"><span class="req-icon">○</span> Special character (!@#$%^&*)</div>
+                        </div>
+                        <div class="inline-error-msg" id="err-acc-new"></div>
                     </div>
                     <div class="form-group">
                         <label>Confirm New Password</label>
-                        <input type="password" id="acc-confirm-pass" class="input" placeholder="I-retype ang new password">
+                        <div style="position: relative;">
+                            <input type="password" id="acc-confirm-pass" class="input" placeholder="I-retype ang new password" autocomplete="new-password" style="padding-right: 46px;">
+                            <button type="button" class="auth-eye" aria-label="Ipakita ang password" onclick="app.toggleAccPasswords()" style="top: 50%; transform: translateY(-50%); right: 12px; color: var(--muted);">
+                                <svg class="acc-eye-show" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                    <circle cx="12" cy="12" r="3"/>
+                                </svg>
+                                <svg class="acc-eye-hide" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;">
+                                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                                    <line x1="1" y1="1" x2="23" y2="23"></line>
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="inline-error-msg" id="err-acc-confirm"></div>
                     </div>
                     <button class="btn btn-ghost" onclick="app.changePassword()">Update Password</button>
                 </div>
 
-                <div class="card account-card">
-                    <h3>Order Logs</h3>
-                    <div id="account-order-logs" class="account-orders-list"></div>
-                    <button class="btn btn-ghost" style="width:100%; margin-top:10px;" onclick="app.go('orders')">View All Orders</button>
+                <!-- Quote (Now directly below Password) -->
+                <div class="account-quote" style="margin-top: 0;">
+                    <p>"Ang tunay na yaman ng Pilipino ay hindi lamang makikita sa bulsa, kundi sa init ng pagtanggap at sa pagmamahal sa sariling atin."</p>
+                    <span>— PiliKart</span>
                 </div>
             </div>
-        </div>
+        </div> <!-- 🟢 Closes account-grid -->
 
-        <!-- Quote -->
-        <div class="account-quote">
-            <p>"Ang tunay na yaman ng Pilipino ay hindi lamang makikita sa bulsa, kundi sa init ng pagtanggap at sa pagmamahal sa sariling atin."</p>
-            <span>— PiliKart</span>
+        <!-- 🟢 Order Logs -->
+        <div class="card account-card" style="margin-top: 30px; margin-bottom: 30px;">
+            <h3>Recent Orders</h3>
+            <div id="account-order-logs" class="account-orders-list"></div>
+            <div style="text-align: center; margin-top: 16px;">
+                <a href="#" onclick="app.go('orders'); return false;" style="color: var(--brand); font-weight: 800; font-size: 13px; text-decoration: underline;">Tingnan Lahat ng Orders &rarr;</a>
+            </div>
         </div>
-    </div>
- 
+    </div> <!-- 🟢 Closes view-account -->
+
     <!-- ADMIN DASHBOARD -->
     <div id="view-admin" class="hidden max-w" style="padding-top:20px; padding-bottom: 60px;">
         <div class="page-head">
@@ -1108,7 +1161,7 @@
                 <span class="head-ic" style="background:linear-gradient(135deg, #a9744a, #8a5c38); color:#fbeed4;">
                     <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
                 </span>
-                Owner Dashboard
+                Admin Dashboard
             </h1>
         </div>
         
@@ -1504,7 +1557,11 @@
     <div class="footer-bottom-bar">
         <span>Copyright &copy; 2026 PiliKart. All rights reserved.</span>
         
-        <button class="btn btn-ghost" style="padding: 4px 14px; font-size: 11px; border-radius: 99px; border-color: var(--muted); color: var(--muted); margin-left: 10px;" onclick="app.showCredits()">
+        <button class="btn" 
+                style="padding: 4px 14px; font-size: 11px; border-radius: 99px; border: 1px solid rgba(232, 226, 219, 0.2); background: transparent; color: #b5aca4; margin-left: 10px; box-shadow: none; font-family: 'Nunito', sans-serif; text-transform: uppercase; letter-spacing: 0.5px; transition: all 0.2s;" 
+                onmouseover="this.style.color='#f6f2ec'; this.style.borderColor='rgba(232, 226, 219, 0.6)'; this.style.background='rgba(255,255,255,0.05)';" 
+                onmouseout="this.style.color='#b5aca4'; this.style.borderColor='rgba(232, 226, 219, 0.2)'; this.style.background='transparent';" 
+                onclick="app.showCredits()">
             Credits
         </button>
 
@@ -1538,7 +1595,7 @@
                 <span class="cart-select-all-text" style="font-size: 13px;">Piliin Lahat</span>
             </label>
             <div style="display: flex; gap: 8px;">
-                <button class="btn btn-ghost" onclick="app.toggleCart(true); app.go('cart');" style="padding: 4px 10px; font-size: 11px; border-radius: 6px; border-color: var(--line); color: var(--brand); font-weight: 800; transition: all 0.2s;" onmouseover="this.style.borderColor='var(--brand)'" onmouseout="this.style.borderColor='var(--line)'">
+                <button class="btn btn-ghost" onclick="app.viewFullCart()" style="padding: 4px 10px; font-size: 11px; border-radius: 6px; border-color: var(--line); color: var(--brand); font-weight: 800; transition: all 0.2s;" onmouseover="this.style.borderColor='var(--brand)'" onmouseout="this.style.borderColor='var(--line)'">
                     View in Full
                 </button>
                 <button class="btn btn-ghost" onclick="app.clearCart()" style="padding: 4px 10px; font-size: 11px; border-radius: 6px; border-color: var(--line); color: var(--muted); transition: all 0.2s;" onmouseover="this.style.color='#e5604d'; this.style.borderColor='#e5604d'" onmouseout="this.style.color='var(--muted)'; this.style.borderColor='var(--line)'">
@@ -1617,7 +1674,7 @@
 
     <div class="nav-drawer-links">
         <!-- 1. Menu (Primary shopping action) -->
-        <a href="#" onclick="app.scrollToMenu(); app.toggleNavDrawer();">
+        <a href="#" data-view="home" onclick="app.scrollToMenu(); app.toggleNavDrawer();">
             <svg class="nd-icon" viewBox="0 0 24 24"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></svg>
             <div>
                 <strong>Menu</strong>
@@ -1626,7 +1683,7 @@
         </a>
 
         <!-- 2. My Orders / Admin Dashboard (Dynamic link for tracking/managing) -->
-        <a href="#" id="nav-orders-link" onclick="app.navTo('orders')">
+        <a href="#" id="nav-orders-link" data-view="orders" onclick="app.navTo('orders')">
             <svg class="nd-icon" id="nav-orders-icon" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
             <div>
                 <strong id="nav-orders-title">My Orders</strong>
@@ -1635,7 +1692,7 @@
         </a>
 
         <!-- 3. Admin My Orders (Only visible to admins) -->
-        <a href="#" id="nav-admin-my-orders" class="hidden" onclick="app.navTo('orders')">
+        <a href="#" id="nav-admin-my-orders" class="hidden" data-view="orders" onclick="app.navTo('orders')">
             <svg class="nd-icon" viewBox="0 0 24 24"><path d="M6 3h12a1 1 0 0 1 1 1v17l-3-2-3 2-3-2-3 2V4a1 1 0 0 1 1-1z"></path><line x1="9" y1="8" x2="15" y2="8"></line><line x1="9" y1="12" x2="13" y2="12"></line></svg>
             <div>
                 <strong>My Orders</strong>
@@ -1644,7 +1701,7 @@
         </a>
 
         <!-- 4. Bayanihan Cart (Key unique feature) -->
-        <a href="#" onclick="app.navTo('bayanihan')">
+        <a href="#" data-view="bayanihan" onclick="app.navTo('bayanihan')">
             <svg class="nd-icon" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
             <div>
                 <strong>Bayanihan Cart</strong>
@@ -1653,7 +1710,7 @@
         </a>
 
         <!-- 5. My Account (Settings & Profile) -->
-        <a href="#" onclick="app.navToAccount()">
+        <a href="#" data-view="account" onclick="app.navToAccount()">
             <svg class="nd-icon" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/><path d="M17 5a2 2 0 0 0-2-2"/></svg>
             <div>
                 <strong>My Account</strong>
@@ -1662,7 +1719,7 @@
         </a>
 
         <!-- 6. Recipe Box (Engagement/Content) -->
-        <a href="#" onclick="app.navTo('recipes')">
+        <a href="#" data-view="recipes" onclick="app.navTo('recipes')">
             <svg class="nd-icon" viewBox="0 0 24 24"><path d="M4 10h16v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8z"/><path d="M2 10h20"/><path d="M8 6c0-2 1-3 2-3s2 1 2 3"/><path d="M14 6c0-2 1-3 2-3s2 1 2 3"/></svg>
             <div>
                 <strong>Recipe Box</strong>
@@ -1671,7 +1728,7 @@
         </a>
 
         <!-- 7. About Us (Brand story) -->
-        <a href="#" onclick="app.navTo('about')">
+        <a href="#" data-view="about" onclick="app.navTo('about')">
             <svg class="nd-icon" viewBox="0 0 24 24"><path d="M4 14.5A4.5 4.5 0 0 1 8.5 10h7a4.5 4.5 0 0 1 4.5 4.5V19a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-4.5Z"/><path d="M15 10V6a3 3 0 0 0-3-3H9a3 3 0 0 0-3 3v4"/><path d="M8 21v-3"/><path d="M16 21v-3"/><path d="M2 14h2"/><path d="M20 14h2"/></svg>
             <div>
                 <strong>About Us</strong>
@@ -1680,7 +1737,7 @@
         </a>
 
         <!-- 8. FAQ (Support/Help) -->
-        <a href="#" onclick="app.navTo('faq')">
+        <a href="#" data-view="faq" onclick="app.navTo('faq')">
             <svg class="nd-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 9a3 3 0 1 1 0-6 3 3 0 0 1 0 6z"/><path d="M12 15a3 3 0 1 1 0 6 3 3 0 0 1 0-6z"/><path d="M9 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0z"/><path d="M15 12a3 3 0 1 1 6 0 3 3 0 0 1-6 0z"/></svg>
             <div>
                 <strong>FAQ</strong>
@@ -1690,28 +1747,38 @@
     </div>
 
     <div class="nav-drawer-footer">
+        <!-- Clean Theme Label -->
+        <div style="font-size: 11px; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; margin-left: 4px;">
+            Theme
+        </div>
+        
         <div class="nd-toggle-wrap" onclick="app.toggleTheme()">
             <div class="nd-toggle-pill" id="nd-theme-pill"></div>
+            
+            <!-- Oak Mode (Light) -->
             <div class="nd-toggle-option" id="nd-opt-day">
-                <svg style="width:14px;height:14px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
-                <span>Day Mode</span>
-            </div>
-            <div class="nd-toggle-option" id="nd-opt-sunset">
-                <svg style="width:14px;height:14px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M17 18a5 5 0 0 0-10 0"/>
-                    <line x1="12" y1="9" x2="12" y2="2"/>
-                    <line x1="4.22" y1="10.22" x2="5.64" y2="11.64"/>
-                    <line x1="1" y1="18" x2="3" y2="18"/>
-                    <line x1="21" y1="18" x2="23" y2="18"/>
-                    <line x1="18.36" y1="11.64" x2="19.78" y2="10.22"/>
-                    <line x1="23" y1="22" x2="1" y2="22"/>
-                    <polyline points="16 5 12 9 8 5"/>
+                <svg style="width:16px;height:16px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="7" r="3"/>
+                    <path d="M12 2v1M12 11v1M7 7h1M16 7h1M8.5 3.5l.7.7M14.8 9.8l.7.7M15.5 3.5l-.7.7M9.2 9.8l-.7.7"/>
+                    <rect x="6" y="15" width="12" height="5" rx="2.5"/>
+                    <path d="M9 17.5h6"/>
                 </svg>
-                <span>Sunset</span>
+                <span>Oak (Light)</span>
+            </div>
+            
+            <!-- Forest Mode (Dark) -->
+            <div class="nd-toggle-option" id="nd-opt-sunset">
+                <svg style="width:16px;height:16px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+                    <path d="M12 17v5" />
+                    <path d="M9 20l3-3 3 3" />
+                    <path d="M10 16l2-2 2 2" />
+                </svg>
+                <span>Forest (Dark)</span>
             </div>
         </div>
 
-        <button class="btn btn-brand" style="width:100%; justify-content:center;" id="nd-auth-btn" onclick="app.handleAuthFromDrawer()">
+        <button class="btn btn-brand" style="width:100%; justify-content:center; margin-top: 10px;" id="nd-auth-btn" onclick="app.handleAuthFromDrawer()">
             <svg style="width:16px;height:16px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 17l5-5-5-5v3H3v4h7v3zM19 3H5c-1.1 0-2 .9-2 2v4h2V5h14v14H5v-4H3v4c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z"/></svg>
             <span id="nd-auth-label">Sign In / Sign Up</span>
         </button>
@@ -2214,37 +2281,71 @@
                     <button type="button" id="btn-tab-signup" class="auth-toggle-btn" role="tab" aria-selected="false" onclick="app.setAuthMode('signup')">Sign Up</button>
                 </div>
  
-                <form id="auth-form" novalidate onsubmit="app.submitAuth(event)">
-                    <!-- 🟢 NEW: Sign Up Only Fields (Name & Address) -->
-                    <div class="auth-collapse auth-extra"><div class="in" style="display:flex; flex-direction:column; gap:10px; padding-bottom:10px;">
-                        <input type="text" id="auth-name" class="auth-input" placeholder="Buong pangalan" autocomplete="name" style="margin-bottom:0;">
-                        <select id="auth-city" class="auth-input" onchange="app.updateAuthBrgyDropdown()" style="margin-bottom:0;">
-                            <option value="" disabled selected>Pumili ng Lungsod</option>
-                        </select>
-                        <select id="auth-brgy" class="auth-input" style="margin-bottom:0;">
-                            <option value="" disabled selected>Pumili ng Barangay</option>
-                        </select>
-                        <input type="text" id="auth-street" class="auth-input" placeholder="House no., Street, Bldg., Subd." autocomplete="street-address" style="margin-bottom:0;">
-                    </div></div>
+                <form id="auth-form" novalidate onsubmit="app.submitAuth(event)" autocomplete="off">
+                    <!-- Sign Up Only Fields (Name & Address) -->
+                    <div class="auth-collapse auth-extra">
+                        <div class="in" style="display:flex; flex-direction:column; gap:6px; padding-bottom:6px;">
+                            <input type="text" id="auth-name" class="auth-input" placeholder="Buong pangalan *" autocomplete="name" style="margin-bottom:0;">
+                            
+                            <!-- City and Barangay Side-by-Side -->
+                            <div style="display: flex; gap: 6px; width: 100%;">
+                                <select id="auth-city" class="auth-input" required onchange="app.updateAuthBrgyDropdown()" style="margin-bottom:0; flex: 1; min-width: 0;">
+                                    <option value="" disabled selected>Pumili ng Lungsod *</option>
+                                </select>
+
+                                <select id="auth-brgy" class="auth-input" required style="margin-bottom:0; flex: 1; min-width: 0;">
+                                    <option value="" disabled selected>Pumili ng Barangay *</option>
+                                </select>
+                            </div>
+                            
+                            <input type="text" id="auth-street" class="auth-input" placeholder="House no., Street, Bldg., Subd. *" autocomplete="street-address" style="margin-bottom:0;">
+                        </div>
+                    </div>
  
-                    <input type="email" id="auth-email" class="auth-input" placeholder="Email" autocomplete="email">
- 
+                    <input type="email" id="auth-email" class="auth-input" placeholder="Email *" autocomplete="off" readonly onfocus="this.removeAttribute('readonly')">
+                    <div class="inline-error-msg" id="err-auth-email"></div>
+                    
+                    <!-- Password Field -->
                     <div class="auth-pass-wrap">
-                        <input type="password" id="auth-pass" class="auth-input" placeholder="Password" autocomplete="current-password">
-                        <button type="button" id="auth-eye" class="auth-eye" aria-label="Ipakita ang password" aria-pressed="false" onclick="app.togglePassword()">
-                            <svg id="eye-icon-show" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <input type="password" id="auth-pass" class="auth-input" placeholder="Password *" autocomplete="new-password" readonly onfocus="this.removeAttribute('readonly')">
+                        <button type="button" class="auth-eye" aria-label="Ipakita ang password" aria-pressed="false" onclick="app.togglePassword()">
+                            <svg class="eye-show-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
                                 <circle cx="12" cy="12" r="3"/>
                             </svg>
-                            <svg id="eye-icon-hide" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;">
+                            <svg class="eye-hide-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;">
                                 <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
                                 <line x1="1" y1="1" x2="23" y2="23"></line>
                             </svg>
                         </button>
                     </div>
+                    <div class="inline-error-msg" id="err-auth-pass"></div>
 
+                    <!-- Password Requirements Checklist -->
+                    <div id="auth-pass-req" class="pass-req-list" style="display: none;">
+                        <div class="req-item" id="auth-req-len"><span class="req-icon">○</span> At least 8 characters</div>
+                        <div class="req-item" id="auth-req-upper"><span class="req-icon">○</span> Uppercase letter (A-Z)</div>
+                        <div class="req-item" id="auth-req-lower"><span class="req-icon">○</span> Lowercase letter (a-z)</div>
+                        <div class="req-item" id="auth-req-num"><span class="req-icon">○</span> Number (0-9)</div>
+                        <div class="req-item" id="auth-req-spec"><span class="req-icon">○</span> Special character (!@#$%^&*)</div>
+                    </div>
+
+                    <!-- Confirm Password Field -->
                     <div class="auth-collapse auth-extra"><div class="in">
-                        <input type="password" id="auth-confirm-pass" class="auth-input" placeholder="Confirm Password" autocomplete="new-password">
+                        <div class="auth-pass-wrap">
+                            <input type="password" id="auth-confirm-pass" class="auth-input" placeholder="Confirm Password *" autocomplete="new-password" readonly onfocus="this.removeAttribute('readonly')">
+                            <button type="button" class="auth-eye" aria-label="Ipakita ang password" aria-pressed="false" onclick="app.togglePassword()">
+                                <svg class="eye-show-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                    <circle cx="12" cy="12" r="3"/>
+                                </svg>
+                                <svg class="eye-hide-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;">
+                                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                                    <line x1="1" y1="1" x2="23" y2="23"></line>
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="inline-error-msg" id="err-auth-confirm"></div>
                     </div></div>
  
                     <div id="auth-error" class="auth-error" role="alert"></div>
@@ -2255,10 +2356,11 @@
                     </button>
                 </form>
  
-                <div class="auth-divider">o kaya</div>
- 
-                <button type="button" class="btn-guest-outline" onclick="app.continueAsGuest()">Continue as Guest</button>
-                <p class="auth-guest-subtitle">Browse freely &mdash; sa checkout, log in o ilagay ang address mo.</p>
+                <div id="auth-guest-section">
+                    <div class="auth-divider">o kaya</div>
+                    <button type="button" class="btn-guest-outline" onclick="app.continueAsGuest()">Continue as Guest</button>
+                    <p class="auth-guest-subtitle">Browse freely &mdash; sa checkout, log in o ilagay ang address mo.</p>
+                </div>
             </div>
         </div>
     </div>
@@ -2319,6 +2421,6 @@
     </div>
 </div>
  
-<script src="main.js?v=12"></script>
+<script src="main.js?v=13"></script>
 </body>
 </html>

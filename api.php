@@ -31,6 +31,14 @@ function notifyAdmins(PDO $pdo, int $orderId, string $message) {
         foreach ($admins as $aid) notify($pdo, $aid, $orderId, $message);
     } catch (Exception $e) {}
 }
+
+function isValidPassword($pw) {
+    return strlen($pw) >= 8 && 
+           preg_match('/[A-Z]/', $pw) && 
+           preg_match('/[a-z]/', $pw) && 
+           preg_match('/[0-9]/', $pw) && 
+           preg_match('/[^A-Za-z0-9]/', $pw);
+}
  
 if (strpos($action, 'admin-') === 0 && ($_SESSION['role'] ?? '') !== 'admin') {
     out(['error' => 'Admins only'], 403);
@@ -73,9 +81,9 @@ switch ($action) {
         $notifs = [];
         if ($user) {
             if ($user['role'] === 'admin') {
-                $orders = $pdo->query('SELECT * FROM orders ORDER BY id DESC LIMIT 50')->fetchAll();
+                $orders = $pdo->query('SELECT * FROM orders WHERE is_archived=0 ORDER BY id DESC LIMIT 50')->fetchAll();
             } else {
-                $stmt = $pdo->prepare('SELECT * FROM orders WHERE user_id=? ORDER BY id DESC');
+                $stmt = $pdo->prepare('SELECT * FROM orders WHERE user_id=? AND is_archived=0 ORDER BY id DESC');
                 $stmt->execute([$user['id']]);
                 $orders = $stmt->fetchAll();
             }
@@ -115,7 +123,7 @@ switch ($action) {
         }
         out(['user' => $user, 'products' => $products, 'orders' => $orders,
              'fee' => $fee, 'notifications' => $notifs, 'groups' => $groups, 'deliveryFees' => $deliveryFees]);
- 
+
     case 'signup':
         $name  = trim($in['name'] ?? '');
         $email = trim(strtolower($in['email'] ?? ''));
@@ -129,8 +137,10 @@ switch ($action) {
 
         if ($name === '') out(['error' => 'Ilagay ang buong pangalan mo.'], 400);
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) out(['error' => 'Mali ang email format.'], 400);
-        if (strlen($pw) < 6) out(['error' => 'Password: hindi bababa sa 6 characters.'], 400);
-        
+        if (!isValidPassword($pw)) {
+            out(['error' => 'Password must be at least 8 characters long and include uppercase, lowercase, number, and special character.'], 400);
+        }
+
         if ($pw !== $confirm_pw) out(['error' => 'Hindi nagtutugma ang password at confirm password.'], 400);
         if ($city === '' || $brgy === '' || $street === '') {
             out(['error' => 'Kumpletuhin ang address (Lungsod, Barangay, at Street).'], 400);
@@ -211,8 +221,9 @@ switch ($action) {
         $current = (string)($in['current'] ?? '');
         $new = (string)($in['new'] ?? '');
 
-        if (strlen($new) < 6) out(['error' => 'New Password: hindi bababa sa 6 characters.'], 400);
-
+        if (!isValidPassword($new)) {
+            out(['error' => 'New Password must be at least 8 characters long and include uppercase, lowercase, number, and special character.'], 400);
+        }
         $stmt = $pdo->prepare('SELECT password_hash FROM users WHERE id=?');
         $stmt->execute([$_SESSION['user_id']]);
         $u = $stmt->fetch();
@@ -360,13 +371,12 @@ switch ($action) {
 
         out(['ok' => true]);
  
-    case 'admin-delete-order':
+    case 'admin-archive-order':
         $oid = (int)$in['order_id'];
         $s = $pdo->prepare('SELECT user_id FROM orders WHERE id=?');
         $s->execute([$oid]);
         $uid = $s->fetchColumn();
-        $pdo->prepare('DELETE FROM order_items WHERE order_id=?')->execute([$oid]);
-        $pdo->prepare('DELETE FROM orders WHERE id=?')->execute([$oid]);
+        $pdo->prepare('UPDATE orders SET is_archived=1 WHERE id=?')->execute([$oid]);
         if ($uid) notify($pdo, (int)$uid, 0, "Ang order #$oid ay na-delete na ng admin.");
         out(['ok' => true]);
  
@@ -438,6 +448,8 @@ switch ($action) {
             SELECT p.name, SUM(oi.qty) AS total_sold, SUM(oi.qty * oi.price) AS total_revenue
             FROM order_items oi
             INNER JOIN products p ON oi.product_id = p.id
+            INNER JOIN orders o ON oi.order_id = o.id
+            WHERE o.is_archived = 0
             GROUP BY p.id, p.name
             HAVING total_sold > 0
             ORDER BY $sort DESC
@@ -452,6 +464,8 @@ switch ($action) {
                    SUM(oi.qty * oi.price) AS total_revenue
             FROM order_items oi
             INNER JOIN products p ON oi.product_id = p.id
+            INNER JOIN orders o ON oi.order_id = o.id
+            WHERE o.is_archived = 0
             GROUP BY p.category
         ");
         out($stmt->fetchAll());
@@ -477,10 +491,10 @@ switch ($action) {
 
     case 'admin-get-users':
         $stmt = $pdo->query("
-            SELECT u.id, u.name, u.email, u.phone, u.address, u.role, u.created_at, COUNT(o.id) AS order_count
+            SELECT u.id, u.name, u.email, u.phone, u.address, u.role, u.created_at, 
+                   (SELECT COUNT(*) FROM orders o WHERE o.user_id = u.id AND o.is_archived = 0) AS order_count
             FROM users u
-            LEFT JOIN orders o ON u.id = o.user_id
-            GROUP BY u.id
+            WHERE u.is_archived = 0
             ORDER BY u.id ASC
         ");
         out($stmt->fetchAll());
@@ -523,7 +537,15 @@ switch ($action) {
         notify($pdo, $targetUserId, 0, "Ang iyong account role ay nabago sa " . strtoupper($newRole) . " ng admin.");
 
         out(['ok' => true]);
+
+    case 'admin-archive-user':
+        $targetUserId = (int)($in['user_id'] ?? 0);
+        if (!$targetUserId) out(['error' => 'Invalid user.'], 400);
         
+        $pdo->prepare('UPDATE users SET is_archived=1 WHERE id=?')->execute([$targetUserId]);
+        notifyAdmins($pdo, 0, "Na-delete ang isang user account (ID: #$targetUserId).");
+        out(['ok' => true]);
+
     case 'mark-read':
         if (!empty($_SESSION['user_id'])) {
             try {
@@ -1220,7 +1242,7 @@ switch ($action) {
         if ($gcashPaid > 0) {
             out(['error' => "Hindi ma-cancel: may $gcashPaid member na nagbayad via GCash. Kailangang i-refund muna."], 400);
         }
-        $pdo->prepare('UPDATE group_carts SET status="cancelled" WHERE id=?')->execute([$gid]);
+        $pdo->prepare('UPDATE group_carts SET status="cancelled", is_archived=1 WHERE id=?')->execute([$gid]);
         $s2 = $pdo->prepare('SELECT user_id FROM group_cart_members WHERE group_cart_id=? AND status="approved"');
         $s2->execute([$gid]);
         $s_host = $pdo->prepare('SELECT name FROM users WHERE id=?'); $s_host->execute([$uid]); $hname = $s_host->fetchColumn();
@@ -1228,7 +1250,6 @@ switch ($action) {
             notify($pdo, (int)$memberUid, 0, "Kinansela ni $hname ang Bayanihan Cart \"{$g['name']}\".");
         }
         out(['ok' => true]);
-
     // ============================================================
     // ADMIN: Bayanihan monitoring (read-only)
     // ============================================================
