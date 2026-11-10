@@ -116,9 +116,9 @@ const app = {
           reply: "Aww, you're welcome, suki! <3 Salamat din sa pagpili sa PiliKart. Happy shopping at ingat lagi!" },
 
         // ==================== DEPARTMENTS ====================
-        { keys: ['paso', 'food essentials'], 
-          reply: "Welcome sa PASO Food Essentials, suki! :) Dito ang mga paborito mong lutong-bahay at grocery essentials.<br><button class='pb-action-btn' onclick=\"app.filterFromFooter('paso')\">View PASO Menu</button>" },
-        { keys: ['apollo', 'technology store'], 
+        { keys: ['paso', 'banga', 'food essentials'], 
+          reply: "Welcome sa BANGA Food Essentials, suki! :) Dito ang mga paborito mong lutong-bahay at grocery essentials."},
+          { keys: ['apollo', 'technology store'], 
           reply: "Welcome sa APOLLO Technologies, suki! :) Dito ang mga gadgets at tech finds.<br><button class='pb-action-btn' onclick=\"app.filterFromFooter('apollo')\">View APOLLO Menu</button>" },
         { keys: ['habi', 'fashion store'], 
           reply: "Welcome sa HABI Fashion & Cosmetics, suki! :) Dito ang mga fashion at beauty finds.<br><button class='pb-action-btn' onclick=\"app.filterFromFooter('habi')\">View HABI Menu</button>" },
@@ -1661,7 +1661,8 @@ initLandingInteractions() {
 
         this._carouselItems = highlights.map(p => {
             const catKey = (p.category || 'paso').toLowerCase();
-            return { id: p.id, name: (p.category || 'ITEM').toUpperCase(), catKey: catKey, icon: this.deptIcons[catKey] || '', desc: p.description || p.tagline || '', featured: p.name, image: p.image };
+            const displayCategory = catKey === 'paso' ? 'BANGA' : (p.category || 'ITEM').toUpperCase();
+return { id: p.id, name: displayCategory, catKey: catKey, icon: this.deptIcons[catKey] || '', desc: p.description || p.tagline || '', featured: p.name, image: p.image };
         });
 
         if (this.carouselIndex >= this._carouselItems.length) this.carouselIndex = 0;
@@ -1757,8 +1758,7 @@ renderMenu() {
     this.budget = maxPrice === Infinity ? null : maxPrice;
     this.updateCartBudgetUI();
 
-    const categoryMeta = { paso: { label: 'PASO' }, nipa: { label: 'NIPA' }, habi: { label: 'HABI' }, apollo: { label: 'APOLLO' } };
-
+    const categoryMeta = { paso: { label: 'BANGA' }, nipa: { label: 'NIPA' }, habi: { label: 'HABI' }, apollo: { label: 'APOLLO' } };
     // 1. Filter
     let filtered = this.products.filter(p => {
         const cat = p.category ? p.category.toLowerCase() : '';
@@ -2597,7 +2597,7 @@ renderMenu() {
         this.cart = this.cart.filter(c => (c.category || '').toLowerCase() !== 'paso');
         this.saveCart();
         this.renderCart();
-        this.showToast('Inalis ang mga PASO items sa iyong cart.');
+        this.showToast('Inalis ang mga BANGA items sa iyong cart.');
         this.toggleCart(true);
         this.go('checkout');
     },
@@ -2812,7 +2812,7 @@ renderMenu() {
         if (!brgy) return this.fieldFail('co-brgy', 'Pumili ng barangay.');
 
         const hasPaso = selectedCart.some(c => (c.category || '').toLowerCase() === 'paso');
-        if (hasPaso && city !== 'Calamba') return this.fieldFail('co-city', 'Ang PASO (pagkain) items ay pwede lang i-deliver sa loob ng Calamba, Laguna.');
+        if (hasPaso && city !== 'Calamba') return this.fieldFail('co-city', 'Ang BANGA (pagkain) items ay pwede lang i-deliver sa loob ng Calamba, Laguna.');
         if (payment === 'gcash' && !this.gcashBase64) return this.fieldFail('gcash-drop', 'I-upload muna ang screenshot ng GCash receipt.');
 
         const address = JSON.stringify({ street, brgy, city });
@@ -3561,7 +3561,7 @@ toggleAdvancedMenuFilters(btn) {
         this.updateThemeButton();
 
         clearTimeout(this._themeTimeout); 
-        this._themeTimeout = setTimeout(() => { html.classList.remove('theme-switching'); }, 600); 
+        this._themeTimeout = setTimeout(() => { html.classList.remove('theme-switching'); }, 1000); 
     },
 
     setTheme(theme) {
@@ -3575,7 +3575,7 @@ toggleAdvancedMenuFilters(btn) {
         if (pillWrap) pillWrap.classList.toggle('is-sunset', theme === 'sunset');
         this.updateThemeButton();
         clearTimeout(this._themeTimeout);
-        this._themeTimeout = setTimeout(() => html.classList.remove('theme-switching'), 800);
+        this._themeTimeout = setTimeout(() => html.classList.remove('theme-switching'), 1000);
     },
 
     updateThemeButton() {

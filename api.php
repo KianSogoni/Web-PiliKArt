@@ -304,8 +304,7 @@ switch ($action) {
             // PASO restriction — food items deliverable only within Calamba
             $address = (string)($in['address'] ?? '');
             if ($hasPaso && stripos($address, 'Calamba') === false) {
-                out(['error' => 'Ang PASO (pagkain) items ay pwede lang i-deliver sa loob ng Calamba, Laguna.'], 400);
-            }
+                out(['error' => 'Ang BANGA (pagkain) items ay pwede lang i-deliver sa loob ng Calamba, Laguna.'], 400);}
 
             $fee = isset($in['fee']) ? (int)$in['fee'] : (int)$pdo->query("SELECT `value` FROM settings WHERE `key`='delivery_fee'")->fetchColumn();
             $protectionFee = 0;
@@ -1114,8 +1113,7 @@ switch ($action) {
             if (strtolower($p->fetchColumn()) === 'paso') { $hasPaso = true; break; }
         }
         if ($hasPaso && stripos($g['delivery_address'], 'Calamba') === false) {
-            out(['error' => 'Ang PASO (pagkain) items ay pwede lang i-deliver sa loob ng Calamba, Laguna. Palitan ang delivery address ng group cart.'], 400);
-        }
+            out(['error' => 'Ang BANGA (pagkain) items ay pwede lang i-deliver sa loob ng Calamba, Laguna. Palitan ang delivery address ng group cart.'], 400);}
 
         $subtotal = 0; $pids = [];
         foreach ($items as $it) { $subtotal += $it['price'] * $it['qty']; $pids[] = $it['product_id']; }
@@ -1323,7 +1321,7 @@ switch ($action) {
             $hoursElapsed = (time() - $deliveryTime) / 3600;
 
             if ($hasPaso && $hoursElapsed > 24) {
-                out(['error' => 'Lumipas na ang 24-oras na refund window para sa PASO (pagkain) items.'], 400);
+                out(['error' => 'Lumipas na ang 24-oras na refund window para sa BANGA (pagkain) items.'], 400);
             } elseif (!$hasPaso && $hoursElapsed > (24 * 7)) {
                 out(['error' => 'Lumipas na ang 7-araw na refund window para sa mga item na ito.'], 400);
             }
