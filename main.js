@@ -178,32 +178,51 @@ const app = {
         if (!reason) return this.showToast('Ilagay ang dahilan ng refund.');
         if (!this._refundProof) return this.showToast('I-upload ang litrato bilang patunay.');
 
-        try {
-            const res = await fetch('api.php?action=request-refund', {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ order_id: this._refundOrderId, reason: reason, proof: this._refundProof })
-            });
-            
-            const text = await res.text();
-            let data;
+        this.showConfirm('Request Refund', 'Sigurado ka bang i-submit ang refund request na ito?', async () => {
             try {
-                data = JSON.parse(text);
-            } catch (err) {
-                console.error("Server returned non-JSON response:", text);
-                return this.showToast('Server Error: Check console for details.');
-            }
+                const res = await fetch('api.php?action=request-refund', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ order_id: this._refundOrderId, reason: reason, proof: this._refundProof })
+                });
+                
+                const text = await res.text();
+                let data;
+                try { data = JSON.parse(text); } catch (err) {
+                    console.error("Server returned non-JSON response:", text);
+                    return this.showToast('Server Error: Check console for details.');
+                }
 
-            if (data.ok) {
-                this.closeModal('refund-modal');
-                this.showToast('Refund request submitted! Hintayin ang approval.');
-                await this.refreshData();
-                this.renderOrders();
-            } else {
-                this.showToast(data.error || 'Failed to submit refund.');
+                if (data.ok) {
+                    this.closeModal('refund-modal');
+                    this.showToast('Refund request submitted! Hintayin ang approval.');
+                    await this.refreshData();
+                    this.renderOrders();
+                } else {
+                    this.showToast(data.error || 'Failed to submit refund.');
+                }
+            } catch (e) { 
+                this.showToast('Connection error. Please try again.'); 
             }
-        } catch (e) { 
-            this.showToast('Connection error. Please try again.'); 
-        }
+        }, 'Submit');
+    },
+
+    deleteUser(userId, userName) {
+        this.showConfirm('Delete Account', `Sigurado ka bang i-delete si <b>${this.esc(userName)}</b>?<br><br>Hindi na siya makaka-login at mawawala siya sa listahan.`, async () => {
+            try {
+                const res = await fetch('api.php?action=admin-archive-user', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: userId })
+                });
+                const data = await res.json();
+                if (data.ok) {
+                    this.showToast('User account deleted.');
+                    this.renderAdminUsers();
+                } else {
+                    this.showToast(data.error || 'Failed to delete user.');
+                }
+            } catch(e) { this.showToast('Connection error.'); }
+        }, 'Delete');
     },
 
     async renderAdminUsers() {
@@ -215,11 +234,14 @@ const app = {
             const res = await fetch('api.php?action=admin-get-users');
             const users = await res.json();
             
-            // Apply filters
+            if (!Array.isArray(users)) {
+                grid.innerHTML = `<p style="text-align:center; color:#e5604d; font-weight:800;">${users.error || 'Failed to load users.'}</p>`;
+                return;
+            }
             const filteredUsers = users.filter(u => {
                 const query = this.adminUserFilter.search;
-                const matchSearch = u.name.toLowerCase().includes(query) || 
-                                    u.email.toLowerCase().includes(query) || 
+                const matchSearch = (u.name || '').toLowerCase().includes(query) || 
+                                    (u.email || '').toLowerCase().includes(query) || 
                                     (u.phone && u.phone.includes(query));
                 const matchRole = this.adminUserFilter.role === 'all' || u.role === this.adminUserFilter.role;
                 return matchSearch && matchRole;
@@ -245,7 +267,10 @@ const app = {
                         <span style="font-size: 11px; font-weight:800; color: var(--muted);">${u.order_count} Order(s)</span>
                         ${u.id === this.user.id 
                             ? '<span style="font-size: 11px; color: var(--muted); font-style: italic;">Current Session</span>' 
-                            : `<button class="btn btn-ghost" style="padding: 4px 12px; font-size: 11px; border-radius: 6px;" onclick='app.openRoleChangeModal(${u.id}, "${u.role}", "${this.esc(u.name)}")'>Change Role</button>`
+                            : `<div style="display:flex; gap:6px;">
+                                <button class="btn btn-ghost" style="padding: 4px 12px; font-size: 11px; border-radius: 6px;" onclick='app.openRoleChangeModal(${u.id}, "${u.role}", "${this.esc(u.name)}")'>Change Role</button>
+                                <button class="btn btn-danger" style="padding: 4px 12px; font-size: 11px; border-radius: 6px;" onclick='app.deleteUser(${u.id}, "${this.esc(u.name)}")'>Delete</button>
+                               </div>`
                         }
                     </div>
                 </div>
@@ -283,43 +308,44 @@ const app = {
         const adminPass = document.getElementById('rc-admin-pass').value;
         const confirmPass = document.getElementById('rc-confirm-pass').value;
 
-        // Client-side Validation
         if (!adminPass) return this.showToast('Enter your password to verify.');
         if (adminPass !== confirmPass) return this.showToast('Passwords do not match.');
-        
-        // Removed the 6-character limit check here
 
-        const btn = document.querySelector('#role-change-modal .btn-brand');
-        const ogText = btn.innerHTML;
-        btn.disabled = true;
-        btn.innerHTML = 'Verifying...';
+        const targetName = document.getElementById('rc-user-name').textContent;
 
-        try {
-            const res = await fetch('api.php?action=admin-update-user-role', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    user_id: this._rcTargetId,
-                    new_role: newRole,
-                    admin_password: adminPass,
-                    confirm_password: confirmPass
-                })
-            });
-            const data = await res.json();
+        this.showConfirm('Change Role', `Baguhin ang role ni <b>${this.esc(targetName)}</b> to <b>${newRole.toUpperCase()}</b>?`, async () => {
+            const btn = document.querySelector('#role-change-modal .btn-brand');
+            const ogText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = 'Verifying...';
 
-            if (data.ok) {
-                this.closeModal('role-change-modal');
-                this.showToast('User role updated successfully!');
-                await this.renderAdminUsers(); // Reload the grid
-            } else {
-                this.showToast(data.error || 'Failed to update role.');
+            try {
+                const res = await fetch('api.php?action=admin-update-user-role', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        user_id: this._rcTargetId,
+                        new_role: newRole,
+                        admin_password: adminPass,
+                        confirm_password: confirmPass
+                    })
+                });
+                const data = await res.json();
+
+                if (data.ok) {
+                    this.closeModal('role-change-modal');
+                    this.showToast('User role updated successfully!');
+                    await this.renderAdminUsers();
+                } else {
+                    this.showToast(data.error || 'Failed to update role.');
+                }
+            } catch (e) {
+                this.showToast('Connection error. Please try again.');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = ogText;
             }
-        } catch (e) {
-            this.showToast('Connection error. Please try again.');
-        } finally {
-            btn.disabled = false;
-            btn.innerHTML = ogText;
-        }
+        }, 'Change Role');
     },
 
     _analyticsLimit: 5,
@@ -678,10 +704,25 @@ const app = {
         this.renderCart(); // Now renders the newly loaded user-specific cart
         this.checkTheme();
         this.updateNavDrawerAuthUI();
+        this.updateNavActiveState()
         this.sizeHeroVideo();
         this.initLeavesAnimation();
         this.checkCartStock();
         this.updateNotifBadge();
+
+        const authPassInput = document.getElementById('auth-pass');
+        if (authPassInput) {
+            authPassInput.addEventListener('input', (e) => {
+                if (this.isSignUp) this.updatePasswordUI(e.target.value, 'auth');
+            });
+        }
+
+        const accNewPassInput = document.getElementById('acc-new-pass');
+        if (accNewPassInput) {
+            accNewPassInput.addEventListener('input', (e) => {
+                this.updatePasswordUI(e.target.value, 'acc');
+            });
+        }
         this.initLandingPage();
         this.initLandingInteractions();
         this.resetCarouselTimer();
@@ -875,6 +916,8 @@ const app = {
         this.updateBodyScrollLock();
         if (!bare) window.scrollTo({ top: 0 });
 
+        this.updateNavActiveState();
+        
         const botBtn = document.getElementById('pilibot-btn');
         if (botBtn) botBtn.style.display = bare ? 'none' : 'flex';
 
@@ -968,7 +1011,7 @@ const app = {
     populateAuthCities() {
         const citySelect = document.getElementById('auth-city');
         if (!citySelect) return;
-        citySelect.innerHTML = '<option value="" disabled selected>Pumili ng Lungsod</option>';
+        citySelect.innerHTML = '<option value="" disabled selected>Pumili ng Lungsod *</option>';
         Object.keys(this.lagunaData).forEach(c => {
             citySelect.innerHTML += `<option value="${c}">${c}</option>`;
         });
@@ -978,7 +1021,7 @@ const app = {
         const city = document.getElementById('auth-city').value;
         const brgySelect = document.getElementById('auth-brgy');
         if (!brgySelect) return;
-        brgySelect.innerHTML = '<option value="" disabled selected>Pumili ng Barangay</option>';
+        brgySelect.innerHTML = '<option value="" disabled selected>Pumili ng Barangay *</option>';
         if (this.lagunaData[city]) {
             Object.keys(this.lagunaData[city]).forEach(b => {
                 brgySelect.innerHTML += `<option value="${b}">${b}</option>`;
@@ -989,7 +1032,24 @@ const app = {
     openAuthModal(mode = 'signin') {
         const modal = document.getElementById('view-auth');
         if (!modal) return;
+        
+        const emailInput = document.getElementById('auth-email');
+        const passInput = document.getElementById('auth-pass');
+        const confirmPassInput = document.getElementById('auth-confirm-pass');
+        
+        if (emailInput) { emailInput.value = ''; emailInput.setAttribute('readonly', 'readonly'); }
+        if (passInput) { passInput.value = ''; passInput.setAttribute('readonly', 'readonly'); }
+        if (confirmPassInput) { confirmPassInput.value = ''; confirmPassInput.setAttribute('readonly', 'readonly'); }
+
+        const isLanding = this.currentView === 'landing';
+        
+        modal.classList.toggle('landing-mode', isLanding);
+        modal.classList.toggle('signup-active', mode === 'signup');
         modal.classList.remove('hidden');
+        
+        void modal.offsetWidth; 
+        modal.classList.add('show');
+
         document.body.style.overflow = 'hidden';
         this.setAuthMode(mode, false);
         this.clearAuthError();
@@ -1000,9 +1060,16 @@ const app = {
     closeAuthModal() {
         const modal = document.getElementById('view-auth');
         if (!modal) return;
-        modal.classList.add('hidden');
+    
+        modal.classList.remove('show'); 
+    
+        setTimeout(() => {
+            modal.classList.add('hidden');
+            this.updateBodyScrollLock();
+            
+        }, 600); 
+
         document.body.style.overflow = (this.currentView === 'landing') ? 'hidden' : 'auto';
-        this.updateBodyScrollLock();
     },
 
     updateNavDrawerAuthUI() {
@@ -1021,17 +1088,30 @@ const app = {
                 ordersTitle.textContent = 'Admin Dashboard';
                 ordersSub.textContent = 'Manage Store';
                 ordersLink.setAttribute('onclick', "app.navTo('admin')");
+                ordersLink.setAttribute('data-view', 'admin'); // 🟢 Set to admin
                 ordersIcon.innerHTML = '<path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>';
                 if (adminMyOrdersLink) adminMyOrdersLink.classList.remove('hidden');
             } else {
                 ordersTitle.textContent = 'My Orders';
                 ordersSub.textContent = 'Kasaysayan ng Order';
                 ordersLink.setAttribute('onclick', "app.navTo('orders')");
+                ordersLink.setAttribute('data-view', 'orders'); // 🟢 Set to orders
                 ordersIcon.innerHTML = '<path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/>';
                 if (adminMyOrdersLink) adminMyOrdersLink.classList.add('hidden');
             }
         } else { if (adminMyOrdersLink) adminMyOrdersLink.classList.add('hidden'); }
         this.updateFooterLinks();
+    },
+
+    updateNavActiveState() {
+        if (!this.currentView) return;
+        document.querySelectorAll('.nav-drawer-links a').forEach(link => {
+            link.classList.remove('active');
+            const targetView = link.getAttribute('data-view');
+            if (targetView === this.currentView) {
+                link.classList.add('active');
+            }
+        });
     },
 
     updateFooterLinks() {
@@ -1105,7 +1185,7 @@ const app = {
     },
     
     initLandingPage() {
-        const text = "Dahan-dahan lang sa pamimili — walang nagmamadali dito.";
+        const text = "Where you can choose to your hearts' desires.";
         const el = document.getElementById('typewriter-text');
         if (el) {
             el.innerHTML = '<span class="type-cursor"></span>';
@@ -1119,7 +1199,7 @@ const app = {
             };
             setTimeout(typeWriter, 500);
         }
-        this.setupTrail('landing-glow', { particleClass: 'trail-amber' });
+        this.setupTrail('menu-cursor-glow', { particleClass: 'trail-brand' });
     },
 
     enterStore() {
@@ -1131,39 +1211,56 @@ const app = {
     },
 
 initLandingInteractions() {
-    this.setupTrail('menu-cursor-glow', { particleClass: 'trail-brand' });
+    this.setupTrail('menu-cursor-glow', { particleClass: 'mixed' });
 },
 
-setupTrail(containerId, options = {}) {
-    const container = document.getElementById(containerId);
-    if (!container) return;
-    const parent = container.parentElement;
-    if (!parent) return;
+    setupTrail(containerId, options = {}) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+        const parent = container.parentElement;
+        if (!parent) return;
 
-    let lastSpawn = 0;
-    const spawnInterval = options.spawnInterval || 22;   // ~45 particles/sec
-    const lifetime      = options.lifetime      || 750;
+        let lastSpawn = 0;
+        const spawnInterval = options.spawnInterval || 25;   // Slightly slower for elegance
+        const lifetime      = options.lifetime      || 850;
 
-    parent.addEventListener('mousemove', (e) => {
-        if (parent.classList.contains('hidden')) return;
-        const now = performance.now();
-        if (now - lastSpawn < spawnInterval) return;
-        lastSpawn = now;
+        // Array of theme colors
+        const themeClasses = ['trail-amber', 'trail-brand', 'trail-leaf'];
 
-        const rect = parent.getBoundingClientRect();
-        const particle = document.createElement('div');
-        particle.className = 'trail-particle ' + (options.particleClass || '');
-        particle.style.left = (e.clientX - rect.left) + 'px';
-        particle.style.top  = (e.clientY - rect.top)  + 'px';
-        container.appendChild(particle);
+        parent.addEventListener('mousemove', (e) => {
+            if (parent.classList.contains('hidden')) return;
+            const now = performance.now();
+            if (now - lastSpawn < spawnInterval) return;
+            lastSpawn = now;
 
-        setTimeout(() => particle.remove(), lifetime);
-    });
-},
+            const rect = parent.getBoundingClientRect();
+            const particle = document.createElement('div');
+            
+            // Randomly pick a theme color
+            let particleClass = options.particleClass;
+            if (options.particleClass === 'mixed') {
+                particleClass = themeClasses[Math.floor(Math.random() * themeClasses.length)];
+            }
+            
+            particle.className = 'trail-particle ' + (particleClass || '');
+            particle.style.left = (e.clientX - rect.left) + 'px';
+            particle.style.top  = (e.clientY - rect.top)  + 'px';
+            
+            // Randomize the size slightly for a more organic feel
+            const randomScale = 0.5 + Math.random() * 0.7;
+            particle.style.transform = `translate(-50%, -50%) scale(${randomScale})`;
+
+            container.appendChild(particle);
+
+            setTimeout(() => particle.remove(), lifetime);
+        });
+    },
 
     handleAuth() {
         if (this.user) {  
-            fetch('api.php?action=logout').then(() => location.reload());
+            this.showConfirm('Logout', 'Sigurado ka bang gusto mong mag-logout?', () => {
+                fetch('api.php?action=logout').then(() => location.reload());
+            }, 'Logout');
         }
         else { this.openAuthModal('signin'); }
     },
@@ -1173,9 +1270,25 @@ setupTrail(containerId, options = {}) {
         if (next === this.isSignUp) return;
         this.isSignUp = next;
 
+        const modal = document.getElementById('view-auth');
+        if (modal) {
+            modal.classList.toggle('signup-active', next);
+            const guestSection = document.getElementById('auth-guest-section');
+            if (guestSection) guestSection.style.display = next ? 'none' : 'block';
+        }
+
+        // Reset password checklist state
+        const reqList = document.getElementById('auth-pass-req');
+        if (reqList) {
+            reqList.style.display = next ? 'grid' : 'none'; // ✅ Force grid for signup, none for signin
+            if (!next) this.updatePasswordUI('', 'auth'); // Clear checks
+        }
+
         const $ = id => document.getElementById(id);
         const card = $('auth-card');
+
         $('auth-toggle').classList.toggle('is-signup', next);
+        
         card.classList.toggle('mode-signup', next);
         $('btn-tab-signin').classList.toggle('active', !next);
         $('btn-tab-signup').classList.toggle('active', next);
@@ -1189,22 +1302,66 @@ setupTrail(containerId, options = {}) {
         $('auth-brgy').value = ''; 
         $('auth-street').value = '';
         if ($('auth-pass').type === 'text') $('auth-pass').type = 'password';
-
+        if ($('auth-confirm-pass').type === 'text') $('auth-confirm-pass').type = 'password';
+        document.querySelectorAll('.eye-show-icon').forEach(el => el.style.display = 'block');
+        document.querySelectorAll('.eye-hide-icon').forEach(el => el.style.display = 'none');
         if (animate) {
             card.classList.remove('bump'); void card.offsetWidth; card.classList.add('bump');
             setTimeout(() => (next ? $('auth-name') : $('auth-email')).focus(), 380);
         }
     },
 
+    checkPasswordStrength(password) {
+        return {
+            len: password.length >= 8,
+            upper: /[A-Z]/.test(password),
+            lower: /[a-z]/.test(password),
+            num: /[0-9]/.test(password),
+            spec: /[^A-Za-z0-9]/.test(password)
+        };
+    },
+
+    updatePasswordUI(password, prefix) {
+        const reqs = this.checkPasswordStrength(password);
+        const list = document.getElementById(`${prefix}-pass-req`);
+        
+        if (list) {
+            if (password.length > 0 || (prefix === 'auth' && this.isSignUp)) {
+                list.style.display = 'grid'; // 🟢 Changed from 'flex' to 'grid'
+            } else {
+                list.style.display = 'none';
+            }
+        }
+
+        ['len', 'upper', 'lower', 'num', 'spec'].forEach(k => {
+            const el = document.getElementById(`${prefix}-req-${k}`);
+            if (el) {
+                if (reqs[k]) {
+                    el.classList.add('met');
+                    el.querySelector('.req-icon').textContent = '✓';
+                } else {
+                    el.classList.remove('met');
+                    el.querySelector('.req-icon').textContent = '○';
+                }
+            }
+        });
+
+        return Object.values(reqs).every(Boolean); // Returns true if ALL rules are met
+    },
+
     togglePassword() {
-        const p = document.getElementById('auth-pass');
-        const iconShow = document.getElementById('eye-icon-show');
-        const iconHide = document.getElementById('eye-icon-hide');
-        const show = p.type === 'password';
-        p.type = show ? 'text' : 'password';
-        if (show) { iconShow.style.display = 'none'; iconHide.style.display = 'block'; }
-        else { iconShow.style.display = 'block'; iconHide.style.display = 'none'; }
-        p.focus();
+        const p1 = document.getElementById('auth-pass');
+        const p2 = document.getElementById('auth-confirm-pass');
+        
+        const show = p1.type === 'password';
+        
+        p1.type = show ? 'text' : 'password';
+        if (p2) p2.type = show ? 'text' : 'password';
+        
+        document.querySelectorAll('.eye-show-icon').forEach(el => el.style.display = show ? 'none' : 'block');
+        document.querySelectorAll('.eye-hide-icon').forEach(el => el.style.display = show ? 'block' : 'none');
+        
+        p1.focus();
     },
 
     continueAsGuest() { 
@@ -1244,10 +1401,19 @@ setupTrail(containerId, options = {}) {
         const street = el('auth-street').value.trim();
 
         if (this.isSignUp && !name) return this.authFail('Ilagay ang buong pangalan mo.', 'auth-name');
+        
+        // 🟢 Name Validation (No numbers, no special characters except . and -)
+        const nameRegex = /^[a-zA-Z\s\.\-]+$/;
+        if (this.isSignUp && !nameRegex.test(name)) {
+            return this.authFail('Mali ang format ng pangalan. Letters, spaces, hyphens, at periods lang ang pwede.', 'auth-name');
+        }
+
         if (!/^\S+@\S+\.\S+$/.test(email)) return this.authFail('Mali ang email format.', 'auth-email');
         if (!password) return this.authFail('Ilagay ang password.', 'auth-pass');
-        if (this.isSignUp && password.length < 6) return this.authFail('Password: hindi bababa sa 6 characters.', 'auth-pass');
-        
+        if (this.isSignUp && !this.updatePasswordUI(password, 'auth')) {
+            return this.authFail('Please ensure your password meets all requirements.', 'auth-pass');
+        }
+
         if (this.isSignUp && password !== confirmPassword) return this.authFail('Hindi nagtutugma ang password at confirm password.', 'auth-confirm-pass');
         if (this.isSignUp && !city) return this.authFail('Pumili ng Lungsod.', 'auth-city');
         if (this.isSignUp && !brgy) return this.authFail('Pumili ng Barangay.', 'auth-brgy');
@@ -1857,7 +2023,11 @@ renderMenu() {
         const itemsDiv = document.getElementById('cart-items');
         const foot = document.getElementById('cart-foot');
         
-        // Update Sidebar Select All state
+        const topBar = document.getElementById('cart-sidebar-select-all-container');
+        if (topBar) {
+            topBar.style.display = this.cart.length ? 'flex' : 'none';
+        }
+
         const selectAllSidebar = document.getElementById('cart-sidebar-select-all');
         if (selectAllSidebar) {
             selectAllSidebar.checked = this.cart.length > 0 && this.cart.every(c => c.selected);
@@ -2123,11 +2293,23 @@ renderMenu() {
 
     removeFromCart(id, variation) { this.cart = this.cart.filter(x => !(x.id === id && (x.variation || '') === (variation || ''))); this.saveCart(); },
     clearCart() { 
+        if (!this.cart || this.cart.length === 0) {
+            return this.showToast('Bakante na ang cart mo, suki!');
+        }
+
         this.showConfirm('Clear Cart', 'Sigurado ka bang i-clear ang buong cart?', () => {
             this.cart = []; 
             this.saveCart(); 
             this.showToast('Na-clear na ang buong cart mo.');
         }, 'Clear');
+    },
+    viewFullCart() {
+        if (!this.cart || this.cart.length === 0) {
+            this.toggleCart(true); // Close the sidebar
+            return this.showToast('Bakante pa ang cart mo, suki!');
+        }
+        this.toggleCart(true);
+        this.go('cart');
     },
     toggleCartItem(id, variation) { 
         const item = this.cart.find(x => x.id === id && (x.variation || '') === (variation || ''));
@@ -2653,17 +2835,45 @@ renderMenu() {
         const city = document.getElementById('acc-city').value;
 
         if (!name) return this.showToast('Ilagay ang iyong pangalan.');
+        
+        // 🟢 Name Validation (No numbers, no special characters except . and -)
+        const nameRegex = /^[a-zA-Z\s\.\-]+$/;
+        if (!nameRegex.test(name)) return this.showToast('Mali ang format ng pangalan. Letters, spaces, hyphens, at periods lang ang pwede.');
+
         if (!/^\S+@\S+\.\S+$/.test(email)) return this.showToast('Mali ang email format.');
         let cleanPhone = phone.replace(/[\s-]/g, '');
         if (cleanPhone && !/^(09|\+639)\d{9}$/.test(cleanPhone)) return this.showToast('Mali ang format ng contact number. Dapat 09XXXXXXXXX o +639XXXXXXXXX.');
 
         const address = (city || brgy || street) ? JSON.stringify({ street, brgy, city }) : '';
-        try {
-            const res = await fetch('api.php?action=update-profile', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, email, phone: cleanPhone, address }) });
-            const data = await res.json();
-            if (data.ok) { this.showToast('Updated na ang profile mo, suki!'); await this.refreshData(); this.updateNavDrawerAuthUI(); } 
-            else { this.showToast(data.error || 'Hindi na-update ang profile.'); }
-        } catch (e) { this.showToast('Walang signal sa server. Try mo ulit mamaya.'); }
+
+        this.showConfirm('Save Profile', 'I-save ang mga pagbabago sa iyong profile?', async () => {
+            try {
+                const res = await fetch('api.php?action=update-profile', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, email, phone: cleanPhone, address }) });
+                const data = await res.json();
+                if (data.ok) { this.showToast('Updated na ang profile mo, suki!'); await this.refreshData(); this.updateNavDrawerAuthUI(); } 
+                else { this.showToast(data.error || 'Hindi na-update ang profile.'); }
+            } catch (e) { this.showToast('Walang signal sa server. Try mo ulit mamaya.'); }
+        }, 'Save');
+    },
+
+    toggleAccPasswords() {
+        const p1 = document.getElementById('acc-current-pass');
+        const p2 = document.getElementById('acc-new-pass');
+        const p3 = document.getElementById('acc-confirm-pass');
+
+        if (!p1 || !p2 || !p3) return;
+
+        // Check the current state
+        const show = p1.type === 'password';
+
+        // Toggle input types
+        p1.type = show ? 'text' : 'password';
+        p2.type = show ? 'text' : 'password';
+        p3.type = show ? 'text' : 'password';
+
+        // Toggle icons globally for the account section
+        document.querySelectorAll('.acc-eye-show').forEach(el => el.style.display = show ? 'none' : 'block');
+        document.querySelectorAll('.acc-eye-hide').forEach(el => el.style.display = show ? 'block' : 'none');
     },
 
     async changePassword() {
@@ -2671,16 +2881,51 @@ renderMenu() {
         const newPass = document.getElementById('acc-new-pass').value;
         const confirmPass = document.getElementById('acc-confirm-pass').value;
 
-        if (!current) return this.showToast('Ilagay ang kasalukuyang password.');
-        if (newPass.length < 6) return this.showToast('New Password: hindi bababa sa 6 characters.');
-        if (newPass !== confirmPass) return this.showToast('Hindi nagtutugma ang new password at confirm password.');
+        const triggerError = (id, msg) => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.classList.remove('invalid');
+                void el.offsetWidth; 
+                el.classList.add('invalid');
+                el.focus();
+                const clearError = () => { el.classList.remove('invalid'); el.removeEventListener('input', clearError); };
+                el.addEventListener('input', clearError);
+            }
+            this.showToast(msg);
+        };
 
-        try {
-            const res = await fetch('api.php?action=change-password', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ current, new: newPass }) });
-            const data = await res.json();
-            if (data.ok) { this.showToast('Matagumpay na nabago ang password!'); document.getElementById('acc-current-pass').value = ''; document.getElementById('acc-new-pass').value = ''; document.getElementById('acc-confirm-pass').value = ''; } 
-            else { this.showToast(data.error || 'Mali ang kasalukuyang password.'); }
-        } catch (e) { this.showToast('Walang koneksyon sa server.'); }
+        if (!current) return triggerError('acc-current-pass', 'Ilagay ang kasalukuyang password.');
+        
+        if (!this.updatePasswordUI(newPass, 'acc')) {
+            return triggerError('acc-new-pass', 'New Password does not meet all requirements.');
+        }
+        
+        if (newPass !== confirmPass) {
+            return triggerError('acc-confirm-pass', 'Hindi nagtutugma ang new password at confirm password.');
+        }
+
+        this.showConfirm('Update Password', 'Sigurado ka bang gusto mong palitan ang iyong password?', async () => {
+            try {
+                const res = await fetch('api.php?action=change-password', { 
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json' }, 
+                    body: JSON.stringify({ current, new: newPass }) 
+                });
+                const data = await res.json();
+                
+                if (data.ok) { 
+                    this.showToast('Matagumpay na nabago ang password!'); 
+                    document.getElementById('acc-current-pass').value = ''; 
+                    document.getElementById('acc-new-pass').value = ''; 
+                    document.getElementById('acc-confirm-pass').value = ''; 
+                    document.getElementById('acc-pass-req').style.display = 'none';
+                } else { 
+                    triggerError('acc-current-pass', data.error || 'Mali ang kasalukuyang password.'); 
+                }
+            } catch (e) { 
+                this.showToast('Walang koneksyon sa server.'); 
+            }
+        }, 'Update');
     },
 
     renderAdmin() {
@@ -2740,13 +2985,14 @@ toggleAdvancedMenuFilters(btn) {
 
         const filteredOrders = this.orders.filter(o => {
             const formattedAddr = this.formatAddress(o.address);
-            const searchMatch = String(o.id).includes(this.adminOrderFilter.search) || o.customer_name.toLowerCase().includes(this.adminOrderFilter.search) || formattedAddr.toLowerCase().includes(this.adminOrderFilter.search) || (o.phone && o.phone.includes(this.adminOrderFilter.search));
+            const customerName = (o.customer_name || '').toLowerCase();
+            const searchMatch = String(o.id).includes(this.adminOrderFilter.search) || customerName.includes(this.adminOrderFilter.search) || formattedAddr.toLowerCase().includes(this.adminOrderFilter.search) || (o.phone && o.phone.includes(this.adminOrderFilter.search));
             const statusMatch = this.adminOrderFilter.status === 'all' || o.status === this.adminOrderFilter.status;
             let typeMatch = true;
             if (this.adminOrderFilter.type === 'bayanihan') typeMatch = !!o.is_group_order;
             if (this.adminOrderFilter.type === 'individual') typeMatch = !o.is_group_order;
             let deptMatch = true;
-            if (this.adminOrderFilter.dept !== 'all') deptMatch = o.items.some(i => { const p = this.products.find(x => x.id === i.product_id); return p && p.category === this.adminOrderFilter.dept; });
+            if (this.adminOrderFilter.dept !== 'all') deptMatch = (o.items || []).some(i => { const p = this.products.find(x => x.id === i.product_id); return p && p.category === this.adminOrderFilter.dept; });
             return searchMatch && statusMatch && typeMatch && deptMatch;
         });
 
@@ -2990,22 +3236,24 @@ toggleAdvancedMenuFilters(btn) {
             options: optionsStr 
         };
 
-        try {
-            const res = await fetch('api.php?action=admin-edit-product', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-            const data = await res.json();
+        this.showConfirm('Save Changes', 'I-save ang mga pagbabago sa produktong ito?', async () => {
+            try {
+                const res = await fetch('api.php?action=admin-edit-product', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
 
-            if (!data.ok) return this.showToast(data.error || 'Hindi na-save ang produkto.');
+                if (!data.ok) return this.showToast(data.error || 'Hindi na-save ang produkto.');
 
-            this.closeProductEditor();
-            this.showToast('Na-update na ang produkto!');
-            await this.reloadAdminData();
-        } catch (err) {
-            this.showToast('Walang koneksyon sa server.');
-        }
+                this.closeProductEditor();
+                this.showToast('Na-update na ang produkto!');
+                await this.reloadAdminData();
+            } catch (err) {
+                this.showToast('Walang koneksyon sa server.');
+            }
+        }, 'Save');
     },
 
     viewProof(src) { 
@@ -3051,14 +3299,25 @@ toggleAdvancedMenuFilters(btn) {
     selectOrderStatus(id, status) {
         // Close all dropdowns
         document.querySelectorAll('.status-dropdown-menu').forEach(m => m.classList.add('hidden'));
-        // Trigger the update
-        this.updateOrderStatus(id, status);
+        
+        // Show confirmation modal before updating
+        this.showConfirm('Update Status', `Palitan ang status ng <b>Order #${id}</b> to <b>${status}</b>?`, () => {
+            this.updateOrderStatus(id, status);
+        }, 'Update');
     },
 
     async deleteOrder(id) {
         this.showConfirm('Delete Order', 'Are you sure you want to permanently delete this order? This action cannot be undone.', async () => {
-            await fetch('api.php?action=admin-delete-order', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ order_id: id }) });
-            this.showToast('Order deleted.'); await this.reloadAdminData();
+            try {
+                const res = await fetch('api.php?action=admin-archive-order', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ order_id: id }) });
+                const data = await res.json();
+                if (data.ok) {
+                    this.showToast('Order deleted.'); 
+                    await this.reloadAdminData();
+                } else {
+                    this.showToast(data.error || 'Failed to delete.');
+                }
+            } catch(e) { this.showToast('Connection error.'); }
         }, 'Delete');
     },
 
@@ -3107,16 +3366,19 @@ toggleAdvancedMenuFilters(btn) {
             best_seller: document.getElementById('add-bestseller').checked ? 1 : 0,
             options: document.getElementById('add-options').value.trim()
         };
-        try {
-            const res = await fetch('api.php?action=admin-add-product', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
-            const data = await res.json();
-            if (data.ok) { 
-                this.showToast('Product added successfully!'); 
-                this.closeAddProductModal();
-                await this.reloadAdminData(); 
-            } 
-            else { this.showToast(data.error || 'Failed to add product.'); }
-        } catch (err) { this.showToast('Connection error.'); }
+
+        this.showConfirm('Add Product', `I-add ang bagong product na <b>${this.esc(payload.name)}</b> sa store?`, async () => {
+            try {
+                const res = await fetch('api.php?action=admin-add-product', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
+                const data = await res.json();
+                if (data.ok) { 
+                    this.showToast('Product added successfully!'); 
+                    this.closeAddProductModal();
+                    await this.reloadAdminData(); 
+                } 
+                else { this.showToast(data.error || 'Failed to add product.'); }
+            } catch (err) { this.showToast('Connection error.'); }
+        }, 'Add Product');
     },
 
     toggleTheme() {
@@ -3133,7 +3395,7 @@ toggleAdvancedMenuFilters(btn) {
         this.updateThemeButton();
 
         clearTimeout(this._themeTimeout); 
-        this._themeTimeout = setTimeout(() => { html.classList.remove('theme-switching'); }, 800); 
+        this._themeTimeout = setTimeout(() => { html.classList.remove('theme-switching'); }, 600); 
     },
 
     setTheme(theme) {
@@ -3717,11 +3979,17 @@ toggleAdvancedMenuFilters(btn) {
         const g = this.bayanihan.current; const sel = document.getElementById('bg-member'); const name = sel.options[sel.selectedIndex].text.split(' (')[0];
         const phone = document.getElementById('bg-phone').value.trim(); const city = document.getElementById('bg-city').value; const brgy = document.getElementById('bg-brgy').value;
         const street = document.getElementById('bg-street').value.trim(); const fee = parseInt(document.getElementById('bg-fee').value) || 0;
-        if (!city || !brgy) return this.showToast('Pumili ng Lungsod at Barangay.'); if (!phone) return this.showToast('Ilagay ang contact number.');
+        
+        if (!city || !brgy) return this.showToast('Pumili ng Lungsod at Barangay.'); 
+        if (!phone) return this.showToast('Ilagay ang contact number.');
+        
         const address = JSON.stringify({ street, brgy, city }); const payload = { group_id: g.id, name, phone, address, fee };
-        const res = await fetch('api.php?action=group-set-delivery', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
-        const data = await res.json();
-        if (data.ok) { this.showToast('Delivery details saved!'); this.openGroupDetail(g.id); } else this.showToast(data.error || 'Failed');
+
+        this.showConfirm('Save Delivery', 'I-save ang delivery details na ito?', async () => {
+            const res = await fetch('api.php?action=group-set-delivery', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+            const data = await res.json();
+            if (data.ok) { this.showToast('Delivery details saved!'); this.openGroupDetail(g.id); } else this.showToast(data.error || 'Failed');
+        }, 'Save');
     },
 
     async setGroupSplit(method) {
@@ -3783,12 +4051,21 @@ toggleAdvancedMenuFilters(btn) {
     async submitSharePayment() {
         const g = this.bayanihan.current; if (!g || !this._payMemberId) return;
         if (this._shareMethod === 'gcash' && !this._shareProof) return this.showToast('I-upload muna ang GCash screenshot.');
+        
         const action = this._isHostMarking ? 'group-mark-paid' : 'group-member-pay';
-        const payload = this._isHostMarking ? { group_id: g.id, member_id: this._payMemberId, paid: 1, amount: this._payAmount, method: this._shareMethod, proof: this._shareProof } : { group_id: g.id, method: this._shareMethod, proof: this._shareProof, amount: this._payAmount };
-        const res = await fetch(`api.php?action=${action}`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
-        const data = await res.json();
-        if (data.ok) { this.closeModal('bayanihan-pay-modal'); this.showToast(this._isHostMarking ? 'Payment marked as paid and verified!' : (this._shareMethod === 'gcash' ? 'Payment submitted! Hintayin ang verification ng host.' : 'Marked as cash. Host will verify.')); this.openGroupDetail(g.id); } 
-        else this.showToast(data.error || 'Failed');
+        const payload = this._isHostMarking 
+            ? { group_id: g.id, member_id: this._payMemberId, paid: 1, amount: this._payAmount, method: this._shareMethod, proof: this._shareProof } 
+            : { group_id: g.id, method: this._shareMethod, proof: this._shareProof, amount: this._payAmount };
+
+        this.showConfirm('Confirm Payment', `I-submit ang bayad na <b>${this.money(this._payAmount)}</b>?`, async () => {
+            const res = await fetch(`api.php?action=${action}`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+            const data = await res.json();
+            if (data.ok) { 
+                this.closeModal('bayanihan-pay-modal'); 
+                this.showToast(this._isHostMarking ? 'Payment marked as paid and verified!' : (this._shareMethod === 'gcash' ? 'Payment submitted! Hintayin ang verification ng host.' : 'Marked as cash. Host will verify.')); 
+                this.openGroupDetail(g.id); 
+            } else this.showToast(data.error || 'Failed');
+        }, 'Submit Payment');
     },
 
     async verifyPayment(memberId, verify) {
@@ -3804,9 +4081,13 @@ toggleAdvancedMenuFilters(btn) {
     inviteToGroup() { document.getElementById('bg-invite-email').value = ''; document.getElementById('bayanihan-invite-modal').classList.remove('hidden'); },
     async submitInvite() {
         const g = this.bayanihan.current; const email = document.getElementById('bg-invite-email').value.trim();
-        const res = await fetch('api.php?action=group-invite', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ group_id: g.id, email }) });
-        const data = await res.json();
-        if (data.ok) { this.closeModal('bayanihan-invite-modal'); this.showToast('Invite sent!'); this.openGroupDetail(g.id); } else this.showToast(data.error || 'Failed');
+        if (!email) return this.showToast('Ilagay ang email address.');
+
+        this.showConfirm('Invite User', `Ipadala ang invite kay <b>${this.esc(email)}</b>?`, async () => {
+            const res = await fetch('api.php?action=group-invite', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ group_id: g.id, email }) });
+            const data = await res.json();
+            if (data.ok) { this.closeModal('bayanihan-invite-modal'); this.showToast('Invite sent!'); this.openGroupDetail(g.id); } else this.showToast(data.error || 'Failed');
+        }, 'Send Invite');
     },
 
     addMoreToGroup() { const g = this.bayanihan.current; if (!g) return; this._lastGroupId = g.id; this.showToast(`Adding items to: ${g.name}`); this.go('home'); setTimeout(() => this.scrollToMenu(), 200); },
@@ -3838,6 +4119,7 @@ toggleAdvancedMenuFilters(btn) {
         const gcashPaid = g.members.filter(m => m.paid == 1 && m.payment_method === 'gcash');
         if (gcashPaid.length > 0) return this.showToast(`Hindi ma-cancel: may ${gcashPaid.length} member na nagbayad via GCash. Ipa-refund muna.`);
         const approvedCount = g.members.filter(m => m.status === 'approved').length; const itemCount = g.items.reduce((s, it) => s + it.qty, 0);
+        
         this.showConfirm('Cancel Bayanihan Cart? ❌', `• ${approvedCount} member(s) mawawalan ng access\n• ${itemCount} item(s) mawawala\n• Lahat ng bayad mawawala\n\nHINDI na maibabalik. Sigurado ka ba?`, async () => {
             const res = await fetch('api.php?action=group-cancel', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ group_id: g.id }) });
             const data = await res.json(); if (!data.ok) { this.showToast(data.error || 'Failed'); return; }
@@ -3874,7 +4156,7 @@ toggleAdvancedMenuFilters(btn) {
             
             const filtered = groups.filter(g => {
                 const matchStatus = filter === 'all' || g.status === filter;
-                const matchSearch = g.name.toLowerCase().includes(searchQuery) || g.host_name.toLowerCase().includes(searchQuery);
+                const matchSearch = (g.name || '').toLowerCase().includes(searchQuery) || (g.host_name || '').toLowerCase().includes(searchQuery);
                 return matchStatus && matchSearch;
             });
             
@@ -3897,28 +4179,42 @@ toggleAdvancedMenuFilters(btn) {
     async viewAdminGroup(gid) {
         try {
             const res = await fetch('api.php?action=admin-get-group', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ id: gid }) });
-            const g = await res.json(); if (g.error) { this.showToast(g.error); return; }
-            const subtotal = g.items.reduce((s, it) => s + it.price * it.qty, 0); const deliveryFee = parseInt(g.delivery_fee) || 0; const total = subtotal + deliveryFee;
-            const approved = g.members.filter(m => m.status === 'approved'); const gcashPaid = approved.filter(m => m.paid == 1 && m.payment_method === 'gcash');
+            const g = await res.json(); 
+            if (g.error) { this.showToast(g.error); return; }
+            
+            // Safely default arrays to empty if undefined to prevent .reduce() / .filter() crashes
+            const items = g.items || [];
+            const members = g.members || [];
+            
+            const subtotal = items.reduce((s, it) => s + (it.price || 0) * (it.qty || 0), 0); 
+            const deliveryFee = parseInt(g.delivery_fee) || 0; 
+            const total = subtotal + deliveryFee;
+            
+            const approved = members.filter(m => m.status === 'approved'); 
+            const gcashPaid = approved.filter(m => m.paid == 1 && m.payment_method === 'gcash');
+            
             const body = document.getElementById('admin-group-detail-body');
+            if (!body) return; // Safety check
+
             body.innerHTML = `
                 <div class="page-head"><button class="btn btn-ghost" style="margin-bottom:12px; padding:6px 14px; font-size:13px;" onclick="app.go('admin')">← Back to Dashboard</button><h1>${this.esc(g.name)}</h1><p>Host: ${this.esc(approved.find(m => m.role === 'host')?.name || '—')} · Status: <b>${this.esc(g.status)}</b></p></div>
                 ${gcashPaid.length ? `<div style="padding:14px; background:rgba(47,140,255,0.1); border-left:4px solid #2f8cff; border-radius:10px; margin-bottom:20px;"><b style="color:#2f8cff;">📱 GCash Payments Locked</b><p style="font-size:12px; margin-top:4px; color:var(--ink); font-weight:600;">${gcashPaid.length} member(s) already paid via GCash — this cart cannot be cancelled.</p></div>` : ''}
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:20px;">
-                    <div class="co-card"><h3>📍 Delivery</h3><p style="font-size:13px; font-weight:600; line-height:1.7;"><b>Recipient:</b> ${this.esc(g.customer_name || '—')}<br><b>Phone:</b> ${this.esc(g.phone || '—')}<br><b>Address:</b> ${this.esc(this.formatAddress(g.delivery_address) || '—')}<br><b>Payment:</b> ${g.payment.toUpperCase()}<br><b>Delivery Fee:</b> ${this.money(deliveryFee)}</p></div>
-                    <div class="co-card"><h3>💰 Totals</h3><p style="font-size:13px; font-weight:600; line-height:1.7;"><b>Subtotal:</b> ${this.money(subtotal)}<br><b>Total:</b> <span style="color:var(--brand); font-size:18px; font-family:'Baloo 2';">${this.money(total)}</span><br><b>Split Method:</b> ${g.split_method.replace(/_/g, ' ')}<br><b>Order ID:</b> ${g.order_id || '—'}</p></div>
+                    <div class="co-card"><h3>📍 Delivery</h3><p style="font-size:13px; font-weight:600; line-height:1.7;"><b>Recipient:</b> ${this.esc(g.customer_name || '—')}<br><b>Phone:</b> ${this.esc(g.phone || '—')}<br><b>Address:</b> ${this.esc(this.formatAddress(g.delivery_address) || '—')}<br><b>Payment:</b> ${g.payment ? g.payment.toUpperCase() : 'N/A'}<br><b>Delivery Fee:</b> ${this.money(deliveryFee)}</p></div>
+                    <div class="co-card"><h3>💰 Totals</h3><p style="font-size:13px; font-weight:600; line-height:1.7;"><b>Subtotal:</b> ${this.money(subtotal)}<br><b>Total:</b> <span style="color:var(--brand); font-size:18px; font-family:'Baloo 2';">${this.money(total)}</span><br><b>Split Method:</b> ${(g.split_method || 'equal').replace(/_/g, ' ')}<br><b>Order ID:</b> ${g.order_id || '—'}</p></div>
                 </div>
                 <div class="co-card" style="margin-bottom:20px;">
                     <h3>👥 Members (${approved.length} approved)</h3>
-                    ${g.members.map(m => {
+                    ${members.length === 0 ? '<p style="text-align:center; color:var(--muted); padding:20px;">No members.</p>' : members.map(m => {
                         const statusBadge = m.status === 'approved' ? '✅' : m.status === 'pending' ? '⏳' : m.status === 'invited' ? '📬' : '❌';
-                        const payBadge = m.paid == 1 ? (m.payer_verified == 1 ? `<span style="color:var(--leaf); font-weight:800;">✓ Verified (${m.payment_method.toUpperCase()}) ${this.money(m.paid_amount)}</span>${m.payment_method === 'gcash' && m.payment_proof ? `<button class="btn btn-ghost" style="padding:2px 8px; font-size:10px; margin-left:8px;" onclick="app.viewProof('${m.payment_proof}')">View Proof</button>` : ''}` : `<span style="color:var(--amber); font-weight:800;">⏳ Awaiting verify (${m.payment_method.toUpperCase()})</span>`) : '<span style="color:var(--muted); font-weight:700;">Unpaid</span>';
-                        return `<div style="display:flex; justify-content:space-between; align-items:center; padding:10px; background:var(--bg); border-radius:10px; margin-bottom:6px; gap:8px; flex-wrap:wrap;"><div><b>${statusBadge} ${this.esc(m.name)}</b> <span style="font-size:11px; color:var(--muted);">${this.esc(m.email)}</span> ${m.role === 'host' ? '<span style="font-size:10px; color:var(--leaf); font-weight:800; margin-left:6px;">HOST</span>' : ''}</div><div style="font-size:12px;">${payBadge}</div></div>`;
+                        // Safely default payment_method to 'CASH' if null to prevent .toUpperCase() crash
+                        const payBadge = m.paid == 1 ? (m.payer_verified == 1 ? `<span style="color:var(--leaf); font-weight:800;">✓ Verified (${(m.payment_method || 'CASH').toUpperCase()}) ${this.money(m.paid_amount || 0)}</span>${m.payment_method === 'gcash' && m.payment_proof ? `<button class="btn btn-ghost" style="padding:2px 8px; font-size:10px; margin-left:8px;" onclick="app.viewProof('${m.payment_proof}')">View Proof</button>` : ''}` : `<span style="color:var(--amber); font-weight:800;">⏳ Awaiting verify (${(m.payment_method || 'CASH').toUpperCase()})</span>`) : '<span style="color:var(--muted); font-weight:700;">Unpaid</span>';
+                        return `<div style="display:flex; justify-content:space-between; align-items:center; padding:10px; background:var(--bg); border-radius:10px; margin-bottom:6px; gap:8px; flex-wrap:wrap;"><div><b>${statusBadge} ${this.esc(m.name)}</b> <span style="font-size:11px; color:var(--muted);">${this.esc(m.email || '')}</span> ${m.role === 'host' ? '<span style="font-size:10px; color:var(--leaf); font-weight:800; margin-left:6px;">HOST</span>' : ''}</div><div style="font-size:12px;">${payBadge}</div></div>`;
                     }).join('')}
                 </div>
-                <div class="co-card"><h3><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg> Items (${g.items.length})</h3>${g.items.length === 0 ? '<p style="text-align:center; color:var(--muted); padding:20px;">No items.</p>' : g.items.map(it => `<div style="display:flex; justify-content:space-between; align-items:center; padding:8px 12px; background:var(--surface2); border-radius:10px; margin-bottom:6px;"><div><b style="font-size:13px;">${this.esc(it.name)}</b><div style="font-size:11px; color:var(--muted);">by ${this.esc(it.user_name)} · ${it.qty} × ${this.money(it.price)}</div></div><div style="font-family:'Baloo 2'; font-weight:800;">${this.money(it.price * it.qty)}</div></div>`).join('')}</div>`;
+                <div class="co-card"><h3><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg> Items (${items.length})</h3>${items.length === 0 ? '<p style="text-align:center; color:var(--muted); padding:20px;">No items.</p>' : items.map(it => `<div style="display:flex; justify-content:space-between; align-items:center; padding:8px 12px; background:var(--surface2); border-radius:10px; margin-bottom:6px;"><div><b style="font-size:13px;">${this.esc(it.name)}</b><div style="font-size:11px; color:var(--muted);">by ${this.esc(it.user_name || 'Unknown')} · ${it.qty} × ${this.money(it.price)}</div></div><div style="font-family:'Baloo 2'; font-weight:800;">${this.money(it.price * it.qty)}</div></div>`).join('')}</div>`;
             this.go('admin-group-detail');
-        } catch (e) { this.showToast('Error loading group'); }
+        } catch (e) { this.showToast('Error loading group'); console.error(e); }
     },
 
     renderAdminFees() {
@@ -3937,12 +4233,16 @@ toggleAdvancedMenuFilters(btn) {
     },
 
     async saveFee(id) {
-        const fee = parseInt(document.getElementById(`fee-input-${id}`).value); if (isNaN(fee) || fee < 0) return this.showToast('Invalid fee amount.');
-        try {
-            const res = await fetch('api.php?action=admin-update-fee', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ id, fee }) });
-            const data = await res.json();
-            if (data.ok) { this.showToast('Fee updated!'); await this.refreshData(); this.renderAdminFees(); } else this.showToast(data.error || 'Failed');
-        } catch(e) { this.showToast('Connection error'); }
+        const fee = parseInt(document.getElementById(`fee-input-${id}`).value); 
+        if (isNaN(fee) || fee < 0) return this.showToast('Invalid fee amount.');
+
+        this.showConfirm('Update Fee', 'I-save ang bagong delivery fee?', async () => {
+            try {
+                const res = await fetch('api.php?action=admin-update-fee', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ id, fee }) });
+                const data = await res.json();
+                if (data.ok) { this.showToast('Fee updated!'); await this.refreshData(); this.renderAdminFees(); } else this.showToast(data.error || 'Failed');
+            } catch(e) { this.showToast('Connection error'); }
+        }, 'Save');
     },
 
     async deleteFee(id) {
@@ -3961,13 +4261,20 @@ toggleAdvancedMenuFilters(btn) {
     },
 
     async submitAddFee() {
-        const city = document.getElementById('new-fee-city').value.trim(); const barangay = document.getElementById('new-fee-brgy').value.trim(); const fee = parseInt(document.getElementById('new-fee-amount').value);
-        if (!city || !barangay) return this.showToast('Fill in City and Barangay.'); if (isNaN(fee) || fee < 0) return this.showToast('Invalid fee amount.');
-        try {
-            const res = await fetch('api.php?action=admin-add-fee', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ city, barangay, fee }) });
-            const data = await res.json();
-            if (data.ok) { this.closeModal('add-fee-modal'); this.showToast('Location added!'); await this.refreshData(); this.renderAdminFees(); } else this.showToast(data.error || 'Failed');
-        } catch(e) { this.showToast('Connection error'); }
+        const city = document.getElementById('new-fee-city').value.trim(); 
+        const barangay = document.getElementById('new-fee-brgy').value.trim(); 
+        const fee = parseInt(document.getElementById('new-fee-amount').value);
+        
+        if (!city || !barangay) return this.showToast('Fill in City and Barangay.'); 
+        if (isNaN(fee) || fee < 0) return this.showToast('Invalid fee amount.');
+
+        this.showConfirm('Add Location', `I-add ang <b>${this.esc(barangay)}, ${this.esc(city)}</b> na may fee na <b>₱${fee}</b>?`, async () => {
+            try {
+                const res = await fetch('api.php?action=admin-add-fee', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ city, barangay, fee }) });
+                const data = await res.json();
+                if (data.ok) { this.closeModal('add-fee-modal'); this.showToast('Location added!'); await this.refreshData(); this.renderAdminFees(); } else this.showToast(data.error || 'Failed');
+            } catch(e) { this.showToast('Connection error'); }
+        }, 'Add Location');
     },
 }
 
@@ -3979,3 +4286,56 @@ document.addEventListener('click', () => {
 });
 window.app = app;
 document.addEventListener('DOMContentLoaded', () => app.init());
+
+/* ============================================================
+   GLOBAL DRAG PREVENTION FOR IMAGES
+   ============================================================ */
+document.addEventListener('dragstart', function(e) {
+    if (e.target.tagName === 'IMG') {
+        e.preventDefault();
+    }
+});
+
+/* ============================================================
+   GLOBAL IMAGE PROTECTION DETERRENTS
+   ============================================================ */
+
+// 1. Prevent Right-Click (Context Menu) on Images
+document.addEventListener('contextmenu', function(e) {
+    if (e.target.tagName === 'IMG') {
+        e.preventDefault();
+        if (window.app && typeof window.app.showToast === 'function') {
+            window.app.showToast('Right-click is disabled to protect our images, suki!');
+        }
+    }
+});
+
+// 2. Prevent Middle-Click (Open in new tab) on Images
+document.addEventListener('mousedown', function(e) {
+    if (e.button === 1 && e.target.tagName === 'IMG') {
+        e.preventDefault();
+    }
+});
+
+// 3. Prevent Ctrl+S (Save Page) which saves all images
+document.addEventListener('keydown', function(e) {
+    if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S')) {
+        // Check if we are inside an input field first
+        const activeEl = document.activeElement;
+        const isInput = activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA');
+        
+        if (!isInput) {
+            e.preventDefault();
+            if (window.app && typeof window.app.showToast === 'function') {
+                window.app.showToast('Saving the page is disabled, suki.');
+            }
+        }
+    }
+});
+
+// 4. Prevent dragging (redundant with CSS, but safe for older browsers)
+document.addEventListener('dragstart', function(e) {
+    if (e.target.tagName === 'IMG') {
+        e.preventDefault();
+    }
+});
