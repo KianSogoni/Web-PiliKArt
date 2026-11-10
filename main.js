@@ -1543,6 +1543,82 @@ initLandingInteractions() {
         if (err) { err.classList.remove('show'); err.textContent = ''; }
         document.querySelectorAll('.auth-input.invalid').forEach(i => i.classList.remove('invalid'));
     },
+        async submitContactForm(e) {
+        e.preventDefault();
+        const name = document.getElementById('contact-name').value.trim();
+        const email = document.getElementById('contact-email').value.trim();
+        const subject = document.getElementById('contact-subject').value.trim();
+        const message = document.getElementById('contact-message').value.trim();
+
+        if (!name || !email || !subject || !message) return this.showToast('Paki-kumpleto ang lahat ng fields.');
+
+        const btn = e.target.querySelector('button[type="submit"]');
+        const ogText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = 'Ipinapadala...';
+
+        try {
+            const res = await fetch('api.php?action=submit-contact', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, email, subject, message })
+            });
+            const data = await res.json();
+
+            if (data.ok) {
+                if (data.email_sent) {
+                    this.showToast('Mensahe naipadala sa Email at Local Mailbox! Salamat, suki.');
+                } else {
+                    this.showToast('Mensahe naka-save sa Local Mailbox (Offline Mode). Salamat, suki.');
+                }
+                e.target.reset();
+                this.go('home'); // Balik sa home after sending
+            } else {
+                this.showToast(data.error || 'Hindi naipadala ang mensahe.');
+            }
+        } catch (err) {
+            this.showToast('Walang koneksyon sa server.');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = ogText;
+        }
+    },
+
+    async renderAdminContacts() {
+        const grid = document.getElementById('admin-contacts-grid');
+        if (!grid) return;
+        
+        grid.innerHTML = '<p style="text-align:center; color:var(--muted);">Loading messages...</p>';
+        
+        try {
+            const res = await fetch('api.php?action=admin-get-contacts');
+            const data = await res.json();
+            
+            if (!data.length) {
+                grid.innerHTML = '<p style="text-align:center; color:var(--muted); padding:20px;">Wala pang mensahe.</p>';
+                return;
+            }
+
+            grid.innerHTML = data.map(m => `
+                <div class="admin-order-card" style="border-left: 4px solid ${m.is_read ? 'var(--line)' : 'var(--brand)'};">
+                    <div class="admin-order-header">
+                        <div>
+                            <h4>${this.esc(m.subject)}</h4>
+                            <span class="admin-order-date">Mula kay: ${this.esc(m.name)} (${this.esc(m.email)})</span>
+                        </div>
+                        <span class="pay-badge" style="background:${m.is_read ? 'var(--surface2)' : 'rgba(217, 91, 51, 0.15)'}; color:${m.is_read ? 'var(--muted)' : 'var(--brand)'}; border-color:${m.is_read ? 'var(--line)' : 'var(--brand)'};">
+                            ${m.is_read ? 'Read' : 'New'}
+                        </span>
+                    </div>
+                    <div style="padding: 10px 0; font-size: 14px; color: var(--ink); line-height: 1.6;">
+                        ${this.esc(m.message).replace(/\n/g, '<br>')}
+                    </div>
+                </div>
+            `).join('');
+        } catch (err) {
+            grid.innerHTML = '<p style="text-align:center; color:#e5604d;">Error loading messages.</p>';
+        }
+    },
 
     authFail(msg, fieldId) {
         const err = document.getElementById('auth-error');
@@ -3107,7 +3183,8 @@ renderMenu() {
         document.querySelectorAll('.admin-tab-btn').forEach(b => { b.className = 'btn btn-ghost admin-tab-btn'; });
         btn.className = 'btn btn-brand admin-tab-btn';
         
-        ['orders', 'stock', 'users', 'analytics', 'bayanihan', 'fees'].forEach(t => { const el = document.getElementById('admin-' + t); if (el) el.classList.add('hidden'); });
+        // 🟢 Added 'contacts' to the array
+        ['orders', 'stock', 'users', 'analytics', 'bayanihan', 'fees', 'contacts'].forEach(t => { const el = document.getElementById('admin-' + t); if (el) el.classList.add('hidden'); });
         
         const target = document.getElementById('admin-' + tab);
         if (target) target.classList.remove('hidden');
@@ -3116,6 +3193,7 @@ renderMenu() {
         if (tab === 'analytics') this.renderAdminAnalytics();
         if (tab === 'bayanihan') this.renderAdminBayanihan();
         if (tab === 'fees') this.renderAdminFees(); 
+        if (tab === 'contacts') this.renderAdminContacts(); // 🟢 Added this
     },
 
 toggleAdvancedMenuFilters(btn) {
@@ -4539,4 +4617,151 @@ document.addEventListener('dragstart', function(e) {
     if (e.target.tagName === 'IMG') {
         e.preventDefault();
     }
+});
+document.addEventListener('DOMContentLoaded', () => {
+  const form = document.getElementById('contactForm');
+  if (!form) return;
+
+  const nameInput = document.getElementById('contact-name');
+  const emailInput = document.getElementById('contact-email');
+  const subjectInput = document.getElementById('contact-subject');
+  const messageInput = document.getElementById('contact-message');
+  const charCounter = document.getElementById('char-counter');
+  const submitBtn = document.getElementById('contact-submit-btn');
+  const btnText = submitBtn.querySelector('.btn-text');
+  const btnSpinner = submitBtn.querySelector('.btn-spinner');
+  const alertBox = document.getElementById('contact-alert');
+  const alertIcon = document.getElementById('contact-alert-icon');
+  const alertMsg = document.getElementById('contact-alert-msg');
+
+  // 1. Validators
+  const isValidEmail = (email) => {
+    const re = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    return re.test(String(email).toLowerCase());
+  };
+
+  // 🟢 Reject numbers and special characters (allows letters, spaces, dots, hyphens)
+  const isValidName = (name) => {
+    const re = /^[a-zA-Z\s\.\-]+$/;
+    return re.test(name) && name.trim().length >= 2;
+  };
+
+  const validateField = (group, condition) => {
+    if (condition) {
+      group.classList.remove('error');
+      group.classList.add('success');
+      return true;
+    } else {
+      group.classList.remove('success');
+      group.classList.add('error');
+      return false;
+    }
+  };
+
+  // 2. Real-time Character Counter
+  const messageGroup = document.getElementById('group-message');
+  messageInput.addEventListener('input', () => {
+    const currentLength = messageInput.value.length;
+    charCounter.textContent = `${currentLength} / 500`;
+
+    if (currentLength < 10 || currentLength > 500) {
+      charCounter.style.color = '#e5604d';
+    } else {
+      charCounter.style.color = 'var(--leaf)';
+    }
+
+    // Auto-clear error once it hits valid length
+    if (currentLength >= 10 && currentLength <= 500) {
+      messageGroup.classList.remove('error');
+      messageGroup.classList.add('success');
+    } else {
+      messageGroup.classList.remove('success');
+    }
+  });
+
+  // 3. Real-time Event Listeners
+  nameInput.addEventListener('blur', () => {
+    validateField(document.getElementById('group-fullname'), isValidName(nameInput.value.trim()));
+  });
+
+  emailInput.addEventListener('blur', () => {
+    validateField(document.getElementById('group-email'), isValidEmail(emailInput.value.trim()));
+  });
+
+  subjectInput.addEventListener('blur', () => {
+    validateField(document.getElementById('group-subject'), subjectInput.value.trim().length >= 4);
+  });
+
+  // 4. Alert Helpers
+  const showAlert = (type, message) => {
+    alertBox.className = `contact-alert ${type}`;
+    
+    // Inject SVG icons instead of emojis
+    if (type === 'success') {
+      alertIcon.innerHTML = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+    } else {
+      alertIcon.innerHTML = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>';
+    }
+    
+    alertMsg.textContent = message;
+    alertBox.classList.remove('hidden');
+    alertBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  };
+
+  const hideAlert = () => {
+    alertBox.classList.add('hidden');
+  };
+
+  // 5. Form Submit
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    hideAlert();
+
+    // Validate all fields
+    const isNameValid = validateField(document.getElementById('group-fullname'), isValidName(nameInput.value.trim()));
+    const isEmailValid = validateField(document.getElementById('group-email'), isValidEmail(emailInput.value.trim()));
+    const isSubjectValid = validateField(document.getElementById('group-subject'), subjectInput.value.trim().length >= 4);
+    const isMessageValid = validateField(document.getElementById('group-message'), messageInput.value.trim().length >= 10);
+
+    if (!isNameValid || !isEmailValid || !isSubjectValid || !isMessageValid) {
+      showAlert('error', 'Paki-ayos ang mga inputs. Tingnan ang mga pulang box.');
+      return;
+    }
+
+    // Set UI to loading state
+    submitBtn.disabled = true;
+    btnText.textContent = 'Ipinapadala...';
+    btnSpinner.classList.remove('hidden');
+
+    const formData = new FormData(form);
+    formData.append('action', 'contact_submit');
+
+    try {
+      const response = await fetch('api.php', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        showAlert('success', result.message || 'Salamat! Naimbak na ang iyong mensahe.');
+        form.reset();
+        charCounter.textContent = '0 / 500';
+        
+        // Clear borders
+        document.querySelectorAll('.form-group').forEach(g => {
+          g.classList.remove('success', 'error');
+        });
+      } else {
+        showAlert('error', result.error || 'Nagkaroon ng problema sa server. Subukan muli.');
+      }
+    } catch (error) {
+      showAlert('error', 'Walang signal sa server. Paki-check ang iyong internet connection.');
+    } finally {
+      submitBtn.disabled = false;
+      btnText.textContent = 'Ipadala ang Mensahe';
+      btnSpinner.classList.add('hidden');
+    }
+  });
 });

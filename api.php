@@ -1,9 +1,15 @@
 <?php
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception;
+require 'PHPMailer/Exception.php';
+require 'PHPMailer/PHPMailer.php';
+require 'PHPMailer/SMTP.php';
+
 session_start();
 require __DIR__ . '/db.php';
 header('Content-Type: application/json');
  
-$action = $_GET['action'] ?? '';
+$action = $_GET['action'] ?? $_POST['action'] ?? '';
 $in = json_decode(file_get_contents('php://input'), true) ?: $_POST;
  
 function out(array $data, int $code = 200) {
@@ -348,7 +354,111 @@ switch ($action) {
             out(['error' => 'Database Error: ' . $e->getMessage()], 500);
         }
         notifyAdmins($pdo, $oid, "Bagong order #$oid mula kay {$in['name']} — total ₱$total.");
- 
+    
+            case 'contact_submit':
+        // ─────────────────────────────────────────────────
+        // 1. Receive & Sanitize Inputs
+        // ─────────────────────────────────────────────────
+        $fullname = trim($in['fullname'] ?? '');
+        $email    = trim($in['email'] ?? '');
+        $subject  = trim($in['subject'] ?? '');
+        $message  = trim($in['message'] ?? '');
+
+        // ─────────────────────────────────────────────────
+        // 2. Server-side Validation
+        // ─────────────────────────────────────────────────
+        if ($fullname === '' || mb_strlen($fullname) < 2) {
+            out(['error' => 'Pakilagay ang tamang pangalan (min. 2 characters).'], 400);
+        }
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            out(['error' => 'Mali ang format ng email address.'], 400);
+        }
+        if (mb_strlen($subject) < 4) {
+            out(['error' => 'Ang paksa ay dapat may hindi bababa sa 4 na karakter.'], 400);
+        }
+        if (mb_strlen($message) < 10) {
+            out(['error' => 'Ang mensahe ay dapat may hindi bababa sa 10 karakter.'], 400);
+        }
+        if (mb_strlen($message) > 500) {
+            out(['error' => 'Ang mensahe ay dapat hindi lalampas sa 500 karakter.'], 400);
+        }
+
+        // ─────────────────────────────────────────────────
+        // 3. Save to Local Mailbox (Database)
+        // ─────────────────────────────────────────────────
+        try {
+            $pdo->prepare('INSERT INTO contact_messages (name, email, subject, message) VALUES (?,?,?,?)')
+                ->execute([$fullname, $email, $subject, $message]);
+        } catch (PDOException $e) {
+            error_log("Contact form DB error: " . $e->getMessage());
+            out(['error' => 'Nagkaroon ng aberya sa server. Subukan muli mamaya.'], 500);
+        }
+
+        // 4. Notify Admins in the Dashboard
+        notifyAdmins($pdo, 0, "Bagong mensahe mula kay $fullname: $subject");
+
+        // ─────────────────────────────────────────────────
+        // 5. Check if online, then send real email via PHPMailer
+        // ─────────────────────────────────────────────────
+        $isOnline = @fsockopen("www.google.com", 80, $errno, $errstr, 2);
+
+        $emailSent = false;
+
+        if ($isOnline) {
+            fclose($isOnline);
+            $mail = new PHPMailer(true);
+            try {
+                $mail->isSMTP();
+                $mail->Host       = 'smtp.gmail.com';
+                $mail->SMTPAuth   = true;
+                $mail->Username   = 'pilikartph@gmail.com';
+                $mail->Password   = 'wuocpwsctekjxskw';
+                $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+                $mail->Port       = 587;
+
+                // Bypass SSL certificate verification for local XAMPP
+                $mail->SMTPOptions = array(
+                    'ssl' => array(
+                        'verify_peer' => false,
+                        'verify_peer_name' => false,
+                        'allow_self_signed' => true
+                    )
+                );
+
+                $mail->setFrom('pilikartph@gmail.com', 'PiliKart Contact');
+                $mail->addAddress('pilikartph@gmail.com'); // Send to yourself
+
+                $mail->isHTML(true);
+                $mail->Subject = "PiliKart Contact: $subject";
+                $mail->Body    = "<h3>New Contact Message</h3>
+                                  <p><b>Name:</b> " . htmlspecialchars($fullname) . "</p>
+                                  <p><b>Email:</b> " . htmlspecialchars($email) . "</p>
+                                  <p><b>Message:</b><br>" . nl2br(htmlspecialchars($message)) . "</p>";
+
+                $mail->send();
+                $emailSent = true;
+            } catch (Exception $e) {
+                $emailSent = false;
+                // Log failure without polluting the inbox table
+                error_log("PHPMailer error: " . $mail->ErrorInfo);
+            }
+        }
+
+        // ─────────────────────────────────────────────────
+        // 6. Return shape the NEW frontend expects
+        // ─────────────────────────────────────────────────
+        out([
+            'success'    => true,
+            'email_sent' => $emailSent,
+            'message'    => $emailSent
+                ? 'Maraming salamat! Naitala at naipadala na ang iyong mensahe. Babalikan ka namin agad!'
+                : 'Mensahe naka-save sa aming Local Mailbox. Babalikan ka namin sa lalong madaling panahon.'
+        ]);
+
+    case 'admin-get-contacts':
+        $stmt = $pdo->query('SELECT * FROM contact_messages ORDER BY created_at DESC');
+        out($stmt->fetchAll());
+
     case 'admin-update-order':
         $oid = (int)$in['order_id'];
         $status = $in['status'];
