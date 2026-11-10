@@ -75,63 +75,229 @@ const app = {
 
         // ==================== GENERAL ====================
         { keys: ['deliver', 'delivery', 'fee', 'shipping', 'ship', 'padala'],
-        reply: "Hello po, suki! :) Ang delivery fee namin ay depende sa iyong lokasyon. Pumunta ka lang sa checkout para makita ang eksaktong fee - walang hidden charges, promise!" },
+          reply: "Hello po, suki! :) Ang delivery fee namin ay depende sa iyong lokasyon. Pumunta ka lang sa checkout para makita ang eksaktong fee - walang hidden charges, promise!<br><button class='pb-action-btn' onclick=\"app.go('cart')\">Go to Checkout</button>" },
         { keys: ['gcash', 'bayad', 'payment', 'resibo', 'receipt'],
-        reply: "Oo naman po, suki! <3 Tumatanggap kami ng GCash. Pagkatapos magbayad, i-upload mo lang ang screenshot ng resibo sa checkout para ma-verify agad namin. Salamat sa tiwala!" },
+          reply: "Oo naman po, suki! <3 Tumatanggap kami ng GCash. Pagkatapos magbayad, i-upload mo lang ang screenshot ng resibo sa checkout para ma-verify agad namin. Salamat sa tiwala!<br><button class='pb-action-btn' onclick=\"app.go('cart')\">Go to Checkout</button>" },
         { keys: ['track', 'tracking', 'saan na', 'status', 'nasaan', 'update order'],
-        reply: "Naiintindihan kita, suki! :) Gusto mo bang malaman kung nasaan na ang order mo? Pumunta lang sa <a href='#' onclick='app.go(\"orders\"); return false;' style='color:var(--brand);text-decoration:underline;'>Mga Order Ko</a> para masubaybayan ang biyahe ng iyong order. Sana malapit na siya!" },
+          reply: "Naiintindihan kita, suki! :) Gusto mo bang malaman kung nasaan na ang order mo? Pumunta lang sa Mga Order Ko para masubaybayan ang biyahe ng iyong order. Sana malapit na siya!<br><button class='pb-action-btn' onclick=\"app.go('orders')\">View My Orders</button>" },
         { keys: ['budget', 'mahal', 'mura', 'afford', 'cheap', 'price range'],
-        reply: "Nice idea, suki! :) Gamitin ang Budget Mode sa itaas ng menu - ilagay mo lang ang maximum na presyo at awtomatikong itatago namin ang mga mamahaling item. Tipid na, saya pa!" },
+          reply: "Nice idea, suki! :) Gamitin ang Budget Mode sa itaas ng menu - ilagay mo lang ang maximum na presyo at awtomatikong itatago namin ang mga mamahaling item. Tipid na, saya pa!<br><button class='pb-action-btn' onclick=\"app.scrollToMenu()\">Go to Menu</button>" },
         { keys: ['cancel', 'cancellation', 'bawi', 'stop order'],
-        reply: "Naku, may bago ka bang isip, suki? :3 Kung gusto mong i-cancel ang order, mag-message agad sa aming support team. Depende sa status ng order kung pwede pa - kausapin mo lang kami!" },
+          reply: "Naku, may bago ka bang isip, suki? :3 Kung gusto mong i-cancel ang order, mag-message agad sa aming support team. Depende sa status ng order kung pwede pa - kausapin mo lang kami!<br><button class='pb-action-btn' onclick=\"app.go('faq')\">View FAQ</button>" },
         { keys: ['refund', 'money back', 'ibalik pera', 'reimburse'],
-        reply: "Sorry sa abala, suki! :( Para sa refund concerns, makipag-ugnayan muna sa aming support team para ma-review namin ang request mo. Aasikasuhin namin nang maayos." },
+          reply: "Sorry sa abala, suki! :( Para sa refund concerns, makipag-ugnayan muna sa aming support team para ma-review namin ang request mo. Aasikasuhin namin nang maayos.<br><button class='pb-action-btn' onclick=\"app.go('orders')\">Go to My Orders</button>" },
         { keys: ['store hours', 'opening hours', 'open', 'close', 'oras', 'schedule'],
-        reply: "Suki, para sa updated store hours, bisitahin mo ang aming <a href='#' onclick='app.go(\"faq\"); return false;' style='color:var(--brand);text-decoration:underline;'>FAQ page</a> o mag-message sa support team. Andito lang kami para sa iyo!" },
+          reply: "Suki, para sa updated store hours, bisitahin mo ang aming FAQ page o mag-message sa support team. Andito lang kami para sa iyo!<br><button class='pb-action-btn' onclick=\"app.go('faq')\">Go to FAQ</button>" },
         { keys: ['best seller', 'bestseller', 'popular', 'patok', 'recommended'],
-        reply: "Gusto mo ng mga paborito ng ibang suki? :) Bisitahin ang aming <a href='#' onclick='app.go(\"menu\"); return false;' style='color:var(--brand);text-decoration:underline;'>Menu</a> - hanapin ang may 'Suki's Choice' badge. Siguradong sulit!" },
+          reply: "Gusto mo ng mga paborito ng ibang suki? :) Bisitahin ang aming Menu - hanapin ang may 'Suki's Choice' badge. Siguradong sulit!<br><button class='pb-action-btn' onclick=\"app.scrollToMenu()\">Browse Menu</button>" },
         { keys: ['menu', 'products', 'items', 'paninda', 'tinda', 'catalog'],
-        reply: "Ang daming pagpipilian, suki! :) Tingnan ang aming <a href='#' onclick='app.go(\"menu\"); return false;' style='color:var(--brand);text-decoration:underline;'>Product Menu</a> - may PASO, NIPA, HABI, at APOLLO, lahat gawang Pinoy!" },
+          reply: "Ang daming pagpipilian, suki! :) Tingnan ang aming Product Menu - may PASO, NIPA, HABI, at APOLLO, lahat gawang Pinoy!<br><button class='pb-action-btn' onclick=\"app.scrollToMenu()\">Browse Menu</button>" },
         { keys: ['available', 'availability', 'out of stock', 'sold out', 'stock', 'ubos'],
-        reply: "Good question, suki! :) Ang availability ay nagbabago depende sa stock. Bisitahin ang <a href='#' onclick='app.go(\"menu\"); return false;' style='color:var(--brand);text-decoration:underline;'>Menu</a> para makita ang available ngayon. May 'Ubos na' badge kung wala." },
+          reply: "Good question, suki! :) Ang availability ay nagbabago depende sa stock. Bisitahin ang Menu para makita ang available ngayon. May 'Ubos na' badge kung wala.<br><button class='pb-action-btn' onclick=\"app.scrollToMenu()\">Browse Menu</button>" },
         { keys: ['discount', 'promo', 'promotion', 'voucher', 'sale', 'coupon'],
-        reply: "Suki! :D Abangan ang aming discounts at special promos. Tingnan ang available offers bago mag-checkout - baka may swertehin!" },
+          reply: "Suki! :D Abangan ang aming discounts at special promos. Tingnan ang available offers bago mag-checkout - baka may swertehin!<br><button class='pb-action-btn' onclick=\"app.scrollToMenu()\">Browse Menu</button>" },
         { keys: ['account', 'register', 'signup', 'sign up', 'login', 'log in'],
-        reply: "Welcome, suki! :) Pwede kang gumawa ng account o mag-log in para mas madaling ma-access ang iyong orders at updates. Tara, sign up na!" },
+          reply: "Welcome, suki! :) Pwede kang gumawa ng account o mag-log in para mas madaling ma-access ang iyong orders at updates. Tara, sign up na!<br><button class='pb-action-btn' onclick=\"app.openAuthModal('signin')\">Sign In / Sign Up</button>" },
         { keys: ['checkout', 'check out', 'place order', 'purchase', 'bumili'],
-        reply: "Ready ka na ba, suki? :) Review-in lang ang mga napili mo, tapos proceed to checkout. Konti na lang, matatanggap mo na!" },
+          reply: "Ready ka na ba, suki? :) Review-in lang ang mga napili mo, tapos proceed to checkout. Konti na lang, matatanggap mo na!<br><button class='pb-action-btn' onclick=\"app.go('cart')\">Go to Cart</button>" },
         { keys: ['address', 'location', 'delivery address', 'saan kayo'],
-        reply: "Suki, siguraduhin lang na tama ang delivery address mo sa checkout para iwas-problema. Kung may changes, i-update sa My Account. Salamat!" },
+          reply: "Suki, siguraduhin lang na tama ang delivery address mo sa checkout para iwas-problema. Kung may changes, i-update sa My Account. Salamat!<br><button class='pb-action-btn' onclick=\"app.go('account')\">Go to My Account</button>" },
         { keys: ['contact', 'support', 'customer service', 'help', 'tulong', 'agent'],
-        reply: "We're here for you, suki! :) Bisitahin ang aming <a href='#' onclick='app.go(\"faq\"); return false;' style='color:var(--brand);text-decoration:underline;'>FAQ page</a> para sa mga sagot. Kung kailangan ng tulong, mag-message lang sa support team." },
+          reply: "We're here for you, suki! :) Bisitahin ang aming FAQ page para sa mga sagot. Kung kailangan ng tulong, mag-message lang sa support team.<br><button class='pb-action-btn' onclick=\"app.go('faq')\">Go to FAQ</button>" },
         { keys: ['wrong item', 'incorrect item', 'maling item', 'damaged', 'sira', 'defective'],
-        reply: "Naku, pasensya na suki! :( Kung may maling o sira na item kang natanggap, mag-message agad sa amin para matulungan ka. Aayusin namin, promise." },
+          reply: "Naku, pasensya na suki! :( Kung may maling o sira na item kang natanggap, pumunta sa My Orders at i-request ang refund para matulungan ka. Aayusin namin, promise.<br><button class='pb-action-btn' onclick=\"app.go('orders')\">Go to My Orders</button>" },
         { keys: ['change order', 'edit order', 'modify order', 'palitan order'],
-        reply: "Suki, kung gusto mong baguhin ang order, mag-message agad sa support. Depende sa processing stage kung pwede pa - mas mabilis, mas mabuti!" },
+          reply: "Suki, kung gusto mong baguhin ang order, mag-message agad sa support. Depende sa processing stage kung pwede pa - mas mabilis, mas mabuti!<br><button class='pb-action-btn' onclick=\"app.go('faq')\">Contact Support</button>" },
         { keys: ['bulk', 'wholesale', 'maramihan', 'large order'],
-        reply: "May okasyon, suki? :D Kung maramihan ang order, mag-message sa support team para sa special arrangements at possible discounts. Sulit!" },
+          reply: "May okasyon, suki? :D Kung maramihan ang order, mag-message sa support team para sa special arrangements at possible discounts. Sulit!<br><button class='pb-action-btn' onclick=\"app.go('faq')\">Contact Support</button>" },
         { keys: ['allergy', 'allergic', 'ingredients', 'sangkap'],
-        reply: "Mahalaga ang kalusugan mo, suki! (!) Siguraduhing suriin ang ingredients sa product listing. Kung may tanong tungkol sa allergens, mag-message lang sa amin." },
+          reply: "Mahalaga ang kalusugan mo, suki! (!) Siguraduhing suriin ang ingredients sa product listing. Kung may tanong tungkol sa allergens, mag-message lang sa amin." },
         { keys: ['thank you', 'thanks', 'salamat', 'thank u'],
-        reply: "Aww, you're welcome, suki! <3 Salamat din sa pagpili sa PiliKart. Happy shopping at ingat lagi!" },
+          reply: "Aww, you're welcome, suki! <3 Salamat din sa pagpili sa PiliKart. Happy shopping at ingat lagi!" },
 
-        // ==================== DEPARTMENTS (Briefed for space) ====================
-        { keys: ['paso', 'food essentials'], reply: "Welcome sa PASO Food Essentials, suki! :) Dito ang mga paborito mong lutong-bahay at grocery essentials. Bisitahin ang <a href='#' onclick='app.go(\"menu\")'>Menu</a> para mag-explore!" },
-        { keys: ['apollo', 'technology store'], reply: "Welcome sa APOLLO Technologies, suki! :) Dito ang mga gadgets at tech finds. Bisitahin ang <a href='#' onclick='app.go(\"menu\")'>Menu</a> para mag-explore!" },
-        { keys: ['habi', 'fashion store'], reply: "Welcome sa HABI Fashion & Cosmetics, suki! :) Dito ang mga fashion at beauty finds. Bisitahin ang <a href='#' onclick='app.go(\"menu\")'>Menu</a> para mag-explore!" },
-        { keys: ['nipa', 'home essentials'], reply: "Welcome sa NIPA Home Essentials, suki! :) Dito ang mga gamit para sa bahay. Bisitahin ang <a href='#' onclick='app.go(\"menu\")'>Menu</a> para mag-explore!" },
+        // ==================== DEPARTMENTS ====================
+        { keys: ['paso', 'food essentials'], 
+          reply: "Welcome sa PASO Food Essentials, suki! :) Dito ang mga paborito mong lutong-bahay at grocery essentials.<br><button class='pb-action-btn' onclick=\"app.filterFromFooter('paso')\">View PASO Menu</button>" },
+        { keys: ['apollo', 'technology store'], 
+          reply: "Welcome sa APOLLO Technologies, suki! :) Dito ang mga gadgets at tech finds.<br><button class='pb-action-btn' onclick=\"app.filterFromFooter('apollo')\">View APOLLO Menu</button>" },
+        { keys: ['habi', 'fashion store'], 
+          reply: "Welcome sa HABI Fashion & Cosmetics, suki! :) Dito ang mga fashion at beauty finds.<br><button class='pb-action-btn' onclick=\"app.filterFromFooter('habi')\">View HABI Menu</button>" },
+        { keys: ['nipa', 'home essentials'], 
+          reply: "Welcome sa NIPA Home Essentials, suki! :) Dito ang mga gamit para sa bahay.<br><button class='pb-action-btn' onclick=\"app.filterFromFooter('nipa')\">View NIPA Menu</button>" },
+
+        // ==================== BAYANIHAN ====================
+        { keys: ['bayanihan', 'group', 'split', 'hati'], 
+          reply: "Ang Bayanihan Cart ay para sa sabay-sabay na order at paghati ng bayad kasama ang tropa! Pwede kang gumawa ng group cart o sumali gamit ang code.<br><button class='pb-action-btn' onclick=\"app.go('bayanihan')\">Go to Bayanihan Cart</button>" },
         
+        // ==================== PASO PRODUCTS ====================
+        { keys: ['adobo', 'best food', 'paborito'], 
+          reply: "Adobo is life! :D Walang tatalo sa adobong manok na may toyo, suka, at bawang. Nasa PASO section namin 'yan, suki!<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Chicken Adobo with Rice')\">View Chicken Adobo</button>" },
+        { keys: ['sisig'], 
+          reply: "Sizzling sarap! :D Paborito mo ba ang maanghang at malutong na sisig? Nasa PASO menu namin yan!<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Pork Sisig with Rice')\">View Pork Sisig</button>" },
+        { keys: ['inasal', 'chicken inasal'], 
+          reply: "Smoky, juicy, at rich in flavor! Paborito mo ba ang inasal?<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Chicken Inasal with Rice')\">View Chicken Inasal</button>" },
+        { keys: ['pancit', 'bihon', 'pansit'], 
+          reply: "Pampaswerte at pampasaya sa handaan! Tara, pancit tayo.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Pancit Bihon Guisado')\">View Pancit Bihon</button>" },
+        { keys: ['beefsilog', 'tapa', 'breakfast'], 
+          reply: "Simula ng araw na puno ng pag-asa! Paborito mong almusal?<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Beefsilog')\">View Beefsilog</button>" },
+        { keys: ['lumpia', 'lumpiang shanghai', 'shanghai'], 
+          reply: "Crispy at masarap na pang-meryenda! Paboritong pulutan at baon.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Lumpiang Shanghai')\">View Lumpiang Shanghai</button>" },
+        { keys: ['leche flan', 'flan'], 
+          reply: "Tamis na laging hinahanap! Ang creamy at caramel goodness.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Leche Flan Cup')\">View Leche Flan</button>" },
+        { keys: ['buko pandan'], 
+          reply: "Preskong kaginhawahan sa bawat subo! Perfect pang-dessert.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Buko Pandan Cup')\">View Buko Pandan</button>" },
+        { keys: ['turon'], 
+          reply: "Sarap ng kabataan sa bawat kagat! Sweet saba at caramelized sugar.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Turon')\">View Turon</button>" },
+        { keys: ['fried chicken'], 
+          reply: "Lutong bahay na hatid ay ginhawa! Crispy fried chicken with egg.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Classic Fried Chicken with Egg')\">View Fried Chicken</button>" },
+        { keys: ['cheese sticks', 'cheese stick'], 
+          reply: "Kada kagat, puno ng sarap! Gooey melted cheese inside crispy wrappers.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Cheese Sticks')\">View Cheese Sticks</button>" },
+        { keys: ['fries', 'french fries'], 
+          reply: "Crispy na pang-meryenda! Golden fried potatoes with salt.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('French Fries')\">View French Fries</button>" },
+        { keys: ['brownies', 'brownie'], 
+          reply: "Tsokolateng tamis ng pagmamahal! Fudgy and rich chocolate brownies.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Fudgy Brownies')\">View Brownies</button>" },
+        { keys: ['milk tea', 'wintermelon'], 
+          reply: "Sarap ng Wintermelon Milk Tea pag mainit ang panahon! 🧋 Nasa PASO menu namin yan, suki.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Wintermelon Milk Tea')\">View Milk Tea</button>" },
+        { keys: ['burger', 'cheeseburger'], 
+          reply: "Busog at saya sa bawat kagat! Juicy beef patty with melted cheese.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Classic Cheeseburger')\">View Cheeseburger</button>" },
+        { keys: ['arroz caldo', 'lugaw'], 
+          reply: "Init ng sabaw, hagod ng pagmamahal! Perfect comfort food kapag maulan.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Arroz Caldo')\">View Arroz Caldo</button>" },
+
+        // ==================== NIPA PRODUCTS ====================
+        { keys: ['tabo'], 
+          reply: "Ah, ang ultimate Pinoy bathroom essential! 🚿 Sturdy, reliable, at perfect para sa tabo-bucket bath!<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Classic Plastic Tabo')\">View Plastic Tabo</button>" },
+        { keys: ['banig'], 
+          reply: "Himbing ng tulog sa banig ng probinsya! Traditional hand-woven sleeping mat.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Banig')\">View Banig</button>" },
+        { keys: ['abaca', 'scrubbing pad'], 
+          reply: "Malinis ang bahay, alaga pa ang kalikasan! Eco-friendly cleaning companion.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Abaca Scrubbing Pad')\">View Abaca Pad</button>" },
+        { keys: ['bamboo utensil', 'kubyertos'], 
+          reply: "Kubyertos na gawa ng kalikasan! Sustainable bamboo fork, spoon, and knife set.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Bamboo Utensil Set')\">View Bamboo Utensils</button>" },
+        { keys: ['coconut bowl', 'bowl'], 
+          reply: "Gawang likas, espesyal ang dating! Unique bowls polished from real coconut shells.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Coconut Shell Bowl')\">View Coconut Bowl</button>" },
+        { keys: ['capiz lamp', 'lamp', 'ilaw'], 
+          reply: "Ilaw na nagbibigay ng init sa tahanan! Elegant lamp made with Capiz shells.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Capiz Shell Lamp')\">View Capiz Lamp</button>" },
+        { keys: ['tray', 'wooden tray'], 
+          reply: "Paghahain nang may karangalan! Sturdy serving tray carved from Acacia wood.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Wooden Serving Tray')\">View Wooden Tray</button>" },
+        { keys: ['sampaguita', 'air freshener'], 
+          reply: "Halimuyak ng tahanang Pinoy! Room spray with the sweet scent of Sampaguita.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Sampaguita Air Freshener')\">View Air Freshener</button>" },
+        { keys: ['palayok'], 
+          reply: "Mabagal lutuin, puno ng lasa at alaala! Traditional clay pot for your stews.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Palayok')\">View Palayok</button>" },
+        { keys: ['broom', 'dustpan', 'walis'], 
+          reply: "Katuwang sa pagpapanatili ng linis! Practical cleaning set.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Broom and Dustpan Set')\">View Broom Set</button>" },
+        { keys: ['pitcher', 'water pitcher'], 
+          reply: "Sariwang tubig para sa buong angkan! Durable pitcher with easy-pour spout.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Plastic Water Pitcher')\">View Water Pitcher</button>" },
+        { keys: ['hangers', 'sampayan'], 
+          reply: "Ayos at maaliwalas na pamamahay! Set of sturdy plastic hangers.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Plastic Clothes Hangers')\">View Hangers</button>" },
+        { keys: ['towel', 'bath towel'], 
+          reply: "Lambot na yakap pagkatapos maligo! Ultra-soft and absorbent cotton towel.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Bath Towel')\">View Bath Towel</button>" },
+        { keys: ['waste bin', 'basurahan'], 
+          reply: "Maliit na basurahan, malaking tulong! Compact bin for personal spaces.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Small Waste Bin')\">View Waste Bin</button>" },
+        { keys: ['laundry basket'], 
+          reply: "Organisado at maayos na labahan! Durable and ventilated laundry basket.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Plastic Laundry Basket')\">View Laundry Basket</button>" },
+        { keys: ['bayong'], 
+          reply: "Mabisang katuwang sa pamimili! Traditional handwoven market bag.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Woven Bayong')\">View Bayong</button>" },
+
+        // ==================== HABI PRODUCTS ====================
+        { keys: ['scarf', 'habi scarf'], 
+          reply: "Ang Indigenous Woven Scarf ay perfect para sa weather at proud na pag-suot ng kulturang Pinoy!<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Indigenous Woven Scarf')\">View Woven Scarf</button>" },
+        { keys: ['barot saya', 'filipiniana'], 
+          reply: "Proud na suot, yaman ng kultura! The prestigious Filipiniana dress.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Barot Saya')\">View Barot Saya</button>" },
+        { keys: ['inabel', 'tote bag'], 
+          reply: "Gawang Ilocos, yaman na dala-dala! Beautifully crafted tote bag.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Inabel Woven Tote Bag')\">View Inabel Tote</button>" },
+        { keys: ['pina', 'pina scarf'], 
+          reply: "Pinong habi, marangal na ganda! Delicately woven from pineapple leaves.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Pina Fabric Scarf')\">View Pina Scarf</button>" },
+        { keys: ['tint', 'cheek tint'], 
+          reply: "Natural na ganda mula sa kalikasan! Calamansi extract for a healthy flush.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Calamansi Lip & Cheek Tint')\">View Calamansi Tint</button>" },
+        { keys: ['coconut oil', 'vco'], 
+          reply: "Likas na lunas para sa kutis at buhok! Cold-pressed pure VCO.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Virgin Coconut Oil VCO')\">View VCO</button>" },
+        { keys: ['perfume', 'sampaguita perfume'], 
+          reply: "Amoy ng bulaklak, alaala ng bayan! Gentle floral scent.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Sampaguita Perfume')\">View Perfume</button>" },
+        { keys: ['slippers', 'tsinelas'], 
+          reply: "Sarap ng pambahay sa bawat hakbang! Slippers made from banig material.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Banig Slide Slippers')\">View Slippers</button>" },
+        { keys: ['coin purse', 'purse'], 
+          reply: "Gawang kamay, pusong Pilipino! Handwoven coin purse from T'nalak fabric.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Tnalak Coin Purse')\">View Coin Purse</button>" },
+        { keys: ['barong', 'polo'], 
+          reply: "Modernong suot, may pusong Pinoy! Lightweight and subtly embroidered.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Barong-inspired Polo')\">View Barong Polo</button>" },
+        { keys: ['sinamay hat', 'hat', 'sumbrero'], 
+          reply: "Proteksyon sa araw, may klasikong ganda! Wide-brimmed sinamay hat.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Sinamay Hat')\">View Sinamay Hat</button>" },
+        { keys: ['lipstick'], 
+          reply: "Gusto mo bang mag-glow, suki? 💄 Tingnan ang aming Velvet Matte Lipstick na pwedeng magbigay sa'yo ng confidence all day.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Velvet Matte Lipstick')\">View Lipstick</button>" },
+        { keys: ['foundation'], 
+          reply: "Kutis na puno ng ningning! Lightweight liquid foundation for a radiant finish.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Dewy Liquid Foundation')\">View Foundation</button>" },
+        { keys: ['blush'], 
+          reply: "Ningning ng pisngi, hatid ay ngiti! Silky and blendable cheek color.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Glow Blush')\">View Blush</button>" },
+        { keys: ['mascara'], 
+          reply: "Titig na hindi kakalas! Smudge-proof and waterproof mascara.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Waterproof Mascara')\">View Mascara</button>" },
+        { keys: ['concealer'], 
+          reply: "Tagong kapaguran, liwanag ang bida! Creamy and full-coverage concealer.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Soft Focus Concealer')\">View Concealer</button>" },
+
+        // ==================== APOLLO PRODUCTS ====================
+        { keys: ['karaoke', 'videoke'], 
+          reply: "Kantahan na, buong pamilya ay masaya! Bring the videoke experience anywhere.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Mini Karaoke Machine')\">View Karaoke Machine</button>" },
+        { keys: ['speaker', 'bluetooth speaker'], 
+          reply: "Musika at saya, kahit saan dalhin! Powerful speaker housed in real bamboo.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Bamboo Bluetooth Speaker')\">View Speaker</button>" },
+        { keys: ['phone case'], 
+          reply: "Gadget na may pusong Pinoy! Protect your phone with authentic Inabel fabric.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Handwoven Inabel Phone Case')\">View Phone Case</button>" },
+        { keys: ['powerbank', 'power bank'], 
+          reply: "Laging handa, laging may karga! Fast-charging power bank with a wooden casing.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Wooden Powerbank (10,000mAh)')\">View Powerbank</button>" },
+        { keys: ['laptop sleeve'], 
+          reply: "Likas na proteksyon sa iyong gadget! Padded sleeve handwoven from abaca fiber.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Abaca Laptop Sleeve (14-inch)')\">View Laptop Sleeve</button>" },
+        { keys: ['phone stand'], 
+          reply: "Tibay ng kahoy, suporta sa'yo! Sturdy desk companion carved from Acacia wood.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Acacia Wood Phone Stand')\">View Phone Stand</button>" },
+        { keys: ['cable organizer'], 
+          reply: "Ayos ang kable, ayos ang espasyo! Beautifully hand-woven rattan basket.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Rattan Cable Organizer')\">View Organizer</button>" },
+        { keys: ['mousepad', 'mouse pad'], 
+          reply: "Swabeng galaw, Pinoy na karangyaan! Unique mousepad layered with Capiz shells.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Capiz Shell Mousepad')\">View Mousepad</button>" },
+        { keys: ['tripod'], 
+          reply: "Kuha ng alaala, tibay ng kawayan! Lightweight, adjustable tripod made from bamboo.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Bamboo Tripod')\">View Tripod</button>" },
+        { keys: ['tablet case'], 
+          reply: "Proteksyon na gawa sa kulturang Pinoy! Padded case made with native woven textiles.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Woven Tablet Case')\">View Tablet Case</button>" },
+        { keys: ['charging cord', 'type-c', 'charger'], 
+          reply: "Mabilis na karga, tuloy ang saya! Durable, high-speed braided Type-C cable.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Charging Cord (Type-C)')\">View Charging Cord</button>" },
+        { keys: ['flash drive', 'usb'], 
+          reply: "Bitbit ang alaala at dokumento! Compact and highly reliable storage drive.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('USB Flash Drive (32GB)')\">View Flash Drive</button>" },
+        { keys: ['mouse', 'wireless mouse'], 
+          reply: "Tahimik na galaw, tumpak na aksyon! Ergonomic wireless mouse with silent clicks.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Wireless Mouse')\">View Wireless Mouse</button>" },
+        { keys: ['keyboard', 'mechanical keyboard'], 
+          reply: "Sarap mag-type, sarap magtrabaho! Responsive mechanical keyboard with tactile switches.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Mechanical Keyboard')\">View Keyboard</button>" },
+        { keys: ['microphone', 'mic'], 
+          reply: "Boses ay malinaw, mensahe ay malinaw! High-quality clip-on wireless microphone.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Wireless Microphone')\">View Microphone</button>" },
+        { keys: ['solar lamp', 'solar light'], 
+          reply: "Liwanag sa gitna ng dilim! Reliable solar-powered lamp for emergencies.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Solar-Powered Lamp')\">View Solar Lamp</button>" },
+
+        // ==================== DELIVERY LOCATIONS ====================
+        { keys: ['binan', 'biñan'], 
+          reply: "Sa <b>Biñan</b>, ang delivery fee ay nag-uumpisa sa <b>₱2</b> hanggang <b>₱144</b> depende sa iyong barangay.<br><button class='pb-action-btn' onclick=\"app.go('cart')\">Go to Checkout</button>" },
+        { keys: ['cabuyao'], 
+          reply: "Sa <b>Cabuyao</b>, ang delivery fee ay nag-uumpisa sa <b>₱8</b> hanggang <b>₱90</b> depende sa iyong barangay.<br><button class='pb-action-btn' onclick=\"app.go('cart')\">Go to Checkout</button>" },
+        { keys: ['calamba'], 
+          reply: "Sa <b>Calamba</b>, ang delivery fee ay nag-uumpisa sa <b>₱2</b> hanggang <b>₱120</b> depende sa iyong barangay.<br><button class='pb-action-btn' onclick=\"app.go('cart')\">Go to Checkout</button>" },
+        { keys: ['san pablo'], 
+          reply: "Sa <b>San Pablo</b>, ang delivery fee ay nag-uumpisa sa <b>₱6</b> hanggang <b>₱170</b> depende sa iyong barangay.<br><button class='pb-action-btn' onclick=\"app.go('cart')\">Go to Checkout</button>" },
+        { keys: ['san pedro'], 
+          reply: "Sa <b>San Pedro</b>, ang delivery fee ay nag-uumpisa sa <b>₱6</b> hanggang <b>₱86</b> depende sa iyong barangay.<br><button class='pb-action-btn' onclick=\"app.go('cart')\">Go to Checkout</button>" },
+        { keys: ['santa rosa', 'sta rosa'], 
+          reply: "Sa <b>Santa Rosa</b>, ang delivery fee ay nag-uumpisa sa <b>₱10</b> hanggang <b>₱70</b> depende sa iyong barangay.<br><button class='pb-action-btn' onclick=\"app.go('cart')\">Go to Checkout</button>" },
+
         // ==================== EASTER EGGS & FUN ====================
-        { keys: ['jose rizal', 'rizal', 'pepe'], reply: "Si Dr. Jose Rizal? Ang ultimate 'Suki's Choice' ng bayan! :) Kung buhay lang siya ngayon, for sure nagta-TikTok na siya para i-promote ang PiliKart." },
-        { keys: ['mahal kita', 'i love you', 'i love u', 'love you'], reply: "Awww! <3 Kinikilig naman si PiliBot! Mahal ko rin kayong lahat ng mga suki ko. Mwah! ^_^" },
-        { keys: ['are you human', 'tao ka ba', 'robot ka ba', 'ai ka ba', 'bot ka ba', 'robot'], reply: "100% Robot po ako, suki! :) Pero ang puso ko, pusong-Pinoy na marunong mag-malasakit. <3" },
-        { keys: ['hello world', 'programmer', 'coding', 'code'], reply: "Spotted ang IT/Programmer, suki! :) Isang mainit na 'Hello World' mula kay PiliBot. Sana walang bugs ang araw mo ngayon!" },
-        { keys: ['adobo', 'best food', 'paborito'], reply: "Adobo is life! :D Walang tatalo sa adobong manok na may toyo, suka, at bawang. Nasa PASO section namin 'yan, suki!" },
-        { keys: ['pumili ka', 'pumili ka + cart'], reply: "Yan ang aming motto, suki! ^_^ 'Pumili ka + Cart.' Huwag kang mahiyang mag-add sa cart, walang bayad ang mag-window shopping!" },
-        { keys: ['pilipinas', 'philippines', 'pinoy', 'filipino'], reply: "Proud to be Pinoy! <3 Ang PiliKart ay ginawa para suportahan ang lokal na negosyo at mga gawang Pinoy. Salamat sa pagmamahal sa sariling atin." },
-        { keys: ['tanginamo', 'gago', 'bobo', 'pangit', 'putangina', 'bad words', 'galit', 'inis'], reply: "Naku po, suki! :( Baka magalit si Lola. Kalmado lang tayo, ha? Andito ako para tumulong, hindi para makipag-away. :)" },
-        { keys: ['god bless', 'dasal', 'pray', 'simbang gabi'], reply: "God bless din sa iyo, suki! :) Ingat ka palagi at salamat sa pagtangkilik sa PiliKart. <3" },
-        { keys: ['secret', 'password', 'admin', 'hack'], reply: "Sshhh! ;) Wala akong alam diyan, suki. Wala kang narinig sa akin. Basta mag-shopping ka na lang!" }
+        { keys: ['jose rizal', 'rizal', 'pepe'], 
+          reply: "Si Dr. Jose Rizal? Ang ultimate 'Suki's Choice' ng bayan! :) Kung buhay lang siya ngayon, for sure nagta-TikTok na siya para i-promote ang PiliKart." },
+        { keys: ['mahal kita', 'i love you', 'i love u', 'love you'], 
+          reply: "Awww! <3 Kinikilig naman si PiliBot! Mahal ko rin kayong lahat ng mga suki ko. Mwah! ^_^" },
+        { keys: ['are you human', 'tao ka ba', 'robot ka ba', 'ai ka ba', 'bot ka ba', 'robot'], 
+          reply: "100% Robot po ako, suki! :) Pero ang puso ko, pusong-Pinoy na marunong mag-malasakit. <3" },
+        { keys: ['hello world', 'programmer', 'coding', 'code'], 
+          reply: "Spotted ang IT/Programmer, suki! :) Isang mainit na 'Hello World' mula kay PiliBot. Sana walang bugs ang araw mo ngayon!" },
+        { keys: ['pumili ka', 'pumili ka + cart'], 
+          reply: "Yan ang aming motto, suki! ^_^ 'Pumili ka + Cart.' Huwag kang mahiyang mag-add sa cart, walang bayad ang mag-window shopping!" },
+        { keys: ['pilipinas', 'philippines', 'pinoy', 'filipino'], 
+          reply: "Proud to be Pinoy! <3 Ang PiliKart ay ginawa para suportahan ang lokal na negosyo at mga gawang Pinoy. Salamat sa pagmamahal sa sariling atin." },
+        { keys: ['tanginamo', 'gago', 'bobo', 'pangit', 'putangina', 'bad words', 'galit', 'inis'], 
+          reply: "Naku po, suki! :( Baka magalit si Lola. Kalmado lang tayo, ha? Andito ako para tumulong, hindi para makipag-away. :)" },
+        { keys: ['god bless', 'dasal', 'pray', 'simbang gabi'], 
+          reply: "God bless din sa iyo, suki! :) Ingat ka palagi at salamat sa pagtangkilik sa PiliKart. <3" },
+        { keys: ['secret', 'password', 'admin', 'hack'], 
+          reply: "Sshhh! ;) Wala akong alam diyan, suki. Wala kang narinig sa akin. Basta mag-shopping ka na lang!" }
     ],
 
     _refundOrderId: null,
@@ -497,7 +663,7 @@ const app = {
                 d.classList.add('hidden'); 
                 d.classList.remove('closing'); 
                 this.updateBodyScrollLock(); 
-            }, 800);
+            }, 400); // 🟢 Changed from 800 to 400
         }
     },
 
@@ -2215,7 +2381,7 @@ renderMenu() {
             d.classList.remove('closing'); 
             this._cartBusy = false; 
             this.updateBodyScrollLock(); 
-        }, 800);
+        }, 400); // 🟢 Changed from 800 to 400
     },
 
     closeModal(id) {
@@ -3450,23 +3616,58 @@ toggleAdvancedMenuFilters(btn) {
 
         const userMessage = input.value.trim();
         chat.innerHTML += `<div class="pb-msg user">${this.esc(userMessage)}</div>`;
+        
+        // Clean the query for matching
         const q = ' ' + userMessage.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim() + ' ';
         input.value = ''; chat.scrollTop = chat.scrollHeight;
 
         setTimeout(() => {
             let reply = "Hmm, di ko pa alam 'yan, suki! :) Subukan mong itanong ang delivery, GCash, orders, products, o Budget Mode.";
-            const match = this.botBrain.find(bot =>
-                bot.keys.some(k => {
-                    const cleanKey = k.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
-                    if (!cleanKey) return false;
-                    if (cleanKey.includes(' ')) return q.includes(' ' + cleanKey);
-                    return q.includes(' ' + cleanKey + ' ');
-                })
-            );
-            if (match) reply = typeof match.reply === 'function' ? match.reply.call(this) : match.reply;
+            
+            // 🟢 NEW: DYNAMIC BARANGAY LOOKUP
+            let isLocationQuery = q.includes(' fee ') || q.includes(' deliver ') || q.includes(' magkano ') || q.includes(' presyo ') || q.includes(' shipping ');
+            
+            if (isLocationQuery && this.deliveryFeesRaw) {
+                // Find if any barangay matches the user's text
+                const match = this.deliveryFeesRaw.find(f => {
+                    const bName = ' ' + f.barangay.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim() + ' ';
+                    return q.includes(bName);
+                });
+
+                if (match) {
+                    reply = `Ah, suki! Ang delivery fee sa <b>${this.esc(match.barangay)}, ${this.esc(match.city)}</b> ay <b>${this.money(match.fee)}</b>.<br><button class='pb-action-btn' onclick="app.go('cart')">Go to Checkout</button>`;
+                }
+            } 
+            
+            // If no barangay match was found, fallback to the standard botBrain search
+            if (reply.includes("Hmm, di ko pa alam")) {
+                const match = this.botBrain.find(bot =>
+                    bot.keys.some(k => {
+                        const cleanKey = k.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
+                        if (!cleanKey) return false;
+                        if (cleanKey.includes(' ')) return q.includes(' ' + cleanKey);
+                        return q.includes(' ' + cleanKey + ' ');
+                    })
+                );
+                if (match) reply = typeof match.reply === 'function' ? match.reply.call(this) : match.reply;
+            }
+
             chat.innerHTML += `<div class="pb-msg">${reply}</div>`;
             chat.scrollTop = chat.scrollHeight;
         }, 600);
+    },
+
+    openBotProduct(productName) {
+        this.toggleBot(); // Close the chatbot window
+        // Find the product by name (case-insensitive)
+        const product = this.products.find(p => p.name.toLowerCase().includes(productName.toLowerCase()));
+        
+        if (product) {
+            // Reuse the existing addToCart function which handles the modal and login check
+            this.addToCart(product.id); 
+        } else {
+            this.showToast('Sorry suki, hindi ko mahanap ang product na iyon sa catalog.');
+        }
     },
 
     async loadGroups() {

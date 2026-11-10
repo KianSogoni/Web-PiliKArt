@@ -30,14 +30,20 @@
             </button>
 
             <button class="circle-nav-btn" id="theme-toggle-btn" onclick="app.toggleTheme()" title="Toggle Theme" aria-label="Toggle Theme">
-                <!-- Oak Mode: Strictly Sun + Wood Log -->
+                <!-- Oak Mode: Sun Only -->
                 <svg id="theme-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <!-- Sun -->
-                    <circle cx="12" cy="7" r="3"/>
-                    <path d="M12 2v1M12 11v1M7 7h1M16 7h1M8.5 3.5l.7.7M14.8 9.8l.7.7M15.5 3.5l-.7.7M9.2 9.8l-.7.7"/>
-                    <!-- Wood Log -->
-                    <rect x="6" y="15" width="12" height="5" rx="2.5"/>
-                    <path d="M9 17.5h6"/>
+                    <!-- Center Sun -->
+                    <circle cx="12" cy="12" r="5"/>
+                    
+                    <!-- Radiating Rays -->
+                    <path d="M12 2v2"/>
+                    <path d="M12 20v2"/>
+                    <path d="M2 12h2"/>
+                    <path d="M20 12h2"/>
+                    <path d="M4.93 4.93l1.41 1.41"/>
+                    <path d="M17.66 17.66l1.41 1.41"/>
+                    <path d="M6.34 17.66l-1.41 1.41"/>
+                    <path d="M19.07 4.93l-1.41 1.41"/>
                 </svg>
                 
                 <!-- Forest Mode: Moon + Pine Tree -->
@@ -1778,7 +1784,7 @@
             </div>
         </div>
 
-        <button class="btn btn-brand" style="width:100%; justify-content:center; margin-top: 10px;" id="nd-auth-btn" onclick="app.handleAuthFromDrawer()">
+        <button class="btn btn-brand" style="width:100%; justify-content:center;" id="nd-auth-btn" onclick="app.handleAuthFromDrawer()">
             <svg style="width:16px;height:16px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 17l5-5-5-5v3H3v4h7v3zM19 3H5c-1.1 0-2 .9-2 2v4h2V5h14v14H5v-4H3v4c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z"/></svg>
             <span id="nd-auth-label">Sign In / Sign Up</span>
         </button>
@@ -2365,59 +2371,62 @@
         </div>
     </div>
 
-<!-- 🟢 NEW: Credits Modal -->
-<div id="credits-modal" class="modal hidden" onclick="if (event.target === this) app.closeModal('credits-modal')">
-    <div class="modal-content" style="max-width: 420px; padding: 32px; text-align: center;">
-        <button class="modal-close-btn" onclick="app.closeModal('credits-modal')">✕</button>
-        
-        <!-- SVG Trophy Icon -->
-        <div style="display: flex; justify-content: center; margin-bottom: 12px; color: var(--amber);">
-            <svg viewBox="0 0 24 24" width="56" height="56" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path>
-                <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path>
-                <path d="M4 22h16"></path>
-                <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"></path>
-                <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"></path>
-                <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"></path>
-            </svg>
-        </div>
+    <!-- 🟢 NEW: Credits Modal -->
+    <div id="credits-modal" class="modal hidden" onclick="if (event.target === this) app.closeModal('credits-modal')">
+        <!-- 🟢 Changed max-width to 600px for the "rounded square" look -->
+        <div class="modal-content" style="max-width: 600px; padding: 32px; text-align: center;">
+            <button class="modal-close-btn" onclick="app.closeModal('credits-modal')">✕</button>
+            
+            <!-- SVG Trophy Icon -->
+            <div style="display: flex; justify-content: center; margin-bottom: 12px; color: var(--amber);">
+                <svg viewBox="0 0 24 24" width="56" height="56" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path>
+                    <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path>
+                    <path d="M4 22h16"></path>
+                    <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"></path>
+                    <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"></path>
+                    <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"></path>
+                </svg>
+            </div>
 
-        <h2 style="font-family: 'Baloo 2'; font-size: 26px; margin-bottom: 6px; color: var(--ink);">piliKArt Team</h2>
-        <p style="color: var(--muted); font-size: 13px; font-weight: 600; margin-bottom: 24px; line-height: 1.5;">The brilliant minds behind this digital love letter to Filipino heritage.</p>
-        
-        <div style="display: flex; flex-direction: column; gap: 10px; text-align: left;">
+            <h2 style="font-family: 'Baloo 2'; font-size: 26px; margin-bottom: 6px; color: var(--ink);">PiliKArt Team</h2>
+            <p style="color: var(--muted); font-size: 13px; font-weight: 600; margin-bottom: 24px; line-height: 1.5;">The brilliant minds behind this digital love letter to Filipino heritage.</p>
+            
+            <!-- 🟢 Changed to a 2-column grid for the wider layout -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; text-align: center;">
             <!-- Kian -->
-            <div style="background: var(--surface2); padding: 12px 16px; border-radius: 14px; border: 1px solid var(--line);">
-                <b style="display: block; color: var(--ink); font-size: 15px;">Kian Charli Sogoni</b>
-                <span style="color: var(--brand); font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; line-height: 1.4; display: block; margin-top: 2px;">Team Leader, Fullstack Developer, Web Designer, Quality Control</span>
+            <div style="background: var(--surface2); padding: 16px; border-radius: 16px; border: 1px solid var(--line); grid-column: 1 / -1; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                <b style="display: block; color: var(--ink); font-size: 16px; margin-bottom: 4px;">Kian Charli Sogoni</b>
+                <span style="color: var(--brand); font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; line-height: 1.4;">Team Leader, Fullstack Developer, Web Designer, Quality Control</span>
             </div>
             
             <!-- Bryan -->
-            <div style="background: var(--surface2); padding: 12px 16px; border-radius: 14px; border: 1px solid var(--line);">
-                <b style="display: block; color: var(--ink); font-size: 15px;">Bryan Joshua Flores</b>
-                <span style="color: var(--leaf); font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; line-height: 1.4; display: block; margin-top: 2px;">Fullstack Developer, Web Developer, Quality Assurance Tester</span>
+            <div style="background: var(--surface2); padding: 16px; border-radius: 16px; border: 1px solid var(--line); grid-column: 1 / -1; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                <b style="display: block; color: var(--ink); font-size: 16px; margin-bottom: 4px;">Bryan Joshua Flores</b>
+                <span style="color: var(--leaf); font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; line-height: 1.4;">Fullstack Developer, Web Developer, Quality Assurance Tester</span>
             </div>
 
-            <!-- Marc -->
-            <div style="background: var(--surface2); padding: 12px 16px; border-radius: 14px; border: 1px solid var(--line);">
-                <b style="display: block; color: var(--ink); font-size: 15px;">Marc Joseph Arambulo</b>
-                <span style="color: var(--sand); font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; line-height: 1.4; display: block; margin-top: 2px;">Data Maintainer</span>
+            <!-- Marc (Now Full Width) -->
+            <div style="background: var(--surface2); padding: 16px; border-radius: 16px; border: 1px solid var(--line); grid-column: 1 / -1; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                <b style="display: block; color: var(--ink); font-size: 15px; margin-bottom: 4px;">Marc Joseph Arambulo</b>
+                <span style="color: var(--sand); font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; line-height: 1.4;">IT Support Specialist, Data Maintainer</span>
             </div>
 
-            <!-- James -->
-            <div style="background: var(--surface2); padding: 12px 16px; border-radius: 14px; border: 1px solid var(--line);">
-                <b style="display: block; color: var(--ink); font-size: 15px;">James Carlo Ladra</b>
-                <span style="color: var(--sand); font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; line-height: 1.4; display: block; margin-top: 2px;">Data Maintainer</span>
+            <!-- James (Now Half Width) -->
+            <div style="background: var(--surface2); padding: 16px; border-radius: 16px; border: 1px solid var(--line); display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                <b style="display: block; color: var(--ink); font-size: 15px; margin-bottom: 4px;">James Carlo Ladra</b>
+                <span style="color: var(--sand); font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; line-height: 1.4;">Data Maintainer</span>
             </div>
 
-            <!-- Christer -->
-            <div style="background: var(--surface2); padding: 12px 16px; border-radius: 14px; border: 1px solid var(--line);">
-                <b style="display: block; color: var(--ink); font-size: 15px;">Christer John Masangcay</b>
-                <span style="color: var(--sand); font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; line-height: 1.4; display: block; margin-top: 2px;">Data Maintainer</span>
+            <!-- Christer (Now Half Width) -->
+            <div style="background: var(--surface2); padding: 16px; border-radius: 16px; border: 1px solid var(--line); display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                <b style="display: block; color: var(--ink); font-size: 16px; margin-bottom: 4px;">Christer John Masangcay</b>
+                <span style="color: var(--sand); font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; line-height: 1.4;">Data Maintainer</span>
             </div>
         </div>
-        
-        <button class="btn btn-brand btn-block btn-large" style="margin-top: 24px;" onclick="app.closeModal('credits-modal')">Close</button>
+            
+            <button class="btn btn-brand btn-block btn-large" style="margin-top: 24px;" onclick="app.closeModal('credits-modal')">Close</button>
+        </div>
     </div>
 </div>
  
