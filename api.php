@@ -6,26 +6,26 @@ header('Content-Type: application/json');
 $action = $_GET['action'] ?? '';
 $in = json_decode(file_get_contents('php://input'), true) ?: $_POST;
  
-function out($data, $code = 200) {
+function out(array $data, int $code = 200) {
     http_response_code($code);
     echo json_encode($data);
     exit;
 }
 
-function resetGroupPayments($pdo, $gid) {
+function resetGroupPayments(PDO $pdo, int $gid) {
     $pdo->prepare('UPDATE group_cart_members SET paid=0, paid_amount=0, payer_verified=0 WHERE group_cart_id=?')
         ->execute([$gid]);
 }
 
-function notify($pdo, $userId, $orderId, $message) {
+function notify(PDO $pdo, int $userId, int $orderId, string $message) {
     if (!$userId) return;
     try {
         $pdo->prepare('INSERT INTO notifications (user_id, order_id, message) VALUES (?,?,?)')
-            ->execute([$userId, (int)$orderId, $message]);
+            ->execute([$userId, $orderId, $message]);
     } catch (Exception $e) {}
 }
 
-function notifyAdmins($pdo, $orderId, $message) {
+function notifyAdmins(PDO $pdo, int $orderId, string $message) {
     try {
         $admins = $pdo->query("SELECT id FROM users WHERE role='admin' AND is_archived=0")->fetchAll(PDO::FETCH_COLUMN);
         foreach ($admins as $aid) notify($pdo, $aid, $orderId, $message);
@@ -651,6 +651,17 @@ switch ($action) {
             }
             if (!$hasItem) { $g['all_have_items'] = false; break; }
         }
+
+        $s = $pdo->prepare("
+            SELECT m.*, u.name, u.email, u.phone, u.address 
+            FROM group_cart_members m
+            INNER JOIN users u ON m.user_id = u.id
+            WHERE m.group_cart_id=?
+            ORDER BY FIELD(m.role,'host','member'), m.joined_at ASC
+        ");
+        $s->execute([$gid]);
+        $g['members'] = $s->fetchAll();
+
         out($g);
 
     case 'group-join-request':
@@ -675,7 +686,8 @@ switch ($action) {
             $pdo->prepare('INSERT INTO group_cart_members (group_cart_id, user_id, role, status) VALUES (?,?,?,?)')
                 ->execute([$g['id'], $uid, 'member', 'pending']);
         }
-        notify($pdo, (int)$g['host_id'], 0, "May nag-request sumali sa iyong Bayanihan Cart \"{$g['name']}\". I-approve o i-reject sa cart detail.");
+        $s_user = $pdo->prepare('SELECT name FROM users WHERE id=?'); $s_user->execute([$uid]); $reqName = $s_user->fetchColumn() ?: 'May isang user';
+        notify($pdo, (int)$g['host_id'], 0, "Si $reqName ay nag-request sumali sa iyong Bayanihan Cart \"{$g['name']}\". I-approve o i-reject sa cart detail.");
         out(['ok' => true, 'id' => (int)$g['id']]);
 
     case 'group-approve-member':
@@ -689,7 +701,10 @@ switch ($action) {
             ->execute([$mid, $gid]);
         $s2 = $pdo->prepare('SELECT user_id FROM group_cart_members WHERE id=?');
         $s2->execute([$mid]);
-        if ($uid2 = $s2->fetchColumn()) notify($pdo, (int)$uid2, 0, "Na-approve ka na sa Bayanihan Cart! Makakapag-add ka na ng items.");
+        if ($uid2 = $s2->fetchColumn()) {
+            $s_cart = $pdo->prepare('SELECT name FROM group_carts WHERE id=?'); $s_cart->execute([$gid]); $cname = $s_cart->fetchColumn();
+            notify($pdo, (int)$uid2, 0, "Na-approve ka na sa Bayanihan Cart \"$cname\"! Makakapag-add ka na ng items.");
+        }
         resetGroupPayments($pdo, $gid);
         out(['ok' => true]);
 
@@ -715,8 +730,9 @@ switch ($action) {
         }
         $pdo->prepare('DELETE FROM group_cart_members WHERE id=? AND group_cart_id=?')
             ->execute([$mid, $gid]);
-        if ($tgt && $tgt['status'] !== 'invited') notify($pdo, (int)$tgt['user_id'], 0, "Hindi na-approve ang join request mo sa isang Bayanihan Cart.");
-        elseif ($tgt) notify($pdo, (int)$tgt['user_id'], 0, "Kinansela ang invite mo sa isang Bayanihan Cart.");
+        $s_cart = $pdo->prepare('SELECT name FROM group_carts WHERE id=?'); $s_cart->execute([$gid]); $cname = $s_cart->fetchColumn() ?: 'Bayanihan Cart';
+        if ($tgt && $tgt['status'] !== 'invited') notify($pdo, (int)$tgt['user_id'], 0, "Hindi na-approve ang join request mo sa Bayanihan Cart \"$cname\".");
+        elseif ($tgt) notify($pdo, (int)$tgt['user_id'], 0, "Kinansela ang invite mo sa Bayanihan Cart \"$cname\".");
         out(['ok' => true]);
 
     case 'group-invite':
@@ -767,7 +783,10 @@ switch ($action) {
         resetGroupPayments($pdo, $gid);
         $s2 = $pdo->prepare('SELECT host_id, name FROM group_carts WHERE id=?');
         $s2->execute([$gid]);
-        if ($g2 = $s2->fetch()) notify($pdo, (int)$g2['host_id'], 0, "Tinanggap ng isang miyembro ang invite sa iyong Bayanihan Cart \"{$g2['name']}\".");
+        if ($g2 = $s2->fetch()) {
+            $s_u = $pdo->prepare('SELECT name FROM users WHERE id=?'); $s_u->execute([$uid]); $uname = $s_u->fetchColumn();
+            notify($pdo, (int)$g2['host_id'], 0, "Tinanggap ni $uname ang invite sa iyong Bayanihan Cart \"{$g2['name']}\".");
+        }
         out(['ok' => true]);
 
     case 'group-decline-invite':
@@ -777,7 +796,10 @@ switch ($action) {
             ->execute([$gid, $uid]);
         $s2 = $pdo->prepare('SELECT host_id, name FROM group_carts WHERE id=?');
         $s2->execute([$gid]);
-        if ($g2 = $s2->fetch()) notify($pdo, (int)$g2['host_id'], 0, "Tinanggihan ng isang miyembro ang invite sa iyong Bayanihan Cart \"{$g2['name']}\".");
+        if ($g2 = $s2->fetch()) {
+            $s_u = $pdo->prepare('SELECT name FROM users WHERE id=?'); $s_u->execute([$uid]); $uname = $s_u->fetchColumn();
+            notify($pdo, (int)$g2['host_id'], 0, "Tinanggihan ni $uname ang invite sa iyong Bayanihan Cart \"{$g2['name']}\".");
+        }
         out(['ok' => true]);
 
     case 'group-add-item':
@@ -815,6 +837,12 @@ switch ($action) {
             if ($p['sold_out'] || $p['stock'] < $qty) out(['error' => 'Kulang ang stock'], 400);
             $pdo->prepare('INSERT INTO group_cart_items (group_cart_id,user_id,product_id,name,price,qty,variation) VALUES (?,?,?,?,?,?,?)')
                 ->execute([$gid, $uid, $pid, $p['name'], $p['price'], $qty, $var]);
+        }
+
+        $s_cart = $pdo->prepare('SELECT name, host_id FROM group_carts WHERE id=?'); $s_cart->execute([$gid]); $cart = $s_cart->fetch();
+        if ($cart && $cart['host_id'] != $uid) {
+            $s_u = $pdo->prepare('SELECT name FROM users WHERE id=?'); $s_u->execute([$uid]); $uname = $s_u->fetchColumn();
+            notify($pdo, (int)$cart['host_id'], 0, "Idinagdag ni $uname ang $qty x {$p['name']} sa iyong Bayanihan Cart \"{$cart['name']}\".");
         }
         out(['ok' => true]);
 
@@ -947,7 +975,8 @@ switch ($action) {
         $s2 = $pdo->prepare('SELECT host_id, name FROM group_carts WHERE id=?');
         $s2->execute([$gid]);
         if ($g2 = $s2->fetch()) {
-            notify($pdo, (int)$g2['host_id'], 0, "May nagbayad na miyembro sa iyong Bayanihan Cart \"{$g2['name']}\". I-verify sa cart detail.");
+            $s_u = $pdo->prepare('SELECT name FROM users WHERE id=?'); $s_u->execute([$uid]); $uname = $s_u->fetchColumn();
+            notify($pdo, (int)$g2['host_id'], 0, "Si $uname ay nagbayad ng ".number_format($amount)." para sa Bayanihan Cart \"{$g2['name']}\". Paki-verify sa cart detail.");
         }
         out(['ok' => true]);
 
@@ -967,8 +996,10 @@ switch ($action) {
         $s2 = $pdo->prepare('SELECT user_id FROM group_cart_members WHERE id=?');
         $s2->execute([$mid]);
         if ($memberUid = $s2->fetchColumn()) {
-            if ($verify) notify($pdo, (int)$memberUid, 0, "Na-verify na ng host ang iyong bayad sa Bayanihan Cart. Salamat!");
-            else notify($pdo, (int)$memberUid, 0, "Na-unverify ng host ang iyong bayad sa Bayanihan Cart. Kontakin ang host.");
+            $s_host = $pdo->prepare('SELECT name FROM users WHERE id=?'); $s_host->execute([$uid]); $hname = $s_host->fetchColumn();
+            $s_cart = $pdo->prepare('SELECT name FROM group_carts WHERE id=?'); $s_cart->execute([$gid]); $cname = $s_cart->fetchColumn();
+            if ($verify) notify($pdo, (int)$memberUid, 0, "Na-verify ni $hname ang iyong bayad sa Bayanihan Cart \"$cname\". Salamat!");
+            else notify($pdo, (int)$memberUid, 0, "Na-unverify ni $hname ang iyong bayad sa Bayanihan Cart \"$cname\". Kontakin ang host.");
         }
         out(['ok' => true]);
 
@@ -1192,8 +1223,9 @@ switch ($action) {
         $pdo->prepare('UPDATE group_carts SET status="cancelled" WHERE id=?')->execute([$gid]);
         $s2 = $pdo->prepare('SELECT user_id FROM group_cart_members WHERE group_cart_id=? AND status="approved"');
         $s2->execute([$gid]);
+        $s_host = $pdo->prepare('SELECT name FROM users WHERE id=?'); $s_host->execute([$uid]); $hname = $s_host->fetchColumn();
         foreach ($s2->fetchAll(PDO::FETCH_COLUMN) as $memberUid) {
-            notify($pdo, (int)$memberUid, 0, "Kinansela ng host ang Bayanihan Cart \"{$g['name']}\".");
+            notify($pdo, (int)$memberUid, 0, "Kinansela ni $hname ang Bayanihan Cart \"{$g['name']}\".");
         }
         out(['ok' => true]);
 
