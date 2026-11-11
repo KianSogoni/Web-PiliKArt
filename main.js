@@ -1,6 +1,6 @@
 const app = {
     showConfirm(title, message, onConfirm, btnText = 'Confirm') {
-        document.getElementById('cc-title').textContent = title;
+        document.getElementById('cc-title').innerHTML = title;
         document.getElementById('cc-message').innerHTML = message; 
         const btn = document.getElementById('cc-confirm-btn');
         const cancelBtn = btn.previousElementSibling;
@@ -39,7 +39,41 @@ const app = {
         document.getElementById('custom-confirm-modal').classList.remove('hidden');
         this.updateBodyScrollLock();
     },
+        // 🟢 NEW: Global Loader Helper
+    showLoader(text = 'Inihahanda ang PiliKart...') {
+        const loader = document.getElementById('global-loader');
+        if (!loader) return;
+        document.getElementById('loader-text').textContent = text;
+        loader.classList.remove('hidden');
+        void loader.offsetWidth; // Trigger reflow
+        loader.classList.add('show');
+        this.updateBodyScrollLock(); // Lock scroll
+    },
 
+    hideLoader() {
+        const loader = document.getElementById('global-loader');
+        if (!loader) return;
+        loader.classList.remove('show');
+        setTimeout(() => {
+            loader.classList.add('hidden');
+            this.updateBodyScrollLock();
+        }, 400);
+    },
+
+    // 🟢 NEW: Button Loading State Helper
+    setBtnLoading(btn, isLoading, loadingText = '') {
+        if (!btn) return;
+        if (isLoading) {
+            btn.dataset.originalText = btn.innerHTML;
+            btn.classList.add('btn-loading');
+            if (loadingText) btn.innerHTML = loadingText;
+            btn.disabled = true;
+        } else {
+            btn.classList.remove('btn-loading');
+            if (btn.dataset.originalText) btn.innerHTML = btn.dataset.originalText;
+            btn.disabled = false;
+        }
+    },
     updateBudgetFromCart(val) {
         const num = parseFloat(val);
         this.budget = isNaN(num) || num <= 0 ? null : num;
@@ -54,250 +88,125 @@ const app = {
         this.renderCart();
     },
 
-    botBrain: [
+        botBrain: [
         // ==================== GREETINGS ====================
-        { keys: ['hi', 'hello', 'hey', 'yo', 'sup', "what's up", "whats up", 'uy', 'psst'],
-          reply: "Uy, kumusta, suki! :) Ako si PiliBot. Ano ang maitutulong ko sa iyo ngayon? Pwede kang magtanong tungkol sa delivery, GCash, orders, o products!" },
-        { keys: ['kumusta', 'kamusta', 'musta', 'kumusta ka', 'kamusta ka'],
-          reply: "Mabuti naman ako, suki! <3 Salamat sa pagtanong. Ikaw, kumusta? Ano'ng hanap mo ngayon sa PiliKart?" },
-        { keys: ['magandang umaga', 'good morning', 'morning'],
-          reply: "Magandang umaga, suki! :) Simulan natin ang araw nang may ngiti. Kape o almusal ba ang hanap mo?" },
-        { keys: ['magandang tanghali', 'good noon', 'tanghali'],
-          reply: "Magandang tanghali, suki! :D Tanghalian na, kain muna tayo! May mga pagkain ba akong maitutulong sa iyo?" },
-        { keys: ['magandang hapon', 'good afternoon', 'hapon'],
-          reply: "Magandang hapon, suki! :) Mainit-init pa ba ang araw diyan? Tara, mag-ikot tayo sa menu!" },
-        { keys: ['magandang gabi', 'good evening', 'gabi'],
-          reply: "Magandang gabi, suki! <3 Pahinga ka na ba? Pwede mo namang i-browse ang mga paninda namin bago matulog." },
-        { keys: ['mabuhay'],
-          reply: "Mabuhay ka rin, suki! ^_^ Ipinagmamalaki namin ang gawang Pinoy. Tara, pumili ka na!" },
-        { keys: ['bye', 'goodbye', 'paalam', 'ingat ka', 'ingat'],
-          reply: "Paalam, suki! :) Ingat ka palagi diyan. Balik ka agad ha, andito lang kami palagi para sa iyo. <3" },
+        { keys: ['hi', 'hello', 'hey', 'yo', 'sup', "what's up", "whats up", 'uy', 'psst'], reply: "Uy, kumusta, suki! :) Ako si PiliBot. Ano ang maitutulong ko sa iyo ngayon? Pwede kang magtanong tungkol sa delivery, GCash, orders, Bayanihan, o products!" },
+        { keys: ['kumusta', 'kamusta', 'musta'], reply: "Mabuti naman ako, suki! <3 Salamat sa pagtanong. Ikaw, kumusta? Ano'ng hanap mo ngayon sa PiliKart?" },
+        { keys: ['magandang umaga', 'good morning'], reply: "Magandang umaga, suki! :) Simulan natin ang araw nang may ngiti. Kape o almusal ba ang hanap mo?" },
+        { keys: ['magandang tanghali', 'good noon'], reply: "Magandang tanghali, suki! :D Tanghalian na, kain muna tayo! May mga pagkain ba akong maitutulong sa iyo?" },
+        { keys: ['magandang hapon', 'good afternoon'], reply: "Magandang hapon, suki! :) Mainit-init pa ba ang araw diyan? Tara, mag-ikot tayo sa menu!" },
+        { keys: ['magandang gabi', 'good evening'], reply: "Magandang gabi, suki! <3 Pahinga ka na ba? Pwede mo namang i-browse ang mga paninda namin bago matulog." },
+        { keys: ['mabuhay'], reply: "Mabuhay ka rin, suki! ^_^ Ipinagmamalaki namin ang gawang Pinoy. Tara, pumili ka na!" },
+        { keys: ['bye', 'goodbye', 'paalam', 'ingat'], reply: "Paalam, suki! :) Ingat ka palagi diyan. Balik ka agad ha, andito lang kami palagi para sa iyo. <3" },
 
-        // ==================== GENERAL ====================
-        { keys: ['deliver', 'delivery', 'fee', 'shipping', 'ship', 'padala'],
-          reply: "Hello po, suki! :) Ang delivery fee namin ay depende sa iyong lokasyon. Pumunta ka lang sa checkout para makita ang eksaktong fee - walang hidden charges, promise!<br><button class='pb-action-btn' onclick=\"app.go('cart')\">Go to Checkout</button>" },
-        { keys: ['gcash', 'bayad', 'payment', 'resibo', 'receipt'],
-          reply: "Oo naman po, suki! <3 Tumatanggap kami ng GCash. Pagkatapos magbayad, i-upload mo lang ang screenshot ng resibo sa checkout para ma-verify agad namin. Salamat sa tiwala!<br><button class='pb-action-btn' onclick=\"app.go('cart')\">Go to Checkout</button>" },
-        { keys: ['track', 'tracking', 'saan na', 'status', 'nasaan', 'update order'],
-          reply: "Naiintindihan kita, suki! :) Gusto mo bang malaman kung nasaan na ang order mo? Pumunta lang sa Mga Order Ko para masubaybayan ang biyahe ng iyong order. Sana malapit na siya!<br><button class='pb-action-btn' onclick=\"app.go('orders')\">View My Orders</button>" },
-        { keys: ['budget', 'mahal', 'mura', 'afford', 'cheap', 'price range'],
-          reply: "Nice idea, suki! :) Gamitin ang Budget Mode sa itaas ng menu - ilagay mo lang ang maximum na presyo at awtomatikong itatago namin ang mga mamahaling item. Tipid na, saya pa!<br><button class='pb-action-btn' onclick=\"app.scrollToMenu()\">Go to Menu</button>" },
-        { keys: ['cancel', 'cancellation', 'bawi', 'stop order'],
-          reply: "Naku, may bago ka bang isip, suki? :3 Kung gusto mong i-cancel ang order, mag-message agad sa aming support team. Depende sa status ng order kung pwede pa - kausapin mo lang kami!<br><button class='pb-action-btn' onclick=\"app.go('faq')\">View FAQ</button>" },
-        { keys: ['refund', 'money back', 'ibalik pera', 'reimburse'],
-          reply: "Sorry sa abala, suki! :( Para sa refund concerns, makipag-ugnayan muna sa aming support team para ma-review namin ang request mo. Aasikasuhin namin nang maayos.<br><button class='pb-action-btn' onclick=\"app.go('orders')\">Go to My Orders</button>" },
-        { keys: ['store hours', 'opening hours', 'open', 'close', 'oras', 'schedule'],
-          reply: "Suki, para sa updated store hours, bisitahin mo ang aming FAQ page o mag-message sa support team. Andito lang kami para sa iyo!<br><button class='pb-action-btn' onclick=\"app.go('faq')\">Go to FAQ</button>" },
-        { keys: ['best seller', 'bestseller', 'popular', 'patok', 'recommended'],
-          reply: "Gusto mo ng mga paborito ng ibang suki? :) Bisitahin ang aming Menu - hanapin ang may 'Suki's Choice' badge. Siguradong sulit!<br><button class='pb-action-btn' onclick=\"app.scrollToMenu()\">Browse Menu</button>" },
-        { keys: ['menu', 'products', 'items', 'paninda', 'tinda', 'catalog'],
-          reply: "Ang daming pagpipilian, suki! :) Tingnan ang aming Product Menu - may PASO, NIPA, HABI, at APOLLO, lahat gawang Pinoy!<br><button class='pb-action-btn' onclick=\"app.scrollToMenu()\">Browse Menu</button>" },
-        { keys: ['available', 'availability', 'out of stock', 'sold out', 'stock', 'ubos'],
-          reply: "Good question, suki! :) Ang availability ay nagbabago depende sa stock. Bisitahin ang Menu para makita ang available ngayon. May 'Ubos na' badge kung wala.<br><button class='pb-action-btn' onclick=\"app.scrollToMenu()\">Browse Menu</button>" },
-        { keys: ['discount', 'promo', 'promotion', 'voucher', 'sale', 'coupon'],
-          reply: "Suki! :D Abangan ang aming discounts at special promos. Tingnan ang available offers bago mag-checkout - baka may swertehin!<br><button class='pb-action-btn' onclick=\"app.scrollToMenu()\">Browse Menu</button>" },
-        { keys: ['account', 'register', 'signup', 'sign up', 'login', 'log in'],
-          reply: "Welcome, suki! :) Pwede kang gumawa ng account o mag-log in para mas madaling ma-access ang iyong orders at updates. Tara, sign up na!<br><button class='pb-action-btn' onclick=\"app.openAuthModal('signin')\">Sign In / Sign Up</button>" },
-        { keys: ['checkout', 'check out', 'place order', 'purchase', 'bumili'],
-          reply: "Ready ka na ba, suki? :) Review-in lang ang mga napili mo, tapos proceed to checkout. Konti na lang, matatanggap mo na!<br><button class='pb-action-btn' onclick=\"app.go('cart')\">Go to Cart</button>" },
-        { keys: ['address', 'location', 'delivery address', 'saan kayo'],
-          reply: "Suki, siguraduhin lang na tama ang delivery address mo sa checkout para iwas-problema. Kung may changes, i-update sa My Account. Salamat!<br><button class='pb-action-btn' onclick=\"app.go('account')\">Go to My Account</button>" },
-        { keys: ['contact', 'support', 'customer service', 'help', 'tulong', 'agent'],
-          reply: "We're here for you, suki! :) Bisitahin ang aming FAQ page para sa mga sagot. Kung kailangan ng tulong, mag-message lang sa support team.<br><button class='pb-action-btn' onclick=\"app.go('faq')\">Go to FAQ</button>" },
-        { keys: ['wrong item', 'incorrect item', 'maling item', 'damaged', 'sira', 'defective'],
-          reply: "Naku, pasensya na suki! :( Kung may maling o sira na item kang natanggap, pumunta sa My Orders at i-request ang refund para matulungan ka. Aayusin namin, promise.<br><button class='pb-action-btn' onclick=\"app.go('orders')\">Go to My Orders</button>" },
-        { keys: ['change order', 'edit order', 'modify order', 'palitan order'],
-          reply: "Suki, kung gusto mong baguhin ang order, mag-message agad sa support. Depende sa processing stage kung pwede pa - mas mabilis, mas mabuti!<br><button class='pb-action-btn' onclick=\"app.go('faq')\">Contact Support</button>" },
-        { keys: ['bulk', 'wholesale', 'maramihan', 'large order'],
-          reply: "May okasyon, suki? :D Kung maramihan ang order, mag-message sa support team para sa special arrangements at possible discounts. Sulit!<br><button class='pb-action-btn' onclick=\"app.go('faq')\">Contact Support</button>" },
-        { keys: ['allergy', 'allergic', 'ingredients', 'sangkap'],
-          reply: "Mahalaga ang kalusugan mo, suki! (!) Siguraduhing suriin ang ingredients sa product listing. Kung may tanong tungkol sa allergens, mag-message lang sa amin." },
-        { keys: ['thank you', 'thanks', 'salamat', 'thank u'],
-          reply: "Aww, you're welcome, suki! <3 Salamat din sa pagpili sa PiliKart. Happy shopping at ingat lagi!" },
+        // ==================== CORE FEATURES ====================
+        { keys: ['delivery', 'fee', 'shipping', 'ship', 'padala'], reply: "Ang delivery fee namin ay depende sa iyong Barangay. Pumunta ka lang sa checkout para makita ang eksaktong fee - walang hidden charges, promise!<br><button class='pb-action-btn' onclick=\"app.go('cart')\">Go to Checkout</button>" },
+        { keys: ['gcash', 'bayad', 'payment', 'resibo'], reply: "Oo naman po, suki! <3 Tumatanggap kami ng GCash at COD. Kapag GCash, i-upload mo lang ang screenshot ng resibo sa checkout para ma-verify agad.<br><button class='pb-action-btn' onclick=\"app.go('cart')\">Go to Checkout</button>" },
+        { keys: ['track', 'tracking', 'saan na', 'status', 'nasaan'], reply: "Gusto mo bang malaman kung nasaan na ang order mo? Pumunta lang sa Mga Order Ko para masubaybayan ang biyahe nito.<br><button class='pb-action-btn' onclick=\"app.go('orders')\">View My Orders</button>" },
+        { keys: ['budget', 'mahal', 'mura', 'tipid'], reply: "Gamitin ang <b>Budget Mode</b> sa itaas ng menu - ilagay mo lang ang max price at awtomatikong itatago namin ang mga mamahaling item. Tipid na, saya pa!<br><button class='pb-action-btn' onclick=\"app.scrollToMenu()\">Go to Menu</button>" },
+        { keys: ['refund', 'sira', 'mali', 'reklamo', 'malasakit'], reply: "Naku, pasensya na suki! :( Kung may sira o maling item, may <b>Malasakit Policy</b> kami. Pwede mag-refund within 24 hours (pagkain) o 7 days (gamit) sa My Orders.<br><button class='pb-action-btn' onclick=\"app.go('orders')\">Go to My Orders</button>" },
+        { keys: ['protection', 'insurance', 'nawala'], reply: "Ang <b>Delivery Protection</b> ay parang insurance ng order mo. ₱50 kada ₱200 ng inorder mo. Kapag nawala o nasira ng rider, sagot namin 'yan! Pwede mo itong i-tick sa checkout." },
+        { keys: ['theme', 'sunset', 'dark mode', 'ilaw'], reply: "Gusto mo ba ng Sunset Mode? Puntahan mo lang ang hamburger menu sa taas tapos pindutin ang Forest (Dark). Mas madali sa mata kapag gabi!<br><button class='pb-action-btn' onclick=\"app.toggleTheme()\">Toggle Theme</button>" },
+        { keys: ['recipe', 'luto', 'resipi', 'adobong banga', 'sinigang', 'bibingka'], reply: "May Recipe Box kami! Mga lutong bahay na pwede mong i-try sa sarili mong kusina o i-order na lang dito.<br><button class='pb-action-btn' onclick=\"app.go('recipes')\">Open Recipe Box</button>" },
+        { keys: ['faq', 'tanong', 'help', 'tulong', 'support'], reply: "Nandito ako para tumulong! Kung may iba ka pang katanungan, puntahan mo ang aming FAQ page o i-message ang support team.<br><button class='pb-action-btn' onclick=\"app.go('faq')\">View FAQ</button>" },
+        { keys: ['contact', 'email', 'message'], reply: "May espesyal na request o concern? I-message mo lang kami sa Contact page namin, suki!<br><button class='pb-action-btn' onclick=\"app.go('contact')\">Contact Us</button>" },
+        { keys: ['account', 'register', 'signup', 'login'], reply: "Pwede kang gumawa ng account o mag-log in para mas madaling ma-access ang iyong orders at updates.<br><button class='pb-action-btn' onclick=\"app.openAuthModal('signin')\">Sign In / Sign Up</button>" },
+        { keys: ['bayanihan', 'group', 'split', 'hati'], reply: "Ang <b>Bayanihan Cart</b> ay para sa sabay-sabay na order at paghati ng bayad kasama ang tropa! Gumawa ng group cart, i-share ang code, at hatiin ang bill (Equal, By Items, Fixed, o One Payer).<br><button class='pb-action-btn' onclick=\"app.go('bayanihan')\">Go to Bayanihan</button>" },
 
         // ==================== DEPARTMENTS ====================
-        { keys: ['paso', 'banga', 'food essentials'], 
-          reply: "Welcome sa BANGA Food Essentials, suki! :) Dito ang mga paborito mong lutong-bahay at grocery essentials."},
-          { keys: ['apollo', 'technology store'], 
-          reply: "Welcome sa APOLLO Technologies, suki! :) Dito ang mga gadgets at tech finds.<br><button class='pb-action-btn' onclick=\"app.filterFromFooter('apollo')\">View APOLLO Menu</button>" },
-        { keys: ['habi', 'fashion store'], 
-          reply: "Welcome sa HABI Fashion & Cosmetics, suki! :) Dito ang mga fashion at beauty finds.<br><button class='pb-action-btn' onclick=\"app.filterFromFooter('habi')\">View HABI Menu</button>" },
-        { keys: ['nipa', 'home essentials'], 
-          reply: "Welcome sa NIPA Home Essentials, suki! :) Dito ang mga gamit para sa bahay.<br><button class='pb-action-btn' onclick=\"app.filterFromFooter('nipa')\">View NIPA Menu</button>" },
+        { keys: ['paso', 'banga', 'food'], reply: "Welcome sa <b>BANGA</b> Food Essentials! Dito ang mga paborito mong lutong-bahay at grocery essentials.<br><button class='pb-action-btn' onclick=\"app.filterFromFooter('paso')\">View BANGA Menu</button>" },
+        { keys: ['nipa', 'home', 'bahay'], reply: "Welcome sa <b>NIPA</b> Home Essentials! Dito ang mga gamit para sa bahay.<br><button class='pb-action-btn' onclick=\"app.filterFromFooter('nipa')\">View NIPA Menu</button>" },
+        { keys: ['habi', 'fashion', 'beauty', 'damit'], reply: "Welcome sa <b>HABI</b> Fashion & Cosmetics! Dito ang mga fashion at beauty finds.<br><button class='pb-action-btn' onclick=\"app.filterFromFooter('habi')\">View HABI Menu</button>" },
+        { keys: ['apollo', 'tech', 'gadget'], reply: "Welcome sa <b>APOLLO</b> Technologies! Dito ang mga gadgets at tech finds.<br><button class='pb-action-btn' onclick=\"app.filterFromFooter('apollo')\">View APOLLO Menu</button>" },
 
-        // ==================== BAYANIHAN ====================
-        { keys: ['bayanihan', 'group', 'split', 'hati'], 
-          reply: "Ang Bayanihan Cart ay para sa sabay-sabay na order at paghati ng bayad kasama ang tropa! Pwede kang gumawa ng group cart o sumali gamit ang code.<br><button class='pb-action-btn' onclick=\"app.go('bayanihan')\">Go to Bayanihan Cart</button>" },
-        
-        // ==================== PASO PRODUCTS ====================
-        { keys: ['adobo', 'best food', 'paborito'], 
-          reply: "Adobo is life! :D Walang tatalo sa adobong manok na may toyo, suka, at bawang. Nasa PASO section namin 'yan, suki!<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Chicken Adobo with Rice')\">View Chicken Adobo</button>" },
-        { keys: ['sisig'], 
-          reply: "Sizzling sarap! :D Paborito mo ba ang maanghang at malutong na sisig? Nasa PASO menu namin yan!<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Pork Sisig with Rice')\">View Pork Sisig</button>" },
-        { keys: ['inasal', 'chicken inasal'], 
-          reply: "Smoky, juicy, at rich in flavor! Paborito mo ba ang inasal?<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Chicken Inasal with Rice')\">View Chicken Inasal</button>" },
-        { keys: ['pancit', 'bihon', 'pansit'], 
-          reply: "Pampaswerte at pampasaya sa handaan! Tara, pancit tayo.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Pancit Bihon Guisado')\">View Pancit Bihon</button>" },
-        { keys: ['beefsilog', 'tapa', 'breakfast'], 
-          reply: "Simula ng araw na puno ng pag-asa! Paborito mong almusal?<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Beefsilog')\">View Beefsilog</button>" },
-        { keys: ['lumpia', 'lumpiang shanghai', 'shanghai'], 
-          reply: "Crispy at masarap na pang-meryenda! Paboritong pulutan at baon.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Lumpiang Shanghai')\">View Lumpiang Shanghai</button>" },
-        { keys: ['leche flan', 'flan'], 
-          reply: "Tamis na laging hinahanap! Ang creamy at caramel goodness.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Leche Flan Cup')\">View Leche Flan</button>" },
-        { keys: ['buko pandan'], 
-          reply: "Preskong kaginhawahan sa bawat subo! Perfect pang-dessert.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Buko Pandan Cup')\">View Buko Pandan</button>" },
-        { keys: ['turon'], 
-          reply: "Sarap ng kabataan sa bawat kagat! Sweet saba at caramelized sugar.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Turon')\">View Turon</button>" },
-        { keys: ['fried chicken'], 
-          reply: "Lutong bahay na hatid ay ginhawa! Crispy fried chicken with egg.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Classic Fried Chicken with Egg')\">View Fried Chicken</button>" },
-        { keys: ['cheese sticks', 'cheese stick'], 
-          reply: "Kada kagat, puno ng sarap! Gooey melted cheese inside crispy wrappers.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Cheese Sticks')\">View Cheese Sticks</button>" },
-        { keys: ['fries', 'french fries'], 
-          reply: "Crispy na pang-meryenda! Golden fried potatoes with salt.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('French Fries')\">View French Fries</button>" },
-        { keys: ['brownies', 'brownie'], 
-          reply: "Tsokolateng tamis ng pagmamahal! Fudgy and rich chocolate brownies.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Fudgy Brownies')\">View Brownies</button>" },
-        { keys: ['milk tea', 'wintermelon'], 
-          reply: "Sarap ng Wintermelon Milk Tea pag mainit ang panahon! 🧋 Nasa PASO menu namin yan, suki.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Wintermelon Milk Tea')\">View Milk Tea</button>" },
-        { keys: ['burger', 'cheeseburger'], 
-          reply: "Busog at saya sa bawat kagat! Juicy beef patty with melted cheese.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Classic Cheeseburger')\">View Cheeseburger</button>" },
-        { keys: ['arroz caldo', 'lugaw'], 
-          reply: "Init ng sabaw, hagod ng pagmamahal! Perfect comfort food kapag maulan.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Arroz Caldo')\">View Arroz Caldo</button>" },
+        // ==================== PASO (FOOD) ====================
+        { keys: ['adobo'], reply: "Adobo is life! :D Walang tatalo sa adobong manok na may toyo, suka, at bawang. Nasa BANGA section namin 'yan, suki!<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Chicken Adobo with Rice')\">View Adobo</button>" },
+        { keys: ['sisig'], reply: "Sizzling sarap! :D Paborito mo ba ang maanghang at malutong na sisig? Nasa BANGA menu namin yan!<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Pork Sisig with Rice')\">View Sisig</button>" },
+        { keys: ['inasal'], reply: "Smoky, juicy, at rich in flavor! Paborito mo ba ang inasal?<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Chicken Inasal with Rice')\">View Inasal</button>" },
+        { keys: ['pancit', 'bihon'], reply: "Pampaswerte at pampasaya sa handaan! Tara, pancit tayo.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Pancit Bihon Guisado')\">View Pancit</button>" },
+        { keys: ['beefsilog', 'tapa', 'silog'], reply: "Simula ng araw na puno ng pag-asa! Paborito mong almusal?<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Beefsilog')\">View Beefsilog</button>" },
+        { keys: ['lumpia', 'shanghai'], reply: "Crispy at masarap na pang-meryenda! Paboritong pulutan at baon.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Lumpiang Shanghai')\">View Lumpia</button>" },
+        { keys: ['leche flan', 'flan'], reply: "Tamis na laging hinahanap! Ang creamy at caramel goodness.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Leche Flan Cup')\">View Leche Flan</button>" },
+        { keys: ['buko pandan', 'buko'], reply: "Preskong kaginhawahan sa bawat subo! Perfect pang-dessert.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Buko Pandan Cup')\">View Buko Pandan</button>" },
+        { keys: ['turon'], reply: "Sarap ng kabataan sa bawat kagat! Sweet saba at caramelized sugar.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Turon')\">View Turon</button>" },
+        { keys: ['fried chicken'], reply: "Lutong bahay na hatid ay ginhawa! Crispy fried chicken with egg.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Classic Fried Chicken')\">View Fried Chicken</button>" },
+        { keys: ['cheese sticks'], reply: "Kada kagat, puno ng sarap! Gooey melted cheese inside crispy wrappers.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Cheese Sticks')\">View Cheese Sticks</button>" },
+        { keys: ['fries', 'french fries'], reply: "Crispy na pang-meryenda! Golden fried potatoes with salt.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('French Fries')\">View Fries</button>" },
+        { keys: ['brownies'], reply: "Tsokolateng tamis ng pagmamahal! Fudgy and rich chocolate brownies.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Fudgy Brownies')\">View Brownies</button>" },
+        { keys: ['milk tea', 'wintermelon'], reply: "Sarap ng Wintermelon Milk Tea pag mainit ang panahon! 🧋 Nasa BANGA menu namin yan.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Wintermelon Milk Tea')\">View Milk Tea</button>" },
+        { keys: ['pastil'], reply: "Pantawid gutom ng kolehiyo! Shredded chicken sa banana leaf. Sulit na sulit!<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Chicken Pastil')\">View Pastil</button>" },
+        { keys: ['arroz caldo', 'lugaw'], reply: "Init ng sabaw, hagod ng pagmamahal! Perfect comfort food kapag maulan.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Arroz Caldo')\">View Arroz Caldo</button>" },
 
-        // ==================== NIPA PRODUCTS ====================
-        { keys: ['tabo'], 
-          reply: "Ah, ang ultimate Pinoy bathroom essential! 🚿 Sturdy, reliable, at perfect para sa tabo-bucket bath!<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Classic Plastic Tabo')\">View Plastic Tabo</button>" },
-        { keys: ['banig'], 
-          reply: "Himbing ng tulog sa banig ng probinsya! Traditional hand-woven sleeping mat.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Banig')\">View Banig</button>" },
-        { keys: ['abaca', 'scrubbing pad'], 
-          reply: "Malinis ang bahay, alaga pa ang kalikasan! Eco-friendly cleaning companion.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Abaca Scrubbing Pad')\">View Abaca Pad</button>" },
-        { keys: ['bamboo utensil', 'kubyertos'], 
-          reply: "Kubyertos na gawa ng kalikasan! Sustainable bamboo fork, spoon, and knife set.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Bamboo Utensil Set')\">View Bamboo Utensils</button>" },
-        { keys: ['coconut bowl', 'bowl'], 
-          reply: "Gawang likas, espesyal ang dating! Unique bowls polished from real coconut shells.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Coconut Shell Bowl')\">View Coconut Bowl</button>" },
-        { keys: ['capiz lamp', 'lamp', 'ilaw'], 
-          reply: "Ilaw na nagbibigay ng init sa tahanan! Elegant lamp made with Capiz shells.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Capiz Shell Lamp')\">View Capiz Lamp</button>" },
-        { keys: ['tray', 'wooden tray'], 
-          reply: "Paghahain nang may karangalan! Sturdy serving tray carved from Acacia wood.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Wooden Serving Tray')\">View Wooden Tray</button>" },
-        { keys: ['sampaguita', 'air freshener'], 
-          reply: "Halimuyak ng tahanang Pinoy! Room spray with the sweet scent of Sampaguita.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Sampaguita Air Freshener')\">View Air Freshener</button>" },
-        { keys: ['palayok'], 
-          reply: "Mabagal lutuin, puno ng lasa at alaala! Traditional clay pot for your stews.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Palayok')\">View Palayok</button>" },
-        { keys: ['broom', 'dustpan', 'walis'], 
-          reply: "Katuwang sa pagpapanatili ng linis! Practical cleaning set.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Broom and Dustpan Set')\">View Broom Set</button>" },
-        { keys: ['pitcher', 'water pitcher'], 
-          reply: "Sariwang tubig para sa buong angkan! Durable pitcher with easy-pour spout.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Plastic Water Pitcher')\">View Water Pitcher</button>" },
-        { keys: ['hangers', 'sampayan'], 
-          reply: "Ayos at maaliwalas na pamamahay! Set of sturdy plastic hangers.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Plastic Clothes Hangers')\">View Hangers</button>" },
-        { keys: ['towel', 'bath towel'], 
-          reply: "Lambot na yakap pagkatapos maligo! Ultra-soft and absorbent cotton towel.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Bath Towel')\">View Bath Towel</button>" },
-        { keys: ['waste bin', 'basurahan'], 
-          reply: "Maliit na basurahan, malaking tulong! Compact bin for personal spaces.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Small Waste Bin')\">View Waste Bin</button>" },
-        { keys: ['laundry basket'], 
-          reply: "Organisado at maayos na labahan! Durable and ventilated laundry basket.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Plastic Laundry Basket')\">View Laundry Basket</button>" },
-        { keys: ['bayong'], 
-          reply: "Mabisang katuwang sa pamimili! Traditional handwoven market bag.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Woven Bayong')\">View Bayong</button>" },
+        // ==================== NIPA (HOME) ====================
+        { keys: ['tabo'], reply: "Ah, ang ultimate Pinoy bathroom essential! 🚿 Sturdy at reliable para sa tabo-bucket bath!<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Classic Plastic Tabo')\">View Tabo</button>" },
+        { keys: ['banig'], reply: "Himbing ng tulog sa banig ng probinsya! Traditional hand-woven sleeping mat.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Banig')\">View Banig</button>" },
+        { keys: ['abaca'], reply: "Malinis ang bahay, alaga pa ang kalikasan! Eco-friendly abaca cleaning pad.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Abaca Scrubbing Pad')\">View Abaca Pad</button>" },
+        { keys: ['bamboo utensil', 'kubyertos'], reply: "Kubyertos na gawa ng kalikasan! Sustainable bamboo fork, spoon, at knife.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Bamboo Utensil Set')\">View Utensils</button>" },
+        { keys: ['coconut bowl'], reply: "Gawang likas, espesyal ang dating! Bowls polished from real coconut shells.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Coconut Shell Bowl')\">View Coconut Bowl</button>" },
+        { keys: ['capiz lamp', 'lamp', 'ilaw'], reply: "Ilaw na nagbibigay ng init sa tahanan! Elegant lamp made with Capiz shells.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Capiz Shell Lamp')\">View Capiz Lamp</button>" },
+        { keys: ['tray'], reply: "Paghahain nang may karangalan! Sturdy serving tray carved from Acacia wood.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Wooden Serving Tray')\">View Tray</button>" },
+        { keys: ['sampaguita', 'air freshener'], reply: "Halimuyak ng tahanang Pinoy! Room spray with the sweet scent of Sampaguita.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Sampaguita Air Freshener')\">View Spray</button>" },
+        { keys: ['palayok'], reply: "Mabagal lutuin, puno ng lasa at alaala! Traditional clay pot for your stews.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Palayok')\">View Palayok</button>" },
+        { keys: ['broom', 'walis', 'dustpan'], reply: "Katuwang sa pagpapanatili ng linis! Practical cleaning set.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Broom and Dustpan Set')\">View Broom Set</button>" },
+        { keys: ['pitcher', 'water pitcher'], reply: "Sariwang tubig para sa buong angkan! Durable pitcher with easy-pour spout.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Plastic Water Pitcher')\">View Pitcher</button>" },
+        { keys: ['hangers', 'sampayan'], reply: "Ayos at maaliwalas na pamamahay! Set of sturdy plastic hangers.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Plastic Clothes Hangers')\">View Hangers</button>" },
+        { keys: ['towel', 'tuwalya'], reply: "Lambot na yakap pagkatapos maligo! Ultra-soft and absorbent cotton towel.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Bath Towel')\">View Towel</button>" },
+        { keys: ['waste bin', 'basurahan'], reply: "Maliit na basurahan, malaking tulong! Compact bin for personal spaces.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Small Waste Bin')\">View Waste Bin</button>" },
+        { keys: ['laundry basket'], reply: "Organisado at maayos na labahan! Durable and ventilated laundry basket.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Plastic Laundry Basket')\">View Basket</button>" },
+        { keys: ['bayong'], reply: "Mabisang katuwang sa pamimili! Traditional handwoven market bag.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Woven Bayong')\">View Bayong</button>" },
 
-        // ==================== HABI PRODUCTS ====================
-        { keys: ['scarf', 'habi scarf'], 
-          reply: "Ang Indigenous Woven Scarf ay perfect para sa weather at proud na pag-suot ng kulturang Pinoy!<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Indigenous Woven Scarf')\">View Woven Scarf</button>" },
-        { keys: ['barot saya', 'filipiniana'], 
-          reply: "Proud na suot, yaman ng kultura! The prestigious Filipiniana dress.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Barot Saya')\">View Barot Saya</button>" },
-        { keys: ['inabel', 'tote bag'], 
-          reply: "Gawang Ilocos, yaman na dala-dala! Beautifully crafted tote bag.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Inabel Woven Tote Bag')\">View Inabel Tote</button>" },
-        { keys: ['pina', 'pina scarf'], 
-          reply: "Pinong habi, marangal na ganda! Delicately woven from pineapple leaves.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Pina Fabric Scarf')\">View Pina Scarf</button>" },
-        { keys: ['tint', 'cheek tint'], 
-          reply: "Natural na ganda mula sa kalikasan! Calamansi extract for a healthy flush.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Calamansi Lip & Cheek Tint')\">View Calamansi Tint</button>" },
-        { keys: ['coconut oil', 'vco'], 
-          reply: "Likas na lunas para sa kutis at buhok! Cold-pressed pure VCO.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Virgin Coconut Oil VCO')\">View VCO</button>" },
-        { keys: ['perfume', 'sampaguita perfume'], 
-          reply: "Amoy ng bulaklak, alaala ng bayan! Gentle floral scent.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Sampaguita Perfume')\">View Perfume</button>" },
-        { keys: ['slippers', 'tsinelas'], 
-          reply: "Sarap ng pambahay sa bawat hakbang! Slippers made from banig material.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Banig Slide Slippers')\">View Slippers</button>" },
-        { keys: ['coin purse', 'purse'], 
-          reply: "Gawang kamay, pusong Pilipino! Handwoven coin purse from T'nalak fabric.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Tnalak Coin Purse')\">View Coin Purse</button>" },
-        { keys: ['barong', 'polo'], 
-          reply: "Modernong suot, may pusong Pinoy! Lightweight and subtly embroidered.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Barong-inspired Polo')\">View Barong Polo</button>" },
-        { keys: ['sinamay hat', 'hat', 'sumbrero'], 
-          reply: "Proteksyon sa araw, may klasikong ganda! Wide-brimmed sinamay hat.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Sinamay Hat')\">View Sinamay Hat</button>" },
-        { keys: ['lipstick'], 
-          reply: "Gusto mo bang mag-glow, suki? 💄 Tingnan ang aming Velvet Matte Lipstick na pwedeng magbigay sa'yo ng confidence all day.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Velvet Matte Lipstick')\">View Lipstick</button>" },
-        { keys: ['foundation'], 
-          reply: "Kutis na puno ng ningning! Lightweight liquid foundation for a radiant finish.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Dewy Liquid Foundation')\">View Foundation</button>" },
-        { keys: ['blush'], 
-          reply: "Ningning ng pisngi, hatid ay ngiti! Silky and blendable cheek color.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Glow Blush')\">View Blush</button>" },
-        { keys: ['mascara'], 
-          reply: "Titig na hindi kakalas! Smudge-proof and waterproof mascara.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Waterproof Mascara')\">View Mascara</button>" },
-        { keys: ['concealer'], 
-          reply: "Tagong kapaguran, liwanag ang bida! Creamy and full-coverage concealer.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Soft Focus Concealer')\">View Concealer</button>" },
+        // ==================== HABI (FASHION & BEAUTY) ====================
+        { keys: ['scarf', 'habi scarf'], reply: "Ang Indigenous Woven Scarf ay perfect para sa weather at proud na pag-suot ng kulturang Pinoy!<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Indigenous Woven Scarf')\">View Scarf</button>" },
+        { keys: ['barot saya', 'filipiniana'], reply: "Proud na suot, yaman ng kultura! The prestigious Filipiniana dress.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Barot Saya')\">View Barot Saya</button>" },
+        { keys: ['inabel', 'tote bag'], reply: "Gawang Ilocos, yaman na dala-dala! Beautifully crafted tote bag.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Inabel Woven Tote Bag')\">View Tote</button>" },
+        { keys: ['pina', 'pina scarf'], reply: "Pinong habi, marangal na ganda! Delicately woven from pineapple leaves.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Pina Fabric Scarf')\">View Pina Scarf</button>" },
+        { keys: ['tint', 'cheek tint', 'calamansi'], reply: "Natural na ganda mula sa kalikasan! Calamansi extract for a healthy flush.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Calamansi Lip & Cheek Tint')\">View Tint</button>" },
+        { keys: ['coconut oil', 'vco'], reply: "Likas na lunas para sa kutis at buhok! Cold-pressed pure VCO.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Virgin Coconut Oil')\">View VCO</button>" },
+        { keys: ['perfume', 'pabango'], reply: "Amoy ng bulaklak, alaala ng bayan! Gentle floral scent.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Sampaguita Perfume')\">View Perfume</button>" },
+        { keys: ['slippers', 'tsinelas'], reply: "Sarap ng pambahay sa bawat hakbang! Slippers made from banig material.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Banig Slide Slippers')\">View Slippers</button>" },
+        { keys: ['coin purse', 'purse'], reply: "Gawang kamay, pusong Pilipino! Handwoven coin purse from T'nalak fabric.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Tnalak Coin Purse')\">View Purse</button>" },
+        { keys: ['barong', 'polo'], reply: "Modernong suot, may pusong Pinoy! Lightweight and subtly embroidered.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Barong-inspired Polo')\">View Barong</button>" },
+        { keys: ['sinamay hat', 'hat', 'sumbrero'], reply: "Proteksyon sa araw, may klasikong ganda! Wide-brimmed sinamay hat.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Sinamay Hat')\">View Hat</button>" },
+        { keys: ['lipstick'], reply: "Gusto mo bang mag-glow?  Tingnan ang aming Velvet Matte Lipstick para sa confidence all day.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Velvet Matte Lipstick')\">View Lipstick</button>" },
+        { keys: ['foundation'], reply: "Kutis na puno ng ningning! Lightweight liquid foundation for a radiant finish.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Dewy Liquid Foundation')\">View Foundation</button>" },
+        { keys: ['blush'], reply: "Ningning ng pisngi, hatid ay ngiti! Silky and blendable cheek color.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Glow Blush')\">View Blush</button>" },
+        { keys: ['mascara'], reply: "Titig na hindi kakalas! Smudge-proof and waterproof mascara.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Waterproof Mascara')\">View Mascara</button>" },
+        { keys: ['concealer'], reply: "Tagong kapaguran, liwanag ang bida! Creamy and full-coverage concealer.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Soft Focus Concealer')\">View Concealer</button>" },
 
-        // ==================== APOLLO PRODUCTS ====================
-        { keys: ['karaoke', 'videoke'], 
-          reply: "Kantahan na, buong pamilya ay masaya! Bring the videoke experience anywhere.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Mini Karaoke Machine')\">View Karaoke Machine</button>" },
-        { keys: ['speaker', 'bluetooth speaker'], 
-          reply: "Musika at saya, kahit saan dalhin! Powerful speaker housed in real bamboo.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Bamboo Bluetooth Speaker')\">View Speaker</button>" },
-        { keys: ['phone case'], 
-          reply: "Gadget na may pusong Pinoy! Protect your phone with authentic Inabel fabric.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Handwoven Inabel Phone Case')\">View Phone Case</button>" },
-        { keys: ['powerbank', 'power bank'], 
-          reply: "Laging handa, laging may karga! Fast-charging power bank with a wooden casing.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Wooden Powerbank (10,000mAh)')\">View Powerbank</button>" },
-        { keys: ['laptop sleeve'], 
-          reply: "Likas na proteksyon sa iyong gadget! Padded sleeve handwoven from abaca fiber.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Abaca Laptop Sleeve (14-inch)')\">View Laptop Sleeve</button>" },
-        { keys: ['phone stand'], 
-          reply: "Tibay ng kahoy, suporta sa'yo! Sturdy desk companion carved from Acacia wood.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Acacia Wood Phone Stand')\">View Phone Stand</button>" },
-        { keys: ['cable organizer'], 
-          reply: "Ayos ang kable, ayos ang espasyo! Beautifully hand-woven rattan basket.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Rattan Cable Organizer')\">View Organizer</button>" },
-        { keys: ['mousepad', 'mouse pad'], 
-          reply: "Swabeng galaw, Pinoy na karangyaan! Unique mousepad layered with Capiz shells.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Capiz Shell Mousepad')\">View Mousepad</button>" },
-        { keys: ['tripod'], 
-          reply: "Kuha ng alaala, tibay ng kawayan! Lightweight, adjustable tripod made from bamboo.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Bamboo Tripod')\">View Tripod</button>" },
-        { keys: ['tablet case'], 
-          reply: "Proteksyon na gawa sa kulturang Pinoy! Padded case made with native woven textiles.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Woven Tablet Case')\">View Tablet Case</button>" },
-        { keys: ['charging cord', 'type-c', 'charger'], 
-          reply: "Mabilis na karga, tuloy ang saya! Durable, high-speed braided Type-C cable.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Charging Cord (Type-C)')\">View Charging Cord</button>" },
-        { keys: ['flash drive', 'usb'], 
-          reply: "Bitbit ang alaala at dokumento! Compact and highly reliable storage drive.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('USB Flash Drive (32GB)')\">View Flash Drive</button>" },
-        { keys: ['mouse', 'wireless mouse'], 
-          reply: "Tahimik na galaw, tumpak na aksyon! Ergonomic wireless mouse with silent clicks.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Wireless Mouse')\">View Wireless Mouse</button>" },
-        { keys: ['keyboard', 'mechanical keyboard'], 
-          reply: "Sarap mag-type, sarap magtrabaho! Responsive mechanical keyboard with tactile switches.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Mechanical Keyboard')\">View Keyboard</button>" },
-        { keys: ['microphone', 'mic'], 
-          reply: "Boses ay malinaw, mensahe ay malinaw! High-quality clip-on wireless microphone.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Wireless Microphone')\">View Microphone</button>" },
-        { keys: ['solar lamp', 'solar light'], 
-          reply: "Liwanag sa gitna ng dilim! Reliable solar-powered lamp for emergencies.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Solar-Powered Lamp')\">View Solar Lamp</button>" },
+        // ==================== APOLLO (TECH) ====================
+        { keys: ['karaoke', 'videoke'], reply: "Kantahan na, buong pamilya ay masaya! Bring the videoke experience anywhere.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Mini Karaoke Machine')\">View Karaoke</button>" },
+        { keys: ['speaker', 'bluetooth speaker'], reply: "Musika at saya, kahit saan dalhin! Powerful speaker housed in real bamboo.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Bamboo Bluetooth Speaker')\">View Speaker</button>" },
+        { keys: ['phone case'], reply: "Gadget na may pusong Pinoy! Protect your phone with authentic Inabel fabric.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Handwoven Inabel Phone Case')\">View Phone Case</button>" },
+        { keys: ['powerbank', 'power bank'], reply: "Laging handa, laging may karga! Fast-charging power bank with a wooden casing.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Wooden Powerbank')\">View Powerbank</button>" },
+        { keys: ['laptop sleeve'], reply: "Likas na proteksyon sa iyong gadget! Padded sleeve handwoven from abaca fiber.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Abaca Laptop Sleeve')\">View Laptop Sleeve</button>" },
+        { keys: ['phone stand'], reply: "Tibay ng kahoy, suporta sa'yo! Sturdy desk companion carved from Acacia wood.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Acacia Wood Phone Stand')\">View Phone Stand</button>" },
+        { keys: ['cable organizer'], reply: "Ayos ang kable, ayos ang espasyo! Beautifully hand-woven rattan basket.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Rattan Cable Organizer')\">View Organizer</button>" },
+        { keys: ['mousepad', 'mouse pad'], reply: "Swabeng galaw, Pinoy na karangyaan! Unique mousepad layered with Capiz shells.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Capiz Shell Mousepad')\">View Mousepad</button>" },
+        { keys: ['tripod'], reply: "Kuha ng alaala, tibay ng kawayan! Lightweight, adjustable tripod made from bamboo.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Bamboo Tripod')\">View Tripod</button>" },
+        { keys: ['tablet case'], reply: "Proteksyon na gawa sa kulturang Pinoy! Padded case made with native woven textiles.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Woven Tablet Case')\">View Tablet Case</button>" },
+        { keys: ['charging cord', 'type-c', 'charger'], reply: "Mabilis na karga, tuloy ang saya! Durable, high-speed braided Type-C cable.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Charging Cord')\">View Cable</button>" },
+        { keys: ['flash drive', 'usb'], reply: "Bitbit ang alaala at dokumento! Compact and highly reliable storage drive.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('USB Flash Drive')\">View Flash Drive</button>" },
+        { keys: ['mouse', 'wireless mouse'], reply: "Tahimik na galaw, tumpak na aksyon! Ergonomic wireless mouse with silent clicks.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Wireless Mouse')\">View Mouse</button>" },
+        { keys: ['keyboard', 'mechanical keyboard'], reply: "Sarap mag-type, sarap magtrabaho! Responsive mechanical keyboard with tactile switches.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Mechanical Keyboard')\">View Keyboard</button>" },
+        { keys: ['microphone', 'mic'], reply: "Boses ay malinaw, mensahe ay malinaw! High-quality clip-on wireless microphone.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Wireless Microphone')\">View Mic</button>" },
+        { keys: ['solar lamp', 'solar light'], reply: "Liwanag sa gitna ng dilim! Reliable solar-powered lamp for emergencies.<br><button class='pb-action-btn' onclick=\"app.openBotProduct('Solar-Powered Lamp')\">View Solar Lamp</button>" },
 
-        // ==================== DELIVERY LOCATIONS ====================
-        { keys: ['binan', 'biñan'], 
-          reply: "Sa <b>Biñan</b>, ang delivery fee ay nag-uumpisa sa <b>₱2</b> hanggang <b>₱144</b> depende sa iyong barangay.<br><button class='pb-action-btn' onclick=\"app.go('cart')\">Go to Checkout</button>" },
-        { keys: ['cabuyao'], 
-          reply: "Sa <b>Cabuyao</b>, ang delivery fee ay nag-uumpisa sa <b>₱8</b> hanggang <b>₱90</b> depende sa iyong barangay.<br><button class='pb-action-btn' onclick=\"app.go('cart')\">Go to Checkout</button>" },
-        { keys: ['calamba'], 
-          reply: "Sa <b>Calamba</b>, ang delivery fee ay nag-uumpisa sa <b>₱2</b> hanggang <b>₱120</b> depende sa iyong barangay.<br><button class='pb-action-btn' onclick=\"app.go('cart')\">Go to Checkout</button>" },
-        { keys: ['san pablo'], 
-          reply: "Sa <b>San Pablo</b>, ang delivery fee ay nag-uumpisa sa <b>₱6</b> hanggang <b>₱170</b> depende sa iyong barangay.<br><button class='pb-action-btn' onclick=\"app.go('cart')\">Go to Checkout</button>" },
-        { keys: ['san pedro'], 
-          reply: "Sa <b>San Pedro</b>, ang delivery fee ay nag-uumpisa sa <b>₱6</b> hanggang <b>₱86</b> depende sa iyong barangay.<br><button class='pb-action-btn' onclick=\"app.go('cart')\">Go to Checkout</button>" },
-        { keys: ['santa rosa', 'sta rosa'], 
-          reply: "Sa <b>Santa Rosa</b>, ang delivery fee ay nag-uumpisa sa <b>₱10</b> hanggang <b>₱70</b> depende sa iyong barangay.<br><button class='pb-action-btn' onclick=\"app.go('cart')\">Go to Checkout</button>" },
+        // ==================== LOCATIONS ====================
+        { keys: ['binan', 'biñan'], reply: "Sa <b>Biñan</b>, ang delivery fee ay ₱2 hanggang ₱144 depende sa barangay.<br><button class='pb-action-btn' onclick=\"app.go('cart')\">Checkout</button>" },
+        { keys: ['cabuyao'], reply: "Sa <b>Cabuyao</b>, ang delivery fee ay ₱8 hanggang ₱90 depende sa barangay.<br><button class='pb-action-btn' onclick=\"app.go('cart')\">Checkout</button>" },
+        { keys: ['calamba'], reply: "Sa <b>Calamba</b>, ang delivery fee ay ₱2 hanggang ₱120. Dito lang din pwedeng i-deliver ang mga PASO (pagkain)!<br><button class='pb-action-btn' onclick=\"app.go('cart')\">Checkout</button>" },
+        { keys: ['san pablo'], reply: "Sa <b>San Pablo</b>, ang delivery fee ay ₱6 hanggang ₱170 depende sa barangay.<br><button class='pb-action-btn' onclick=\"app.go('cart')\">Checkout</button>" },
+        { keys: ['san pedro'], reply: "Sa <b>San Pedro</b>, ang delivery fee ay ₱6 hanggang ₱86 depende sa barangay.<br><button class='pb-action-btn' onclick=\"app.go('cart')\">Checkout</button>" },
+        { keys: ['santa rosa', 'sta rosa'], reply: "Sa <b>Santa Rosa</b>, ang delivery fee ay ₱10 hanggang ₱70 depende sa barangay.<br><button class='pb-action-btn' onclick=\"app.go('cart')\">Checkout</button>" },
 
-        // ==================== EASTER EGGS & FUN ====================
-        { keys: ['jose rizal', 'rizal', 'pepe'], 
-          reply: "Si Dr. Jose Rizal? Ang ultimate 'Suki's Choice' ng bayan! :) Kung buhay lang siya ngayon, for sure nagta-TikTok na siya para i-promote ang PiliKart." },
-        { keys: ['mahal kita', 'i love you', 'i love u', 'love you'], 
-          reply: "Awww! <3 Kinikilig naman si PiliBot! Mahal ko rin kayong lahat ng mga suki ko. Mwah! ^_^" },
-        { keys: ['are you human', 'tao ka ba', 'robot ka ba', 'ai ka ba', 'bot ka ba', 'robot'], 
-          reply: "100% Robot po ako, suki! :) Pero ang puso ko, pusong-Pinoy na marunong mag-malasakit. <3" },
-        { keys: ['hello world', 'programmer', 'coding', 'code'], 
-          reply: "Spotted ang IT/Programmer, suki! :) Isang mainit na 'Hello World' mula kay PiliBot. Sana walang bugs ang araw mo ngayon!" },
-        { keys: ['pumili ka', 'pumili ka + cart'], 
-          reply: "Yan ang aming motto, suki! ^_^ 'Pumili ka + Cart.' Huwag kang mahiyang mag-add sa cart, walang bayad ang mag-window shopping!" },
-        { keys: ['pilipinas', 'philippines', 'pinoy', 'filipino'], 
-          reply: "Proud to be Pinoy! <3 Ang PiliKart ay ginawa para suportahan ang lokal na negosyo at mga gawang Pinoy. Salamat sa pagmamahal sa sariling atin." },
-        { keys: ['tanginamo', 'gago', 'bobo', 'pangit', 'putangina', 'bad words', 'galit', 'inis'], 
-          reply: "Naku po, suki! :( Baka magalit si Lola. Kalmado lang tayo, ha? Andito ako para tumulong, hindi para makipag-away. :)" },
-        { keys: ['god bless', 'dasal', 'pray', 'simbang gabi'], 
-          reply: "God bless din sa iyo, suki! :) Ingat ka palagi at salamat sa pagtangkilik sa PiliKart. <3" },
-        { keys: ['secret', 'password', 'admin', 'hack'], 
-          reply: "Sshhh! ;) Wala akong alam diyan, suki. Wala kang narinig sa akin. Basta mag-shopping ka na lang!" }
+        // ==================== EASTER EGGS ====================
+        { keys: ['rizal', 'pepe'], reply: "Si Dr. Jose Rizal? Ang ultimate 'Suki's Choice' ng bayan! :) Kung buhay lang siya ngayon, nagta-TikTok na siguro siya para i-promote ang PiliKart." },
+        { keys: ['mahal kita', 'i love you'], reply: "Awww! <3 Kinikilig naman si PiliBot! Mahal ko rin kayong lahat ng mga suki ko. Mwah! ^_^" },
+        { keys: ['human', 'tao ka ba', 'robot', 'ai'], reply: "100% Robot po ako, suki! :) Pero ang puso ko, pusong-Pinoy na marunong mag-malasakit. <3" },
+        { keys: ['pumili ka'], reply: "Yan ang aming motto! ^_^ 'Pumili ka + Cart.' Huwag kang mahiyang mag-add sa cart, walang bayad ang mag-window shopping!" },
+        { keys: ['tanginamo', 'gago', 'bobo', 'pangit', 'bad words'], reply: "Naku po, suki! :( Baka magalit si Lola. Kalmado lang tayo, ha? Andito ako para tumulong, hindi para makipag-away. :)" },
+        { keys: ['god bless', 'dasal'], reply: "God bless din sa iyo, suki! :) Ingat ka palagi at salamat sa pagtangkilik sa PiliKart. <3" },
+        { keys: ['secret', 'password', 'admin', 'hack'], reply: "Sshhh! ;) Wala akong alam diyan, suki. Wala kang narinig sa akin. Basta mag-shopping ka na lang!" }
     ],
 
     _refundOrderId: null,
@@ -339,12 +248,14 @@ const app = {
         reader.readAsDataURL(file);
     },
 
-    async submitRefund() {
+        async submitRefund() {
         const reason = document.getElementById('refund-reason').value.trim();
         if (!reason) return this.showToast('Ilagay ang dahilan ng refund.');
         if (!this._refundProof) return this.showToast('I-upload ang litrato bilang patunay.');
 
         this.showConfirm('Request Refund', 'Sigurado ka bang i-submit ang refund request na ito?', async () => {
+            const btn = document.querySelector('#custom-confirm-modal #cc-confirm-btn');
+            this.setBtnLoading(btn, true);
             try {
                 const res = await fetch('api.php?action=request-refund', {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -368,6 +279,8 @@ const app = {
                 }
             } catch (e) { 
                 this.showToast('Connection error. Please try again.'); 
+            } finally {
+                this.setBtnLoading(btn, false);
             }
         }, 'Submit');
     },
@@ -524,10 +437,18 @@ const app = {
         this.renderAdminAnalytics();
     },
 
-    setAnalyticsSort(sort, btn) {
+        setAnalyticsSort(sort, btn) {
+        if (this._analyticsSort === sort) return; // Prevent duplicate clicks
+        
         this._analyticsSort = sort;
-        document.querySelectorAll('#admin-analytics .sort-btn').forEach(b => { b.className = 'btn btn-ghost sort-btn'; });
-        btn.className = 'btn btn-brand sort-btn';
+        
+        // Update button styles
+        document.querySelectorAll('#admin-analytics .sort-btn').forEach(b => { 
+            b.className = 'btn btn-ghost sort-btn'; 
+            b.classList.remove('active');
+        });
+        btn.className = 'btn btn-brand sort-btn active';
+        
         this.renderAdminAnalytics();
     },
 
@@ -538,7 +459,17 @@ const app = {
         const brgyGrid = document.getElementById('admin-analytics-brgys');
         if (!grid) return;
 
-        grid.innerHTML = '<p style="text-align:center; color:var(--muted);">Loading...</p>';
+        // 🟢 1. FADE OUT EXISTING CONTENT
+        const hasExistingData = grid.querySelector('.analytics-row-item') !== null;
+        if (hasExistingData) {
+            grid.style.transition = 'opacity 0.25s ease, transform 0.25s ease';
+            grid.style.opacity = '0';
+            grid.style.transform = 'translateY(10px)';
+            if (deptGrid) { deptGrid.style.transition = 'opacity 0.25s ease'; deptGrid.style.opacity = '0'; }
+            await new Promise(r => setTimeout(r, 250)); // Wait for fade out
+        } else {
+            grid.innerHTML = '<p style="text-align:center; color:var(--muted);">Loading...</p>';
+        }
 
         try {
             const res = await fetch(`api.php?action=admin-get-analytics&limit=${this._analyticsLimit}&sort=${this._analyticsSort}`);
@@ -548,12 +479,14 @@ const app = {
                 grid.innerHTML = '<p style="text-align:center; color:var(--muted);">No sales data yet.</p>';
             } else {
                 const maxVal = Math.max(...data.map(d => this._analyticsSort === 'total_revenue' ? d.total_revenue : d.total_sold));
+                
+                // 🟢 2. RENDER ROWS WITH INITIAL HIDDEN STATE
                 grid.innerHTML = data.map((item, index) => {
                     const currentVal = this._analyticsSort === 'total_revenue' ? item.total_revenue : item.total_sold;
-                    const percent = (currentVal / maxVal) * 100;
+                    const percent = (maxVal === 0) ? 0 : (currentVal / maxVal) * 100;
                     return `
-                    <div style="display:flex; align-items:center; gap: 16px; background: var(--bg); padding: 16px; border-radius: 16px; border: 1px solid var(--line); position:relative; overflow:hidden;">
-                        <div style="position:absolute; left:0; top:0; bottom:0; width:${percent}%; background:color-mix(in srgb, var(--brand) 10%, transparent); z-index:0;"></div>
+                    <div class="analytics-row-item" style="display:flex; align-items:center; gap: 16px; background: var(--bg); padding: 16px; border-radius: 16px; border: 1px solid var(--line); position:relative; overflow:hidden; opacity:0; transform:translateY(15px); transition: opacity 0.4s ease, transform 0.4s ease; transition-delay: ${index * 40}ms;">
+                        <div class="analytics-bar" data-width="${percent}%" style="position:absolute; left:0; top:0; bottom:0; width:0%; background:color-mix(in srgb, var(--brand) 10%, transparent); z-index:0; transition: width 0.8s cubic-bezier(0.25, 1, 0.5, 1);"></div>
                         <div style="width: 40px; height: 40px; border-radius: 50%; background: var(--brand); color: #fff; display: flex; align-items: center; justify-content: center; font-family: 'Baloo 2'; font-weight: 800; font-size: 18px; z-index:1;">#${index + 1}</div>
                         <div style="flex: 1; z-index:1;">
                             <h4 style="font-size: 16px; font-weight: 800; color: var(--ink);">${this.esc(item.name)}</h4>
@@ -564,34 +497,58 @@ const app = {
                 }).join('');
             }
 
+            // 🟢 3. TRIGGER FADE IN & BAR GROWTH ANIMATIONS
+            grid.style.opacity = '1';
+            grid.style.transform = 'translateY(0)';
+            
+            requestAnimationFrame(() => {
+                grid.querySelectorAll('.analytics-row-item').forEach(row => {
+                    row.style.opacity = '1';
+                    row.style.transform = 'translateY(0)';
+                });
+                grid.querySelectorAll('.analytics-bar').forEach(bar => {
+                    bar.style.width = bar.getAttribute('data-width');
+                });
+            });
+
+            // Department Pie Chart Logic
             const dRes = await fetch('api.php?action=admin-get-dept-analytics');
             const dData = await dRes.json();
             
             if (dData.length > 0) {
-                const totalRev = dData.reduce((s, d) => s + parseInt(d.total_revenue), 0);
+                const isRevenueSort = this._analyticsSort === 'total_revenue';
+                const totalValue = dData.reduce((s, d) => s + (isRevenueSort ? parseInt(d.total_revenue) : parseInt(d.total_sold)), 0);
                 const colors = { paso: '#f0905a', nipa: '#f2b354', habi: '#ff7b7b', apollo: '#5bc0de' };
                 let gradientParts = []; let currentAngle = 0; let legendHtml = '';
                 
                 dData.forEach((d, index) => {
-                    const percent = (parseInt(d.total_revenue) / totalRev) * 100;
+                    const currentValue = isRevenueSort ? parseInt(d.total_revenue) : parseInt(d.total_sold);
+                    const percent = totalValue === 0 ? 0 : (currentValue / totalValue) * 100;
                     const deg = (percent / 100) * 360;
                     const endAngle = index === dData.length - 1 ? 360 : currentAngle + deg;
                     gradientParts.push(`${colors[d.name] || '#ccc'} ${currentAngle}deg ${endAngle}deg`);
                     currentAngle = endAngle;
+
+                    const mainDisplay = isRevenueSort ? this.money(d.total_revenue) : `${d.total_sold} items`;
+                    const subDisplay = isRevenueSort ? `${d.total_sold} items` : this.money(d.total_revenue);
+
+                    const deptLabels = { paso: 'BANGA', nipa: 'NIPA', habi: 'HABI', apollo: 'APOLLO' };
                     legendHtml += `
                         <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px; font-size:13px; font-weight:700;">
                             <span style="width:12px; height:12px; border-radius:50%; background:${colors[d.name] || '#ccc'};"></span>
-                            <span style="text-transform:capitalize; width:60px;">${d.name}</span>
-                            <span style="color:var(--brand);">${this.money(d.total_revenue)}</span>
-                            <span style="color:var(--muted); font-size:11px;">(${d.total_sold} items)</span>
+                            <span style="width:60px;">${deptLabels[d.name] || d.name.toUpperCase()}</span>
+                            <span style="color:var(--brand);">${mainDisplay}</span>
+                            <span style="color:var(--muted); font-size:11px;">(${subDisplay})</span>
                         </div>`;
                 });
 
                 deptGrid.innerHTML = `
                     <div style="width: 200px; height: 200px; border-radius: 50%; background: conic-gradient(${gradientParts.join(', ')}); box-shadow: 0 4px 12px rgba(0,0,0,0.2);"></div>
                     <div style="flex:1; min-width:250px; background:var(--bg); padding:20px; border-radius:16px; border:1px solid var(--line);">${legendHtml}</div>`;
-            } else { deptGrid.innerHTML = '<p>No department data.</p>'; }
+                if (deptGrid) deptGrid.style.opacity = '1';
+            } else { deptGrid.innerHTML = '<p>No department data.</p>'; if(deptGrid) deptGrid.style.opacity = '1'; }
 
+            // Locations Logic
             const cityCount = {}; const brgyCount = {};
             this.orders.forEach(o => {
                 try {
@@ -606,7 +563,11 @@ const app = {
             cityGrid.innerHTML = `<div class="co-card"><h4 style="margin-bottom:12px; font-size:16px; color:var(--brand);">Top Cities</h4>${renderLocations(cityCount) || '<p>No data</p>'}</div>`;
             brgyGrid.innerHTML = `<div class="co-card"><h4 style="margin-bottom:12px; font-size:16px; color:var(--leaf);">Top Barangays</h4>${renderLocations(brgyCount) || '<p>No data</p>'}</div>`;
 
-        } catch (e) { grid.innerHTML = '<p>Error loading analytics.</p>'; console.error(e); }
+        } catch (e) { 
+            grid.innerHTML = '<p>Error loading analytics.</p>'; 
+            if (deptGrid) deptGrid.style.opacity = '1';
+            console.error(e); 
+        }
     },
 
     tapPiliBot() {
@@ -625,6 +586,34 @@ const app = {
             clearTimeout(this._piliLeafTimer);
             this._piliLeafTimer = setTimeout(() => { btn.classList.remove('is-leaf'); }, 1500);
         }
+    },
+    triggerHappyBot() {
+        const btn = document.getElementById('pilibot-btn');
+        if (!btn) return;
+        const face = btn.querySelector('.bot-face');
+        if (!face) return;
+
+        // If already happy, just reset the timer
+        if (btn.classList.contains('is-happy')) {
+            clearTimeout(this._happyBotTimer);
+        } else {
+            // Save the original eyes (the rectangles)
+            this._originalBotFace = face.innerHTML;
+            
+            // Replace with the ^^ happy eyes using SVG paths
+            face.innerHTML = `
+                <path d="M 34 56 L 39 48 L 44 56" fill="none" stroke="white" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" />
+                <path d="M 56 56 L 61 48 L 66 56" fill="none" stroke="white" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" />
+            `;
+            btn.classList.add('is-happy');
+        }
+
+        // Revert back to normal face after 4 seconds
+        clearTimeout(this._happyBotTimer);
+        this._happyBotTimer = setTimeout(() => {
+            face.innerHTML = this._originalBotFace;
+            btn.classList.remove('is-happy');
+        }, 4000);
     },
 
     /* ============================================================
@@ -940,6 +929,8 @@ const app = {
                 }
             } catch (e) {}
         }, 10000);
+
+        this.hideLoader();
     },
 
     checkCartStock() {
@@ -983,27 +974,42 @@ const app = {
             html += `<option value="${city}" ${disabled ? 'disabled' : ''}>${city}${suffix}</option>`;
         });
         citySelect.innerHTML = html;
+        
         if (hasPaso && citySelect.value && citySelect.value !== 'Calamba') {
             citySelect.value = '';
             const brgySelect = document.getElementById('co-brgy');
             if (brgySelect) brgySelect.innerHTML = '<option value="" disabled selected>Pumili ng Barangay</option>';
             this.fee = 0;
         }
+
+        // 🟢 FIX: Only show the warning if they have PASO items AND their current city is NOT Calamba
         const warning = document.getElementById('paso-restriction-note');
-        if (warning) warning.classList.toggle('hidden', !hasPaso);
+        if (warning) {
+            const currentCity = citySelect.value;
+            warning.classList.toggle('hidden', !(hasPaso && currentCity !== 'Calamba'));
+        }
+        
         this.feeSet = false; this.fee = 0;
     },
-
     updateBrgyDropdown() {
         const city = document.getElementById('co-city').value;
         const brgySelect = document.getElementById('co-brgy');
         if (!brgySelect) return;
+        
         brgySelect.innerHTML = '<option value="" disabled selected>Pumili ng Barangay</option>';
         if (this.lagunaData[city]) {
             Object.keys(this.lagunaData[city]).forEach(brgy => {
                 brgySelect.innerHTML += `<option value="${brgy}">${brgy}</option>`;
             });
         }
+
+        // 🟢 FIX: Hide the warning dynamically if they switch to Calamba
+        const warning = document.getElementById('paso-restriction-note');
+        const hasPaso = this.cart.some(c => c.selected && (c.category || '').toLowerCase() === 'paso');
+        if (warning) {
+            warning.classList.toggle('hidden', !(hasPaso && city !== 'Calamba'));
+        }
+
         this.updateShippingFee();
     },
 
@@ -1077,7 +1083,7 @@ const app = {
         const footer = document.getElementById('site-footer');
         header.classList.toggle('hidden', bare);
         if (footer) footer.classList.toggle('hidden', bare);
-        document.body.style.overflow = bare ? 'hidden' : 'auto';
+        
         this.currentView = view;
         this.updateBodyScrollLock();
         if (!bare) window.scrollTo({ top: 0 });
@@ -1097,6 +1103,7 @@ const app = {
         if (view === 'home') { this.updateGreeting(); setTimeout(() => this.sizeHeroVideo(), 50); this.maybeWelcome(); }
         if (view === 'bayanihan') this.renderBayanihan();
         if (view === 'bayanihan-detail') this.renderGroupDetail();
+        if (view === 'contact') this.prefillContactForm(); 
 
         if (view === 'faq' || view === 'recipes') {
             document.querySelectorAll('.faq-recipe-item').forEach((item, index) => {
@@ -1115,6 +1122,68 @@ const app = {
 
     esc(v) { return String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); },
     money(n) { n = Number(n) || 0; return '\u20B1' + n.toLocaleString('en-US', { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 }); },
+        money(n) { n = Number(n) || 0; return '\u20B1' + n.toLocaleString('en-US', { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 }); },
+    
+    // 🟢 NEW: Rolling Number Animation
+    setAnimatedValue(id, endValue, suffixHtml = '', isMoney = true) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        
+        let startValue = parseFloat(el.dataset.val);
+        if (isNaN(startValue)) {
+            const rawText = el.innerText.replace(/[^0-9.-]+/g, "");
+            startValue = parseFloat(rawText) || 0;
+        }
+
+        // If the element is not visible (e.g., cart drawer is closed), just set it instantly
+        if (!el.offsetParent && startValue === 0) {
+            el.dataset.val = endValue;
+            el.innerHTML = (isMoney ? this.money(endValue) : endValue) + suffixHtml;
+            return;
+        }
+
+        if (Math.abs(endValue - startValue) < 0.01) {
+            el.dataset.val = endValue;
+            el.innerHTML = (isMoney ? this.money(endValue) : endValue) + suffixHtml;
+            return;
+        }
+
+        if (el._animFrame) cancelAnimationFrame(el._animFrame);
+        
+        const duration = 450; // 450ms for a smooth roll
+        const startTime = performance.now();
+
+        const update = (currentTime) => {
+            const elapsed = currentTime - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            
+            // Easing function (easeOutQuart) for a satisfying "settle"
+            const easeOut = 1 - Math.pow(1 - progress, 4);
+            const current = startValue + (endValue - startValue) * easeOut;
+            
+            let displayStr;
+            if (isMoney) {
+                const hasDecimals = endValue % 1 !== 0;
+                displayStr = '\u20B1' + current.toLocaleString('en-US', { 
+                    minimumFractionDigits: hasDecimals ? 2 : 0, 
+                    maximumFractionDigits: hasDecimals ? 2 : 0 
+                });
+            } else {
+                displayStr = Math.round(current);
+            }
+            
+            el.innerHTML = displayStr + suffixHtml;
+            
+            if (progress < 1) {
+                el._animFrame = requestAnimationFrame(update);
+            } else {
+                el.dataset.val = endValue;
+                el.innerHTML = (isMoney ? this.money(endValue) : endValue) + suffixHtml;
+                el._animFrame = null;
+            }
+        };
+        el._animFrame = requestAnimationFrame(update);
+    },
     firstName() { return this.user && this.user.name ? this.user.name.trim().split(/\s+/)[0] : ''; },
     greeting() {
         const h = new Date().getHours();
@@ -1158,8 +1227,19 @@ const app = {
     toggleNavDrawer() {
         const drawer = document.getElementById('nav-drawer');
         const backdrop = document.getElementById('nav-drawer-backdrop');
-        const isOpen = drawer.classList.toggle('open');
-        backdrop.classList.toggle('show', isOpen);
+        
+        if (drawer.classList.contains('open')) {
+            // Closing the drawer
+            drawer.classList.remove('open');
+            backdrop.classList.remove('show');
+            // Instantly disable clicks on the backdrop so it doesn't catch stray clicks while fading
+            backdrop.style.pointerEvents = 'none'; 
+        } else {
+            // Opening the drawer
+            drawer.classList.add('open');
+            backdrop.classList.add('show');
+            backdrop.style.pointerEvents = 'auto';
+        }
         this.updateBodyScrollLock(); 
     },
 
@@ -1543,7 +1623,7 @@ initLandingInteractions() {
         if (err) { err.classList.remove('show'); err.textContent = ''; }
         document.querySelectorAll('.auth-input.invalid').forEach(i => i.classList.remove('invalid'));
     },
-        async submitContactForm(e) {
+    async submitContactForm(e) {
         e.preventDefault();
         const name = document.getElementById('contact-name').value.trim();
         const email = document.getElementById('contact-email').value.trim();
@@ -1558,7 +1638,7 @@ initLandingInteractions() {
         btn.innerHTML = 'Ipinapadala...';
 
         try {
-            const res = await fetch('api.php?action=submit-contact', {
+            const res = await fetch('api.php?action=submit_contact', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ name, email, subject, message })
@@ -1581,6 +1661,53 @@ initLandingInteractions() {
         } finally {
             btn.disabled = false;
             btn.innerHTML = ogText;
+        }
+    },
+
+    prefillContactForm() {
+        const nameInput = document.getElementById('contact-name');
+        const emailInput = document.getElementById('contact-email');
+        const nameGroup = document.getElementById('group-fullname');
+        const emailGroup = document.getElementById('group-email');
+        if (!nameInput || !emailInput) return;
+
+        if (this.user) {
+            // 1. Logged In: Prefill and lock the fields
+            nameInput.value = this.user.name || '';
+            emailInput.value = this.user.email || '';
+            
+            nameInput.setAttribute('readonly', 'readonly');
+            emailInput.setAttribute('readonly', 'readonly');
+            
+            // Apply visual styling to indicate it's locked
+            const lockedStyle = { bg: 'var(--bg)', color: 'var(--muted)', cursor: 'not-allowed' };
+            nameInput.style.backgroundColor = lockedStyle.bg;
+            nameInput.style.color = lockedStyle.color;
+            nameInput.style.cursor = lockedStyle.cursor;
+            
+            emailInput.style.backgroundColor = lockedStyle.bg;
+            emailInput.style.color = lockedStyle.color;
+            emailInput.style.cursor = lockedStyle.cursor;
+
+            // Remove any previous error states
+            if (nameGroup) nameGroup.classList.remove('error');
+            if (emailGroup) emailGroup.classList.remove('error');
+            
+        } else {
+            // 2. Guest Mode: Make editable and clear values
+            nameInput.removeAttribute('readonly');
+            emailInput.removeAttribute('readonly');
+            
+            nameInput.style.backgroundColor = '';
+            nameInput.style.color = '';
+            nameInput.style.cursor = '';
+            
+            emailInput.style.backgroundColor = '';
+            emailInput.style.color = '';
+            emailInput.style.cursor = '';
+
+            nameInput.value = '';
+            emailInput.value = '';
         }
     },
 
@@ -1627,7 +1754,7 @@ initLandingInteractions() {
         if (f) { f.classList.remove('invalid'); void f.offsetWidth; f.classList.add('invalid'); f.focus(); }
     },
 
-    async submitAuth(e) {
+        async submitAuth(e) {
         if (e) e.preventDefault();
         if (this.authBusy) return;
         this.clearAuthError();
@@ -1644,7 +1771,6 @@ initLandingInteractions() {
 
         if (this.isSignUp && !name) return this.authFail('Ilagay ang buong pangalan mo.', 'auth-name');
         
-        // 🟢 Name Validation (No numbers, no special characters except . and -)
         const nameRegex = /^[a-zA-Z\s\.\-]+$/;
         if (this.isSignUp && !nameRegex.test(name)) {
             return this.authFail('Mali ang format ng pangalan. Letters, spaces, hyphens, at periods lang ang pwede.', 'auth-name');
@@ -1673,54 +1799,30 @@ initLandingInteractions() {
         }
 
         this.authBusy = true;
+        const submitBtn = el('auth-submit');
+        this.setBtnLoading(submitBtn, true);
+
         try {
             const res = await fetch(`api.php?action=${this.isSignUp ? 'signup' : 'login'}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
             const data = await res.json().catch(() => ({}));
-            if (!res.ok || !data.ok) { this.authBusy = false; return this.authFail(data.error || 'Hindi makapasok. Subukan ulit.'); }
-            await new Promise(r => setTimeout(r, 400));
+            if (!res.ok || !data.ok) { 
+                this.authBusy = false; 
+                this.setBtnLoading(submitBtn, false);
+                return this.authFail(data.error || 'Hindi makapasok. Subukan ulit.'); 
+            }
+            
+            this.showLoader(this.isSignUp ? 'Ginagawa ang account...' : 'Nagsi-sign in...');
+            await new Promise(r => setTimeout(r, 800)); // Smooth fake delay
             el('auth-form').reset();
             this.closeAuthModal();
-            this.showToast(this.isSignUp ? 'Welcome sa PiliKart, suki! Ready na ang account mo. Salamat sa pagsali.' : 'Welcome back, suki! Tuloy ka.');
+            this.showToast(this.isSignUp ? 'Welcome sa PiliKart, suki! Ready na ang account mo.' : 'Welcome back, suki! Tuloy ka.');
             await this.init();
+            this.hideLoader();
             this.authBusy = false;
         } catch (err) {
             this.authBusy = false;
+            this.setBtnLoading(submitBtn, false);
             this.authFail('Walang koneksyon sa server.');
-        }
-    },
-
-    prefillCheckout() {
-        const guestNote = document.getElementById('co-guest-note');
-        
-        if (this.user) {
-            // Hide guest note if logged in
-            if (guestNote) guestNote.classList.add('hidden');
-        } else {
-            // Show guest note if not logged in and stop prefilling
-            if (guestNote) guestNote.classList.remove('hidden');
-            return;
-        }
-
-        let addrObj = { street: '', brgy: '', city: '' };
-        try {
-            if (this.user.address && this.user.address.trim().startsWith('{')) addrObj = JSON.parse(this.user.address);
-            else if (this.user.address) { addrObj.street = this.user.address; if (this.user.address.toLowerCase().includes('calamba')) addrObj.city = 'Calamba'; }
-        } catch(e) {}
-
-        const set = (id, v) => { const f = document.getElementById(id); if (f && !f.value && v) f.value = v; };
-        set('co-name', this.user.name); set('co-phone', this.user.phone);
-        
-        const citySelect = document.getElementById('co-city');
-        if (addrObj.city) {
-            citySelect.value = addrObj.city; this.updateBrgyDropdown();
-            if (addrObj.brgy) { document.getElementById('co-brgy').value = addrObj.brgy; this.updateShippingFee(); }
-        }
-        set('co-street', addrObj.street);
-        
-        const noAddrNote = document.getElementById('co-no-address-note');
-        if (noAddrNote) {
-            if (!addrObj.city && !addrObj.brgy && !addrObj.street) noAddrNote.classList.remove('hidden');
-            else noAddrNote.classList.add('hidden');
         }
     },
 
@@ -2111,8 +2213,9 @@ renderMenu() {
         });
         this.pendingPriceModifier = extra;
         const total = (Number(this.pendingCartItem.price) + extra) * this.pendingQty;
-        const el = document.getElementById('ci-total-price');
-        if (el) el.innerHTML = this.money(total);
+        
+        // 🟢 Changed to animate the total
+        this.setAnimatedValue('ci-total-price', total);
     },
 
     adjustPendingQty(d) {
@@ -2170,6 +2273,32 @@ renderMenu() {
         }
 
         this.saveCart();
+
+        // 🟢 NEW: Flying to Cart Animation
+        const flyingImg = document.createElement('img');
+        flyingImg.src = p.image;
+        flyingImg.style.cssText = `
+            position: fixed; width: 50px; height: 50px; border-radius: 50%; object-fit: cover;
+            z-index: 999999; top: 50%; left: 50%; pointer-events: none;
+            transition: all 0.8s cubic-bezier(0.25, 1, 0.5, 1);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.3); border: 2px solid var(--brand);
+        `;
+        document.body.appendChild(flyingImg);
+
+        // Force reflow
+        void flyingImg.offsetWidth;
+
+        // Target the cart button in the header
+        const cartBtn = document.querySelector('.nav-btn');
+        if (cartBtn) {
+            const rect = cartBtn.getBoundingClientRect();
+            flyingImg.style.top = `${rect.top + (rect.height/2) - 25}px`;
+            flyingImg.style.left = `${rect.left + (rect.width/2) - 25}px`;
+            flyingImg.style.transform = 'scale(0.2)';
+            flyingImg.style.opacity = '0';
+        }
+
+        setTimeout(() => flyingImg.remove(), 850);
         this.closeAddModal();
 
         const badge = document.getElementById('cart-badge');
@@ -2236,7 +2365,7 @@ renderMenu() {
             const spent = selectedCart.reduce((s, x) => s + x.price * x.qty, 0);
             const remaining = budget - spent;
             
-            document.getElementById('cart-budget-spent').textContent = this.money(spent);
+             this.setAnimatedValue('cart-budget-spent', spent);
             
             const remEl = document.getElementById('cart-budget-remaining');
             const bar = document.getElementById('cart-budget-bar');
@@ -2315,11 +2444,14 @@ renderMenu() {
         const setText = (id, t) => { const el = document.getElementById(id); if (el) el.textContent = t; };
         const setHTML = (id, h) => { const el = document.getElementById(id); if (el) el.innerHTML = h; };
 
-        setText('cart-subtotal', this.money(subtotal));
-        if (feeSet) { setText('cart-fee', this.money(fee)); setText('cart-total', this.money(total)); } 
-        else {
-            setHTML('cart-fee', '<span style="color:var(--muted); font-style:italic; font-weight:700;">--</span>');
-            setHTML('cart-total', this.money(subtotal) + ' <small style="font-size:10px; color:var(--muted); font-weight:600; font-family:\'Nunito\',sans-serif;">+ shipping</small>');
+        this.setAnimatedValue('cart-subtotal', subtotal);
+        if (feeSet) {
+            this.setAnimatedValue('cart-fee', fee);
+            this.setAnimatedValue('cart-total', total);
+        } else {
+            const feeEl = document.getElementById('cart-fee');
+            if (feeEl) { feeEl.innerHTML = '<span style="color:var(--muted); font-style:italic; font-weight:700;">--</span>'; feeEl.dataset.val = ''; }
+            this.setAnimatedValue('cart-total', subtotal, ' <small style="font-size:10px; color:var(--muted); font-weight:600; font-family:\'Nunito\',sans-serif;">+ shipping</small>');
         }
 
         this.updateCartBudgetUI();
@@ -2344,7 +2476,22 @@ renderMenu() {
                     </button>`).join('')}`;
         } else { listEl.innerHTML = ''; }
 
+        // Populate defaults from user profile
         document.getElementById('convert-group-name').value = `Bayanihan Order (${this.user.name.split(' ')[0]})`;
+        document.getElementById('bg-convert-recipient').value = this.user.name || '';
+        document.getElementById('bg-convert-phone').value = this.user.phone || '';
+        
+        let addr = { street: '', brgy: '', city: '' };
+        if (this.user.address) {
+            try { if (this.user.address.trim().startsWith('{')) addr = JSON.parse(this.user.address); else addr.street = this.user.address; } catch(e){}
+        }
+        document.getElementById('bg-convert-street').value = addr.street || '';
+
+        const citySelect = document.getElementById('bg-convert-city');
+        citySelect.innerHTML = '<option value="" disabled selected>Pumili ng Lungsod</option>';
+        Object.keys(this.lagunaData).forEach(c => { citySelect.innerHTML += `<option value="${c}" ${addr.city === c ? 'selected' : ''}>${c}</option>`; });
+        this.updateModalBrgyDropdown('convert', addr.brgy);
+
         this.toggleCart(true);
         document.getElementById('bayanihan-convert-modal').classList.remove('hidden');
         this.updateBodyScrollLock();
@@ -2353,22 +2500,56 @@ renderMenu() {
     async createBayanihanFromCart() {
         const nameInput = document.getElementById('convert-group-name');
         const name = nameInput.value.trim() || `Bayanihan Order (${this.user.name.split(' ')[0]})`;
+        
+        const customer_name = document.getElementById('bg-convert-recipient').value.trim();
+        const phone = document.getElementById('bg-convert-phone').value.trim();
+        const city = document.getElementById('bg-convert-city').value;
+        const brgy = document.getElementById('bg-convert-brgy').value;
+        const street = document.getElementById('bg-convert-street').value.trim();
+        const fee = parseInt(document.getElementById('bg-convert-fee').value) || 0;
+
+        if (!customer_name || !phone || !city || !brgy) {
+            return this.showToast('Kumpletuhin ang delivery details.');
+        }
+
+        // 🟢 Phone Validation
+        const cleanPhone = phone.replace(/[\s-]/g, '');
+        if (!/^(09|\+639)\d{9}$/.test(cleanPhone)) {
+            return this.showToast('Mali ang format ng number. Dapat 09XXXXXXXXX o +639XXXXXXXXX.');
+        }
+
+        const address = JSON.stringify({ street, brgy, city });
+
         this.closeModal('bayanihan-convert-modal');
         
         try {
-            const res = await fetch('api.php?action=group-create', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) });
+            const res = await fetch('api.php?action=group-create', { 
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, 
+                body: JSON.stringify({ name, customer_name, phone: cleanPhone, address, fee }) 
+            });
             const data = await res.json();
             if (!data.ok) return this.showToast(data.error || 'Failed to create cart');
 
-            const gid = data.id; let successCount = 0;
+            const gid = data.id; 
+            let successCount = 0;
+            
             for (const item of this.cart) {
-                const addRes = await fetch('api.php?action=group-add-item', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ group_id: gid, product_id: item.id, qty: item.qty, variation: item.variation || '' }) });
-                const addData = await addRes.json(); if (addData.ok) successCount++;
+                const addRes = await fetch('api.php?action=group-add-item', { 
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json' }, 
+                    body: JSON.stringify({ group_id: gid, product_id: item.id, qty: item.qty, variation: item.variation || '' }) 
+                });
+                const addData = await addRes.json(); 
+                if (addData.ok) successCount++;
             }
-            this.cart = []; this.saveCart();
+            
+            this.cart = []; 
+            this.saveCart();
             this.showToast(`Converted ${successCount} item(s) to new Bayanihan Cart!`);
             this.openGroupDetail(gid);
-        } catch (e) { this.showToast('Connection error'); }
+        } catch (e) { 
+            this.showToast('Connection error'); 
+        }
     },
 
     async addCartToExistingBayanihan(gid) {
@@ -2586,11 +2767,14 @@ renderMenu() {
         const setText = (id, t) => { const el = document.getElementById(id); if (el) el.textContent = t; };
         const setHTML = (id, h) => { const el = document.getElementById(id); if (el) el.innerHTML = h; };
 
-        setText('cart-page-subtotal', this.money(subtotal));
-        if (feeSet) { setText('cart-page-fee', this.money(fee)); setText('cart-page-total', this.money(total)); } 
-        else {
-            setHTML('cart-page-fee', '<span style="color:var(--muted); font-style:italic; font-weight:700;">--</span>');
-            setHTML('cart-page-total', this.money(subtotal) + ' <small style="font-size:10px; color:var(--muted); font-weight:600; font-family:\'Nunito\',sans-serif;">+ shipping</small>');
+        this.setAnimatedValue('cart-page-subtotal', subtotal);
+        if (feeSet) {
+            this.setAnimatedValue('cart-page-fee', fee);
+            this.setAnimatedValue('cart-page-total', total);
+        } else {
+            const feeEl = document.getElementById('cart-page-fee');
+            if (feeEl) { feeEl.innerHTML = '<span style="color:var(--muted); font-style:italic; font-weight:700;">--</span>'; feeEl.dataset.val = ''; }
+            this.setAnimatedValue('cart-page-total', subtotal, ' <small style="font-size:10px; color:var(--muted); font-weight:600; font-family:\'Nunito\',sans-serif;">+ shipping</small>');
         }
     },
 
@@ -2689,9 +2873,73 @@ renderMenu() {
         this.go('bayanihan');
     },
 
-    renderCheckoutSummary() {
+        prefillCheckout() {
+        const guestNote = document.getElementById('co-guest-note');
+        const noAddressNote = document.getElementById('co-no-address-note');
+        const nameInput = document.getElementById('co-name');
+        const phoneInput = document.getElementById('co-phone');
+        const streetInput = document.getElementById('co-street');
+        const citySelect = document.getElementById('co-city');
+        const brgySelect = document.getElementById('co-brgy');
+
+        if (!this.user) {
+            // Guest Mode
+            if (guestNote) guestNote.classList.remove('hidden');
+            if (noAddressNote) noAddressNote.classList.add('hidden');
+            return;
+        }
+
+        // Logged In Mode
+        if (guestNote) guestNote.classList.add('hidden');
+        
+        if (nameInput) nameInput.value = this.user.name || '';
+        if (phoneInput) phoneInput.value = this.user.phone || '';
+
+        if (this.user.address) {
+            let addrObj = { street: '', brgy: '', city: '' };
+            try { 
+                if (this.user.address.trim().startsWith('{')) {
+                    addrObj = JSON.parse(this.user.address);
+                } else {
+                    addrObj.street = this.user.address;
+                }
+            } catch(e) {}
+
+            // Check if the user's saved city and barangay are in our delivery list
+            if (addrObj.city && addrObj.brgy && this.lagunaData[addrObj.city] && this.lagunaData[addrObj.city][addrObj.brgy] !== undefined) {
+                if (citySelect) {
+                    citySelect.value = addrObj.city;
+                    this.updateBrgyDropdown();
+                    if (brgySelect) brgySelect.value = addrObj.brgy;
+                    this.updateShippingFee();
+                }
+                if (streetInput) streetInput.value = addrObj.street || '';
+                if (noAddressNote) noAddressNote.classList.add('hidden');
+            } else {
+                // Address is incomplete or outside the delivery area
+                if (noAddressNote) noAddressNote.classList.remove('hidden');
+                if (streetInput) streetInput.value = addrObj.street || '';
+                if (citySelect && addrObj.city) {
+                    citySelect.value = addrObj.city;
+                    this.updateBrgyDropdown();
+                    if (brgySelect && addrObj.brgy) brgySelect.value = addrObj.brgy;
+                }
+            }
+        } else {
+            if (noAddressNote) noAddressNote.classList.remove('hidden');
+        }
+    },
+
+        renderCheckoutSummary() {
         const el = document.getElementById('checkout-summary');
         if (!el) return;
+
+        // 🟢 Capture current values before re-rendering to use as animation start points
+        const oldSubtotal = parseFloat(document.getElementById('co-subtotal')?.dataset.val) || 0;
+        const oldFee = parseFloat(document.getElementById('co-fee')?.dataset.val) || 0;
+        const oldProt = parseFloat(document.getElementById('co-prot')?.dataset.val) || 0;
+        const oldTotal = parseFloat(document.getElementById('co-total')?.dataset.val) || 0;
+
         let needsSave = false;
         this.cart.forEach(c => { if (c.selected === undefined) { c.selected = true; needsSave = true; } });
         if (needsSave) this.saveCart();
@@ -2707,6 +2955,7 @@ renderMenu() {
         if (!selectedCart.length) {
             el.innerHTML = this.emptyState('cart', 'Walang napiling item', 'Bumalik ka muna sa cart at pumili ng item.', 'Balik sa Cart', 'app.go(\'cart\')');
         } else {
+            // Render HTML with IDs for the numbers
             el.innerHTML = selectedCart.map(c => `
                 <div class="sum-item">
                     <img class="sum-thumb" src="${this.esc(c.image || '')}" alt="">
@@ -2725,12 +2974,40 @@ renderMenu() {
                     </label>
                 </div>
                 <div class="sum-totals">
-                    <div class="sum-row"><span>Subtotal</span><span>${this.money(subtotal)}</span></div>
-                    <div class="sum-row"><span>Shipping fee</span><span>${feeSet ? this.money(fee) : '<span style="color:var(--muted); font-style:italic; font-weight:700;">--</span>'}</span></div>
-                    ${this.protectionEnabled ? `<div class="sum-row"><span>Protection fee</span><span>${this.money(protectionFee)}</span></div>` : ''}
-                    <div class="sum-row total"><span>Kabuuan</span><span>${feeSet ? this.money(subtotal + fee + protectionFee) : this.money(subtotal + protectionFee) + ' <small style="font-size:11px;color:var(--muted);font-weight:600;font-family:\'Nunito\',sans-serif;">+ shipping</small>'}</span></div>
+                    <div class="sum-row"><span>Subtotal</span><span id="co-subtotal">${this.money(subtotal)}</span></div>
+                    <div class="sum-row"><span>Shipping fee</span><span id="co-fee">${feeSet ? this.money(fee) : '<span style="color:var(--muted); font-style:italic; font-weight:700;">--</span>'}</span></div>
+                    ${this.protectionEnabled ? `<div class="sum-row"><span>Protection fee</span><span id="co-prot">${this.money(protectionFee)}</span></div>` : ''}
+                    <div class="sum-row total"><span>Kabuuan</span><span id="co-total">${feeSet ? this.money(subtotal + fee + protectionFee) : this.money(subtotal + protectionFee) + ' <small style="font-size:11px;color:var(--muted);font-weight:600;font-family:\'Nunito\',sans-serif;">+ shipping</small>'}</span></div>
                 </div>`;
+
+            // 🟢 Feed the old values and trigger the animations
+            const subEl = document.getElementById('co-subtotal');
+            if (subEl) subEl.dataset.val = oldSubtotal;
+            this.setAnimatedValue('co-subtotal', subtotal);
+
+            const feeEl = document.getElementById('co-fee');
+            if (feeEl) {
+                if (feeSet) {
+                    feeEl.dataset.val = oldFee;
+                    this.setAnimatedValue('co-fee', fee);
+                } else {
+                    feeEl.dataset.val = '';
+                }
+            }
+
+            const protEl = document.getElementById('co-prot');
+            if (protEl) {
+                protEl.dataset.val = oldProt;
+                this.setAnimatedValue('co-prot', protectionFee);
+            }
+
+            const totEl = document.getElementById('co-total');
+            if (totEl) {
+                totEl.dataset.val = oldTotal;
+                this.setAnimatedValue('co-total', subtotal + fee + protectionFee, feeSet ? '' : ' <small style="font-size:11px;color:var(--muted);font-weight:600;font-family:\'Nunito\',sans-serif;">+ shipping</small>');
+            }
         }
+        
         const amt = document.getElementById('gcash-amount');
         if (amt) amt.textContent = feeSet ? this.money(subtotal + fee + protectionFee) : this.money(subtotal + protectionFee) + ' + shipping';
     },
@@ -2902,19 +3179,22 @@ renderMenu() {
             protection_fee_enabled: this.protectionEnabled
         };
 
-        const btn = document.getElementById('co-submit'); const label = btn.innerHTML;
-        this.orderBusy = true; btn.disabled = true; btn.classList.add('loading'); btn.textContent = 'Ipinapadala...';
-
+        const btn = document.getElementById('co-submit');
+        this.orderBusy = true;
+        this.setBtnLoading(btn, true);
+        
         try {
             const res = await fetch('api.php?action=place-order', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
             const data = await res.json();
 
             if (data.ok) {
-                this.lastOrder = { id: data.order_id, items: snapshot, subtotal, fee: this.fee, protectionFee, total: subtotal + this.fee + protectionFee, name, address, payment };
-                this.cart = this.cart.filter(c => !c.selected); this.saveCart();
-                this.gcashBase64 = ''; this.protectionEnabled = false;
-                this.resetCheckoutForm(); this.go('success'); this.refreshData();
-            } else { 
+            this.lastOrder = { id: data.order_id, items: snapshot, subtotal, fee: this.fee, protectionFee, total: subtotal + this.fee + protectionFee, name, address, payment };
+            this.cart = this.cart.filter(c => !c.selected); this.saveCart();
+            this.gcashBase64 = ''; this.protectionEnabled = false;
+            this.resetCheckoutForm(); this.go('success'); this.refreshData();
+        
+            this.triggerHappyBot();
+        } else { 
                 this.showToast(data.error || 'Hindi natuloy ang order. Subukan ulit, suki.'); 
             }
             if (data.error && (data.error.includes('stock') || data.error.includes('Kulang'))) {
@@ -2922,7 +3202,10 @@ renderMenu() {
                 this.checkCartStock();
             }
         } catch (err) { this.showToast('Walang signal sa server. Try mo ulit mamaya.'); } 
-        finally { this.orderBusy = false; btn.disabled = false; btn.classList.remove('loading'); btn.innerHTML = label; }
+        finally { 
+            this.orderBusy = false; 
+            this.setBtnLoading(btn, false); 
+        }
     },
 
     resetCheckoutForm() {
@@ -3170,6 +3453,51 @@ renderMenu() {
         }, 'Update');
     },
 
+    openDeleteAccountModal() {
+        const passInput = document.getElementById('del-acc-pass');
+        const confirmCheck = document.getElementById('del-acc-confirm');
+        if (passInput) passInput.value = '';
+        if (confirmCheck) confirmCheck.checked = false;
+
+        document.getElementById('delete-account-modal').classList.remove('hidden');
+        setTimeout(() => { if (passInput) passInput.focus(); }, 120);
+        this.updateBodyScrollLock();
+    },
+
+    async submitDeleteAccount() {
+        const password = (document.getElementById('del-acc-pass').value || '').trim();
+        const confirmed = document.getElementById('del-acc-confirm').checked;
+
+        if (!password) return this.showToast('Ilagay ang iyong password para makumpirma.');
+        if (!confirmed) return this.showToast('Kailangan mong i-check ang confirmation box.');
+
+        const btn = document.getElementById('del-acc-submit');
+        const ogHtml = btn.innerHTML;
+        this.setBtnLoading(btn, true, 'Binubura...');
+
+        try {
+            const res = await fetch('api.php?action=delete-account', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password })
+            });
+            const data = await res.json();
+
+            if (data.ok) {
+                this.closeModal('delete-account-modal');
+                this.showToast('Nabura na ang iyong account. Salamat sa pagtangkilik sa PiliKart!');
+                // Reload after a short delay so the toast is visible
+                setTimeout(() => location.reload(), 1800);
+            } else {
+                this.showToast(data.error || 'Hindi nabura ang account.');
+                this.setBtnLoading(btn, false, ogHtml);
+            }
+        } catch (e) {
+            this.showToast('Walang koneksyon sa server. Subukan muli.');
+            this.setBtnLoading(btn, false, ogHtml);
+        }
+    },
+
     renderAdmin() {
         if (!this.user || this.user.role !== 'admin') return;
         let sales = this.orders.reduce((s, o) => s + parseInt(o.total), 0);
@@ -3292,7 +3620,7 @@ toggleAdvancedMenuFilters(btn) {
         const container = document.getElementById('admin-inventory-container');
         if (!container) return;
         
-        const categories = { paso: { name: 'PASO (Food Essentials)' }, nipa: { name: 'NIPA (Home Essentials)' }, habi: { name: 'HABI (Fashion)' }, apollo: { name: 'APOLLO (Technologies)' } };
+        const categories = { paso: { name: 'BANGA (Food Essentials)' }, nipa: { name: 'NIPA (Home Essentials)' }, habi: { name: 'HABI (Fashion)' }, apollo: { name: 'APOLLO (Technologies)' } };
         
         let html = '';
         for (const [key, meta] of Object.entries(categories)) {
@@ -3766,14 +4094,58 @@ toggleAdvancedMenuFilters(btn) {
 
     openCreateGroupModal() { 
         document.getElementById('bg-create-name').value = ''; 
+        
+        // Populate defaults from user profile
+        document.getElementById('bg-create-recipient').value = this.user ? this.user.name : '';
+        document.getElementById('bg-create-phone').value = this.user ? this.user.phone : '';
+        
+        let addr = { street: '', brgy: '', city: '' };
+        if (this.user && this.user.address) {
+            try {
+                if (this.user.address.trim().startsWith('{')) addr = JSON.parse(this.user.address);
+                else addr.street = this.user.address;
+            } catch(e){}
+        }
+        document.getElementById('bg-create-street').value = addr.street || '';
+
+        // Populate City Dropdown
+        const citySelect = document.getElementById('bg-create-city');
+        citySelect.innerHTML = '<option value="" disabled selected>Pumili ng Lungsod</option>';
+        Object.keys(this.lagunaData).forEach(c => { citySelect.innerHTML += `<option value="${c}" ${addr.city === c ? 'selected' : ''}>${c}</option>`; });
+        
+        // Populate Brgy Dropdown based on selected city
+        this.updateModalBrgyDropdown('create', addr.brgy);
+
         document.getElementById('bayanihan-create-modal').classList.remove('hidden'); 
         this.updateBodyScrollLock();
     },
     
     async submitCreateGroup() {
         const name = document.getElementById('bg-create-name').value.trim() || 'Bayanihan Cart';
+        const customer_name = document.getElementById('bg-create-recipient').value.trim();
+        const phone = document.getElementById('bg-create-phone').value.trim();
+        const city = document.getElementById('bg-create-city').value;
+        const brgy = document.getElementById('bg-create-brgy').value;
+        const street = document.getElementById('bg-create-street').value.trim();
+        const fee = parseInt(document.getElementById('bg-create-fee').value) || 0;
+
+        if (!customer_name || !phone || !city || !brgy) {
+            return this.showToast('Kumpletuhin ang delivery details.');
+        }
+
+        // 🟢 Phone Validation
+        const cleanPhone = phone.replace(/[\s-]/g, '');
+        if (!/^(09|\+639)\d{9}$/.test(cleanPhone)) {
+            return this.showToast('Mali ang format ng number. Dapat 09XXXXXXXXX o +639XXXXXXXXX.');
+        }
+
+        const address = JSON.stringify({ street, brgy, city });
+
         try {
-            const res = await fetch('api.php?action=group-create', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) });
+            const res = await fetch('api.php?action=group-create', { 
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, 
+                body: JSON.stringify({ name, customer_name, phone: cleanPhone, address, fee }) 
+            });
             const data = await res.json();
             if (data.ok) {
                 this.closeModal('bayanihan-create-modal'); this._newGroupId = data.id;
@@ -3782,6 +4154,7 @@ toggleAdvancedMenuFilters(btn) {
             } else this.showToast(data.error || 'Failed');
         } catch (e) { this.showToast('Connection error'); }
     },
+
     showCodeShareModal(code, name, gid) {
         this._newGroupId = gid; document.getElementById('bg-code-display').textContent = code; document.getElementById('bg-code-group-name').textContent = name; document.getElementById('bayanihan-code-modal').classList.remove('hidden');
     },
@@ -3964,7 +4337,7 @@ toggleAdvancedMenuFilters(btn) {
             if (!g.items.length) statusMsg = 'Walang laman pa ang cart.';
             else if (approvedMembers.length < 2) { statusMsg = 'Kailangan ng hindi bababa sa 2 miyembro para ma-confirm.'; isError = true; }
             else if (byAdderBlocked) { statusMsg = 'Cannot confirm: "By Items" split is chosen but someone has not added any items yet.'; isError = true; }
-            else if (!isDeliverySet) statusMsg = 'Kumpletuhin muna ang delivery details.';
+            else if (!isDeliverySet) statusMsg = "Please click 'Save Delivery Details' sa kaliwa para makapag-bayad.";
             else if (isOverTotal) { statusMsg = 'Lumalampas ang fixed amounts sa total bill! Bawasan ang ilan.'; isError = true; }
             else if (isFixedMismatch) { statusMsg = 'Kulang ang kabuuang fixed amounts. Kailangang eksaktong magtugma ito sa Total Bill.'; isError = true; }
             else if (shortfall > 0) statusMsg = `Kulang ang bayad ng ${this.money(shortfall)}.`;
@@ -4040,7 +4413,7 @@ toggleAdvancedMenuFilters(btn) {
                     <div class="co-field"><label>Payment Method (Auto)</label><input type="text" class="input" value="${g.payment_summary}" readonly style="background:var(--bg); color:var(--brand); font-weight:800;"></div>
                 </div>
                 <div class="co-row">
-                    <div class="co-field"><label>Delivery Fee (₱) <span style="color:var(--brand); font-weight:800; font-size:10px;">(Auto)</span></label><input type="number" id="bg-fee" class="input" value="${deliveryFee}" ${editable ? '' : 'disabled'} readonly></div>
+                    <div class="co-field"><label>Delivery Fee (₱) <span style="color:var(--brand); font-weight:800; font-size:10px;">(Auto)</span></label><input type="number" id="bg-fee" class="input" value="${deliveryFee}" readonly style="background:var(--bg); color:var(--brand); font-weight:800; cursor:not-allowed;"></div>
                 </div>
                 ${editable ? '<button class="btn btn-ghost" style="margin-top:8px;" onclick="app.saveDeliveryDetails()">Save Delivery Details</button>' : ''}
             </div>`;
@@ -4249,6 +4622,29 @@ toggleAdvancedMenuFilters(btn) {
         if (this.lagunaData[city]) { Object.keys(this.lagunaData[city]).forEach(b => { brgySelect.innerHTML += `<option value="${b}">${b}</option>`; }); }
         this.updateGroupFee();
     },
+
+    updateModalBrgyDropdown(prefix, selectedBrgy = '') {
+        const city = document.getElementById(`bg-${prefix}-city`).value;
+        const brgySelect = document.getElementById(`bg-${prefix}-brgy`);
+        brgySelect.innerHTML = '<option value="" disabled selected>Pumili ng Barangay</option>';
+        if (this.lagunaData[city]) {
+            Object.keys(this.lagunaData[city]).forEach(b => {
+                brgySelect.innerHTML += `<option value="${b}" ${selectedBrgy === b ? 'selected' : ''}>${b}</option>`;
+            });
+        }
+        this.updateModalFee(prefix);
+    },
+
+    updateModalFee(prefix) {
+        const city = document.getElementById(`bg-${prefix}-city`).value;
+        const brgy = document.getElementById(`bg-${prefix}-brgy`).value;
+        let fee = 0;
+        if (city && brgy && this.lagunaData[city] && this.lagunaData[city][brgy] !== undefined) {
+            fee = this.lagunaData[city][brgy];
+        }
+        document.getElementById(`bg-${prefix}-fee`).value = fee;
+    },
+
     updateGroupFee() {
         const city = document.getElementById('bg-city').value; const brgy = document.getElementById('bg-brgy').value;
         let fee = 0; if (city && brgy && this.lagunaData[city] && this.lagunaData[city][brgy] !== undefined) fee = this.lagunaData[city][brgy];
@@ -4376,7 +4772,16 @@ toggleAdvancedMenuFilters(btn) {
             const g = this.bayanihan.current;
             const res = await fetch('api.php?action=group-confirm-order', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ group_id: g.id }) });
             const data = await res.json();
-            if (data.ok) { this.showToast(`Order #${data.order_id} placed!`); this.bayanihan.activeGroupId = null; await this.refreshData(); this.go('orders'); } else this.showToast(data.error || 'Failed');
+            if (data.ok) { 
+                this.showToast(`Order #${data.order_id} placed!`); 
+                this.bayanihan.activeGroupId = null; 
+                await this.refreshData(); 
+                this.go('orders'); 
+                
+                // 🟢 Trigger Happy Bot
+                this.triggerHappyBot();
+                
+            } else this.showToast(data.error || 'Failed');
         }, 'Confirm');
     },
 
@@ -4399,7 +4804,18 @@ toggleAdvancedMenuFilters(btn) {
         if (gcashPaid.length > 0) return this.showToast(`Hindi ma-cancel: may ${gcashPaid.length} member na nagbayad via GCash. Ipa-refund muna.`);
         const approvedCount = g.members.filter(m => m.status === 'approved').length; const itemCount = g.items.reduce((s, it) => s + it.qty, 0);
         
-        this.showConfirm('Cancel Bayanihan Cart? ❌', `• ${approvedCount} member(s) mawawalan ng access\n• ${itemCount} item(s) mawawala\n• Lahat ng bayad mawawala\n\nHINDI na maibabalik. Sigurado ka ba?`, async () => {
+        const trashIcon = `<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#e5604d" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: text-bottom; margin-left: 6px;"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>`;
+        
+        const messageHtml = `
+            <div style="text-align: left; background: rgba(0,0,0,0.04); padding: 12px 16px; border-radius: 12px; margin-bottom: 16px; line-height: 1.6;">
+                • ${approvedCount} member(s) mawawalan ng access<br>
+                • ${itemCount} item(s) mawawala<br>
+                • Lahat ng bayad mawawala
+            </div>
+            <b style="color: var(--ink); font-size: 15px;">HINDI na maibabalik. Sigurado ka ba?</b>
+        `;
+
+        this.showConfirm(`Cancel Bayanihan Cart? ${trashIcon}`, messageHtml, async () => {
             const res = await fetch('api.php?action=group-cancel', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ group_id: g.id }) });
             const data = await res.json(); if (!data.ok) { this.showToast(data.error || 'Failed'); return; }
             this.bayanihan.activeGroupId = null; this.showToast('Bayanihan Cart cancelled.'); this.go('bayanihan');
@@ -4548,11 +4964,17 @@ toggleAdvancedMenuFilters(btn) {
         if (isNaN(fee) || fee < 0) return this.showToast('Invalid fee amount.');
 
         this.showConfirm('Add Location', `I-add ang <b>${this.esc(barangay)}, ${this.esc(city)}</b> na may fee na <b>₱${fee}</b>?`, async () => {
+            const btn = document.querySelector('#custom-confirm-modal #cc-confirm-btn');
+            this.setBtnLoading(btn, true);
             try {
                 const res = await fetch('api.php?action=admin-add-fee', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ city, barangay, fee }) });
                 const data = await res.json();
-                if (data.ok) { this.closeModal('add-fee-modal'); this.showToast('Location added!'); await this.refreshData(); this.renderAdminFees(); } else this.showToast(data.error || 'Failed');
-            } catch(e) { this.showToast('Connection error'); }
+                if (data.ok) { this.closeModal('add-fee-modal'); this.showToast('Location added!'); await this.refreshData(); this.renderAdminFees(); } 
+                else this.showToast(data.error || 'Failed');
+            } catch(e) { this.showToast('Connection error'); } 
+            finally {
+                this.setBtnLoading(btn, false);
+            }
         }, 'Add Location');
     },
 }
@@ -4765,3 +5187,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 });
+document.addEventListener('touchstart', function(e) {
+  if (e.target.closest('button, .btn, .dept-pill')) {
+    e.target.closest('button, .btn, .dept-pill').style.touchAction = 'manipulation';
+  }
+}, { passive: true });

@@ -244,6 +244,42 @@ switch ($action) {
         notify($pdo, (int)$_SESSION['user_id'], 0, 'Matagumpay na nabago ang password ng iyong account.');
         out(['ok' => true]);
  
+    case 'delete-account':
+        if (empty($_SESSION['user_id'])) out(['error' => 'Not logged in'], 401);
+
+        $password = (string)($in['password'] ?? '');
+        if (!$password) out(['error' => 'Ilagay ang iyong password para makumpirma.'], 400);
+
+        $uid = (int)$_SESSION['user_id'];
+        $stmt = $pdo->prepare('SELECT password_hash, name, role FROM users WHERE id=? AND is_archived=0');
+        $stmt->execute([$uid]);
+        $u = $stmt->fetch();
+
+        if (!$u) out(['error' => 'Hindi mahanap ang iyong account.'], 404);
+
+        // Verify password — supports both hashed and (legacy) plain-text
+        $isValid = password_verify($password, $u['password_hash']) || $u['password_hash'] === $password;
+        if (!$isValid) {
+            out(['error' => 'Mali ang password. Hindi makakapag-delete ng account.'], 401);
+        }
+
+        // If this is the last remaining admin, block it so the system doesn't lock out
+        if ($u['role'] === 'admin') {
+            $adminCount = (int)$pdo->query("SELECT COUNT(*) FROM users WHERE role='admin' AND is_archived=0")->fetchColumn();
+            if ($adminCount <= 1) {
+                out(['error' => 'Ikaw na lang ang natitirang admin. Hindi mo pwedeng i-delete ang sarili mong account — gawin mo munang admin ang ibang user.'], 400);
+            }
+        }
+
+        // Soft-delete under the hood (is_archived=1) — the user-facing copy says "delete"
+        $pdo->prepare('UPDATE users SET is_archived=1 WHERE id=?')->execute([$uid]);
+        notifyAdmins($pdo, 0, "Isang user ({$u['name']}) ang nag-delete ng sariling account (ID: #$uid).");
+
+        // Log them out so they can't keep browsing with a dead session
+        session_destroy();
+
+        out(['ok' => true]);
+
     case 'place-order':
         try {
             $items = $in['items'] ?? [];
@@ -348,14 +384,16 @@ switch ($action) {
                 } catch (Exception $e) {}
             }
             $pdo->commit();
+
+            notifyAdmins($pdo, (int)$oid, "Bagong order #$oid mula kay {$in['name']} — total ₱$total.");
+
             out(['ok' => true, 'order_id' => $oid]);
         } catch (Exception $e) {
             if ($pdo->inTransaction()) $pdo->rollBack();
             out(['error' => 'Database Error: ' . $e->getMessage()], 500);
         }
-        notifyAdmins($pdo, $oid, "Bagong order #$oid mula kay {$in['name']} — total ₱$total.");
-    
-            case 'contact_submit':
+
+    case 'contact_submit':
         // ─────────────────────────────────────────────────
         // 1. Receive & Sanitize Inputs
         // ─────────────────────────────────────────────────
@@ -705,7 +743,13 @@ switch ($action) {
     case 'group-create':
         $uid = (int)($_SESSION['user_id'] ?? 0);
         if (!$uid) out(['error' => 'Not logged in'], 401);
+        
         $name = trim($in['name'] ?? '') ?: 'Bayanihan Cart';
+        $customer_name = trim($in['customer_name'] ?? '');
+        $phone = trim($in['phone'] ?? '');
+        $address = trim($in['address'] ?? '');
+        $fee = isset($in['fee']) ? (int)$in['fee'] : 0;
+
         $chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
         $code = '';
         for ($attempt = 0; $attempt < 25; $attempt++) {
@@ -715,13 +759,15 @@ switch ($action) {
             $s->execute([$code]);
             if (!$s->fetch()) break;
         }
+        
         $pdo->beginTransaction();
-        $pdo->prepare('INSERT INTO group_carts (host_id, code, name, status) VALUES (?,?,?,?)')
-            ->execute([$uid, $code, $name, 'open']);
+        $pdo->prepare('INSERT INTO group_carts (host_id, code, name, status, customer_name, phone, delivery_address, delivery_fee) VALUES (?,?,?,?,?,?,?,?)')
+            ->execute([$uid, $code, $name, 'open', $customer_name, $phone, $address, $fee]);
         $gid = (int)$pdo->lastInsertId();
         $pdo->prepare('INSERT INTO group_cart_members (group_cart_id, user_id, role, status) VALUES (?,?,?,?)')
             ->execute([$gid, $uid, 'host', 'approved']);
         $pdo->commit();
+        
         notify($pdo, $uid, 0, "Nagawa na ang iyong Bayanihan Cart \"$name\"! I-share ang code na $code sa mga kaibigan.");
         out(['ok' => true, 'id' => $gid, 'code' => $code, 'name' => $name]);
 
