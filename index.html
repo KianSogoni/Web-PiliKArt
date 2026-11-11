@@ -2,7 +2,7 @@
 <html lang="en" data-theme="day">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
     <title>PiliKart — Good finds. Galing Pinoy.</title>
     <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito:wght@600;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css?v=9">
@@ -65,7 +65,14 @@
         </div>
     </div>
 </header>
- 
+<!-- Global Loading Overlay -->
+<div id="global-loader" class="hidden">
+    <div class="loader-content">
+        <div class="loader-spinner"></div>
+        <p id="loader-text">Inihahanda ang PiliKart...</p>
+    </div>
+</div>
+
 <main id="main-content" style="display:none;">
     
             <!-- LANDING PAGE -->
@@ -195,7 +202,7 @@
             </div>
 
             <!-- Top Bar: Search + Budget Mode + Advanced Toggle -->
-            <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 15px; margin-bottom: 15px; max-width: 900px; margin-left: auto; margin-right: auto;">
+            <div class="menu-search-grid" style="display: grid; grid-template-columns: 2fr 1fr; gap: 15px; margin-bottom: 15px; max-width: 900px; margin-left: auto; margin-right: auto;">
                 <div>
                     <label style="display:block; font-size:12px; font-weight:800; color:var(--muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.5px;">Hanapin sa Menu</label>
                     <input type="text" id="search-input" class="input" placeholder="Walis, lipstick, tuwalya..." oninput="app.renderMenu()">
@@ -407,7 +414,7 @@
                     <svg class="acc-chevron" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
                 </div>
                 <div class="faq-recipe-body">
-                    <p class="recipe-quote">Ang adobo ang pinaka-tapat na ulam ng Pilipino — toyo, suka, bawang. Sa PASO, mabagal naming niluluto sa palayok para lumapot ang sarsa nang kusa.</p>
+                    <p class="recipe-quote">Ang adobo ang pinaka-tapat na ulam ng Pilipino — toyo, suka, bawang. Sa BANGA, mabagal naming niluluto sa palayok para lumapot ang sarsa nang kusa.</p>
                     <div class="recipe-grid">
                         <div class="recipe-ingredients">
                             <h4><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--brand)"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> Sangkap</h4>
@@ -531,31 +538,47 @@
         <!-- NEW CTA FOR RECIPE BOX -->
         <div class="faq-cta">
             <h3>Gusto mo ng ibang recipe?</h3>
-            <button class="btn btn-leaf btn-large" onclick="app.toggleBot()">
-                <svg style="width:26px; height:26px; fill: currentColor;" viewBox="0 0 100 100">
-                    <defs>
-                        <mask id="bot-mask-recipe">
-                            <rect width="100" height="100" fill="white" />
-                            <rect x="22" y="38" width="56" height="36" rx="18" fill="black" />
-                            <g class="bot-face">
-                                <rect x="36" y="48" width="7" height="13" rx="3.5" fill="white" />
-                                <rect x="57" y="48" width="7" height="13" rx="3.5" fill="white" />
-                                <path d="M 50,66 L 50,71 M 50,68 L 46,66 M 50,68 L 54,66" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" opacity="0.6" />
+            
+            <!-- Side-by-side buttons -->
+            <div style="display: flex; gap: 16px; justify-content: center; align-items: center; flex-wrap: wrap; margin-top: 20px;">
+                
+                <!-- PiliBot Button -->
+                <button class="btn btn-leaf btn-large" onclick="app.toggleBot()" style="min-width: 240px; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                    <svg style="width:26px; height:26px; fill: currentColor;" viewBox="0 0 100 100">
+                        <defs>
+                            <mask id="bot-mask-recipe">
+                                <rect width="100" height="100" fill="white" />
+                                <rect x="22" y="38" width="56" height="36" rx="18" fill="black" />
+                                <g class="bot-face">
+                                    <rect x="36" y="48" width="7" height="13" rx="3.5" fill="white" />
+                                    <rect x="57" y="48" width="7" height="13" rx="3.5" fill="white" />
+                                    <path d="M 50,66 L 50,71 M 50,68 L 46,66 M 50,68 L 54,66" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" opacity="0.6" />
+                                </g>
+                            </mask>
+                        </defs>
+                        <g>
+                            <path d="M 50,28 L 50,20" stroke="currentColor" stroke-width="3" stroke-linecap="round" fill="none" />
+                            <path d="M 50,20 C 42,14 44,6 50,5 C 56,6 58,14 50,20 Z" />
+                            <g mask="url(#bot-mask-recipe)">
+                                <rect x="14" y="28" width="72" height="56" rx="28" />
+                                <rect x="8" y="46" width="10" height="20" rx="5" />
+                                <rect x="82" y="46" width="10" height="20" rx="5" />
                             </g>
-                        </mask>
-                    </defs>
-                    <g>
-                        <path d="M 50,28 L 50,20" stroke="currentColor" stroke-width="3" stroke-linecap="round" fill="none" />
-                        <path d="M 50,20 C 42,14 44,6 50,5 C 56,6 58,14 50,20 Z" />
-                        <g mask="url(#bot-mask-recipe)">
-                            <rect x="14" y="28" width="72" height="56" rx="28" />
-                            <rect x="8" y="46" width="10" height="20" rx="5" />
-                            <rect x="82" y="46" width="10" height="20" rx="5" />
                         </g>
-                    </g>
-                </svg>
-                Itanong kay PiliBot
-            </button>
+                    </svg>
+                    Itanong kay PiliBot
+                </button>
+
+                <!-- Contact Us Button -->
+                <button class="btn btn-brand btn-large" onclick="app.go('contact')" style="min-width: 240px; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                    <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <rect width="20" height="16" x="2" y="4" rx="2"/>
+                        <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+                    </svg>
+                    I-request sa Contact Us
+                </button>
+
+            </div>
         </div>
     </div>
 
@@ -563,13 +586,16 @@
 <div id="view-contact" class="hidden max-w page-wrap">
     <section id="contact-section" class="contact-page-container">
         
-        <!-- Header -->
-        <div class="contact-header">
-            <div class="contact-title-wrapper">
-                <div class="contact-icon-badge">
-                    <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
-                </div>
-                <div>
+                    <!-- Header -->
+                        <div class="contact-header">
+                            <div class="contact-title-wrapper">
+                            <div class="contact-icon-badge">
+                                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <rect width="20" height="16" x="2" y="4" rx="2"/>
+                                <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+                            </svg>
+                        </div>
+                    <div>
                     <h1 class="contact-title">Makipag-ugnayan</h1>
                     <p class="contact-subtitle">May tanong, mungkahi, o problema? I-message mo kami, suki!</p>
                 </div>
@@ -579,47 +605,60 @@
         <div class="contact-grid">
             <!-- Info Sidebar Card -->
             <aside class="contact-info-card">
-                <div class="info-card-header">
-                    <span class="info-tag">PiliKart Support</span>
-                    <h3>Nandito kami para tumulong!</h3>
-                    <p>Huwag mag-atubiling magpadala ng mensahe. Tutulungan ka ng aming team at ni PiliBot agad-agad.</p>
-                </div>
+    <div class="info-card-header">
+        <span class="info-tag">PiliKart Support</span>
+        <h3>Handa kaming tumulong!</h3>
+        <p>May katanungan o espesyal na request? I-message mo lang kami. Gagawin namin ang aming best para tugunan ang concern mo nang may malasakit.</p>
+    </div>
 
-                <div class="info-channels">
-                    <div class="channel-item">
-                        <div class="channel-icon">
-                            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg>
-                        </div>
-                        <div>
-                            <strong>Calamba Hub</strong>
-                            <p>City College of Calamba, Laguna</p>
-                        </div>
-                    </div>
-                    <div class="channel-item">
-                        <div class="channel-icon">
-                            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-                        </div>
-                        <div>
-                            <strong>Mabilis na Sagot</strong>
-                            <p>Mon - Sat: 8:00 AM - 6:00 PM</p>
-                        </div>
-                    </div>
-                    <div class="channel-item">
-                        <div class="channel-icon">
-                            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                        </div>
-                        <div>
-                            <strong>PiliBot Assistant</strong>
-                            <p>Available 24/7 sa kanang sulok sa ibaba</p>
-                        </div>
-                    </div>
-                </div>
+    <div class="info-channels">
+        <!-- Item 1: Add Item -->
+        <div class="channel-item">
+            <div class="channel-icon">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                    <line x1="12" y1="9" x2="12" y2="15"/><line x1="9" y1="12" x2="15" y2="12"/>
+                </svg>
+            </div>
+            <div>
+                <strong>Item Requests</strong>
+                <p>May gusto ka bang ipa-add na bagong paninda sa tindahan? Sabihin mo lang!</p>
+            </div>
+        </div>
 
-                <!-- Decorative Leaf -->
-                <div class="info-card-leaf-decoration">
-                    <svg viewBox="0 0 24 24" width="120" height="120" fill="currentColor" opacity="0.05"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></svg>
-                </div>
-            </aside>
+        <!-- Item 2: Restock -->
+        <div class="channel-item">
+            <div class="channel-icon">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M23 4v6h-6"/><path d="M1 20v-6h6"/>
+                    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                </svg>
+            </div>
+            <div>
+                <strong>Restock Alerts</strong>
+                <p>Naubos na ba ang paborito mong item? Ipaalam para mai-restock namin agad.</p>
+            </div>
+        </div>
+
+        <!-- Item 3: PiliBot & Support -->
+        <div class="channel-item">
+            <div class="channel-icon">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                </svg>
+            </div>
+            <div>
+                <strong>Order & General Concerns</strong>
+                <p>Para sa ibang tanong, i-message kami. Si PiliBot ay nandito rin para sa mga simpleng sagot.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Decorative Leaf -->
+    <div class="info-card-leaf-decoration">
+        <svg viewBox="0 0 24 24" width="120" height="120" fill="currentColor" opacity="0.05"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></svg>
+    </div>
+</aside>
 
             <!-- Main Interactive Form Card -->
             <div class="contact-form-card">
@@ -690,9 +729,15 @@
         
         <div class="faq-recipe-hero">
             <div class="landing-badge">MGA TANONG</div>
-            <h1>FAQ 
-                <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--brand); transform: translateY(4px); margin-left: 10px;"><path d="M12 2l3 3m-3-3l-3 3m3-3v14m0 0l-3-3m3 3l3-3m-9-4h14"/></svg>
-            </h1>
+                <h1>FAQ 
+            <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--brand); transform: translateY(4px); margin-left: 10px;">
+                <circle cx="12" cy="12" r="3"/>
+                <path d="M12 9a3 3 0 1 1 0-6 3 3 0 0 1 0 6z"/>
+                <path d="M12 15a3 3 0 1 1 0 6 3 3 0 0 1 0-6z"/>
+                <path d="M9 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0z"/>
+                <path d="M15 12a3 3 0 1 1 6 0 3 3 0 0 1-6 0z"/>
+            </svg>
+        </h1>
             <p>Mga madalas itanong sa tindahan.</p>
         </div>
 
@@ -932,31 +977,47 @@
 
         <div class="faq-cta">
             <h3>Hindi mo nahanap ang sagot?</h3>
-            <button class="btn btn-leaf btn-large" onclick="app.toggleBot()">
-                <svg style="width:26px; height:26px; fill: currentColor;" viewBox="0 0 100 100">
-                    <defs>
-                        <mask id="bot-mask-faq">
-                            <rect width="100" height="100" fill="white" />
-                            <rect x="22" y="38" width="56" height="36" rx="18" fill="black" />
-                            <g class="bot-face">
-                                <rect x="36" y="48" width="7" height="13" rx="3.5" fill="white" />
-                                <rect x="57" y="48" width="7" height="13" rx="3.5" fill="white" />
-                                <path d="M 50,66 L 50,71 M 50,68 L 46,66 M 50,68 L 54,66" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" opacity="0.6" />
+            
+            <!-- Side-by-side buttons -->
+            <div style="display: flex; gap: 16px; justify-content: center; align-items: center; flex-wrap: wrap; margin-top: 20px;">
+                
+                <!-- PiliBot (Green) -->
+                <button class="btn btn-leaf btn-large" onclick="app.toggleBot()" style="min-width: 240px; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                    <svg style="width:26px; height:26px; fill: currentColor;" viewBox="0 0 100 100">
+                        <defs>
+                            <mask id="bot-mask-faq">
+                                <rect width="100" height="100" fill="white" />
+                                <rect x="22" y="38" width="56" height="36" rx="18" fill="black" />
+                                <g class="bot-face">
+                                    <rect x="36" y="48" width="7" height="13" rx="3.5" fill="white" />
+                                    <rect x="57" y="48" width="7" height="13" rx="3.5" fill="white" />
+                                    <path d="M 50,66 L 50,71 M 50,68 L 46,66 M 50,68 L 54,66" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" opacity="0.6" />
+                                </g>
+                            </mask>
+                        </defs>
+                        <g>
+                            <path d="M 50,28 L 50,20" stroke="currentColor" stroke-width="3" stroke-linecap="round" fill="none" />
+                            <path d="M 50,20 C 42,14 44,6 50,5 C 56,6 58,14 50,20 Z" />
+                            <g mask="url(#bot-mask-faq)">
+                                <rect x="14" y="28" width="72" height="56" rx="28" />
+                                <rect x="8" y="46" width="10" height="20" rx="5" />
+                                <rect x="82" y="46" width="10" height="20" rx="5" />
                             </g>
-                        </mask>
-                    </defs>
-                    <g>
-                        <path d="M 50,28 L 50,20" stroke="currentColor" stroke-width="3" stroke-linecap="round" fill="none" />
-                        <path d="M 50,20 C 42,14 44,6 50,5 C 56,6 58,14 50,20 Z" />
-                        <g mask="url(#bot-mask-faq)">
-                            <rect x="14" y="28" width="72" height="56" rx="28" />
-                            <rect x="8" y="46" width="10" height="20" rx="5" />
-                            <rect x="82" y="46" width="10" height="20" rx="5" />
                         </g>
-                    </g>
-                </svg>
-                Itanong kay PiliBot
-            </button>
+                    </svg>
+                    Itanong kay PiliBot
+                </button>
+
+                <!-- Contact Us (Orange) -->
+                <button class="btn btn-brand btn-large" onclick="app.go('contact')" style="min-width: 240px; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                    <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <rect width="20" height="16" x="2" y="4" rx="2"/>
+                        <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+                    </svg>
+                    Makipag-ugnayan
+                </button>
+
+            </div>
         </div>
     </div>
  
@@ -966,14 +1027,15 @@
             <h1>
     <span class="head-ic" style="background:linear-gradient(135deg, #a9744a, #8a5c38); color:#fbeed4;">
         <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
-            <line x1="3" y1="6" x2="21" y2="6"/>
-            <path d="M16 10a4 4 0 0 1-8 0"/>
+            <circle cx="9" cy="21" r="1"></circle>
+            <circle cx="20" cy="21" r="1"></circle>
+            <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
         </svg>
     </span> 
     Ang Cart Mo
 </h1>
-            <p>Silipin muna bago ihain.</p>
+            <p>Tingnan at i-manage ang mga napili mo bago mag-checkout.</p>
+
         </div>
 
         <div class="cart-page-grid">
@@ -1020,7 +1082,7 @@
                             <b>Paalala:</b> Wala ka pang naka-save na address sa iyong <a href="#" onclick="app.go('account'); return false;">My Account</a>. Mangyaring ilagay ito para mas mapabilis ang susunod mong checkout.
                         </div>
                         <div class="co-note hidden" id="paso-restriction-note" style="background: rgba(240, 169, 59, 0.15); border-left: 4px solid var(--amber); color: var(--ink);">
-                            <b>Paalala:</b> May BANGA (pagkain) item ka sa cart. Ang mga PASO items ay pwede lang i-deliver sa loob ng <b>Calamba, Laguna</b>.
+                            <b>Paalala:</b> May BANGA (pagkain) item ka sa cart. Ang mga BANGA items ay pwede lang i-deliver sa loob ng <b>Calamba, Laguna</b>.
                         </div>
 
                         <div class="co-row">
@@ -1293,7 +1355,29 @@
                 <a href="#" onclick="app.go('orders'); return false;" style="color: var(--brand); font-weight: 800; font-size: 13px; text-decoration: underline;">Tingnan Lahat ng Orders &rarr;</a>
             </div>
         </div>
-    </div> <!-- 🟢 Closes view-account -->
+
+        <!-- 🟢 NEW: Danger Zone (Self-Archive) — now inside #view-account -->
+        <div class="card account-card" style="margin-top: 0; margin-bottom: 30px; border-color: rgba(229, 96, 77, 0.4); background: linear-gradient(135deg, rgba(229,96,77,0.04), transparent);">
+            <h3 style="color: #e5604d; display: flex; align-items: center; gap: 8px; border-bottom-color: rgba(229, 96, 77, 0.3);">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                    <line x1="12" y1="9" x2="12" y2="13"></line>
+                    <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                </svg>
+                Danger Zone
+            </h3>
+            <p style="color: var(--muted); font-size: 13px; font-weight: 600; margin-bottom: 16px; line-height: 1.6;">
+                Kapag na-delete ang iyong account, <b>hindi ka na makaka-login</b> gamit ang email na ito at mawawala ang access sa iyong account. Sigurado ka bang gusto mong magpatuloy?
+            </p>
+            <button class="btn btn-danger" style="padding: 10px 20px; font-size: 14px; display: inline-flex; align-items: center; gap: 8px;" onclick="app.openDeleteAccountModal()">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="3 6 5 6 21 6"></polyline>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                </svg>
+                Delete My Account
+            </button>
+        </div>
+    </div>
 
     <!-- ADMIN DASHBOARD -->
     <div id="view-admin" class="hidden max-w" style="padding-top:20px; padding-bottom: 60px;">
@@ -1687,9 +1771,24 @@
             <p class="footer-tag">pumili ka + cart</p>
             <ul class="footer-links" id="footer-dynamic-links"></ul>
         </div>
-        <div class="footer-col">
-            <h3 class="footer-title">About Us</h3>
-            <p class="footer-text">A digital love letter to Filipino heritage, PiliKart combines Filipino heritage with Filipino ingenuity to uplift communities and bring the warmth of home to your online shopping.</p>
+                <div class="footer-col">
+            <!-- About Us Clickable Link -->
+            <a href="#" onclick="app.go('about'); return false;" class="footer-title footer-glow-link">
+                About Us
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-left: 6px;"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+            </a>
+            <p class="footer-text" style="margin-bottom: 24px;">
+                A digital love letter to Filipino heritage, PiliKart combines local ingenuity to uplift communities and bring the warmth of home to your online shopping.
+            </p>
+            <br>
+            <!-- Contact Us Clickable Link -->
+            <a href="#" onclick="app.go('contact'); return false;" class="footer-title footer-glow-link">
+                Contact Us!
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-left: 6px;"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+            </a>
+            <p class="footer-text" style="margin-bottom: 0;">
+                PiliKart grows with you. Your feedback and suggestions help us shape a better, warmer experience for everyone. <br> May concern o idea ka? Let's talk!
+            </p>
         </div>
         <div class="footer-col">
             <h3 class="footer-title">
@@ -1823,9 +1922,13 @@
     </div>
 
     <div class="nav-drawer-links">
-        <!-- 1. Menu (Primary shopping action) -->
+                <!-- 1. Menu (Primary shopping action - Stall Icon) -->
         <a href="#" data-view="home" onclick="app.scrollToMenu(); app.toggleNavDrawer();">
-            <svg class="nd-icon" viewBox="0 0 24 24"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></svg>
+            <svg class="nd-icon" viewBox="0 0 24 24">
+                <path d="M3 9h18v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9Z"/>
+                <path d="M3 9l2-5h14l2 5"/>
+                <path d="M9 22V12h6v10"/>
+            </svg>
             <div>
                 <strong>Menu</strong>
                 <small>Ang Lutuan</small>
@@ -1877,9 +1980,12 @@
             </div>
         </a>
 
-        <!-- 7. About Us (Brand story) -->
+        <!-- 7. About Us (Brand story - Leaf Icon) -->
         <a href="#" data-view="about" onclick="app.navTo('about')">
-            <svg class="nd-icon" viewBox="0 0 24 24"><path d="M4 14.5A4.5 4.5 0 0 1 8.5 10h7a4.5 4.5 0 0 1 4.5 4.5V19a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-4.5Z"/><path d="M15 10V6a3 3 0 0 0-3-3H9a3 3 0 0 0-3 3v4"/><path d="M8 21v-3"/><path d="M16 21v-3"/><path d="M2 14h2"/><path d="M20 14h2"/></svg>
+            <svg class="nd-icon" viewBox="0 0 24 24">
+                <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/>
+                <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/>
+            </svg>
             <div>
                 <strong>About Us</strong>
                 <small>Tungkol sa PiliKart</small>
@@ -2102,7 +2208,7 @@
 
         <h2 style="font-family:'Baloo 2'; font-size: 24px; margin-bottom: 12px; color: var(--ink);">BANGA Delivery Restriction</h2>
         <p style="color: var(--muted); font-weight: 600; font-size: 14px; margin-bottom: 16px; line-height: 1.6;">
-            Ang iyong profile location ay naka-set sa labas ng <b>Calamba, Laguna</b>. Ang mga sumusunod na <b>PASO (pagkain)</b> items ay pwede lamang i-deliver sa loob ng Calamba:
+            Ang iyong profile location ay naka-set sa labas ng <b>Calamba, Laguna</b>. Ang mga sumusunod na <b>BANGA (pagkain)</b> items ay pwede lamang i-deliver sa loob ng Calamba:
         </p>
         
         <!-- Scrollable container for PASO items -->
@@ -2112,7 +2218,7 @@
 
         <div style="display: flex; flex-direction: column; gap: 12px;">
             <button class="btn btn-brand btn-block" onclick="app.pasoEditLocation()">I-edit ang Location</button>
-            <button class="btn btn-danger btn-block" onclick="app.pasoDeleteItems()">Alisin ang mga PASO Items</button>
+            <button class="btn btn-danger btn-block" onclick="app.pasoDeleteItems()">Alisin ang mga BANGA Items</button>
             <button class="btn btn-leaf btn-block" onclick="app.pasoConvertToBayanihan()">Gamitin ang Bayanihan Cart</button>
             <button class="btn btn-ghost btn-block" onclick="app.closeModal('paso-restriction-modal')">Cancel</button>
         </div>
@@ -2248,14 +2354,49 @@
 </div>
 
 <div id="bayanihan-create-modal" class="modal hidden" onclick="if (event.target === this) app.closeModal('bayanihan-create-modal')">
-    <div class="modal-content" style="max-width:420px; padding:28px;">
+    <div class="modal-content" style="max-width:500px; padding:28px;">
         <button class="modal-close-btn" onclick="app.closeModal('bayanihan-create-modal')">✕</button>
         <h2 class="pe-title" style="padding-right:0;">Create Bayanihan Cart</h2>
-        <p style="color:var(--muted); font-weight:600; font-size:13px; margin-bottom:16px;">Ikaw ang magiging host. Bibigyan ka ng 6-character code para makasali ang iba.</p>
+        <p style="color:var(--muted); font-weight:600; font-size:13px; margin-bottom:16px;">Ikaw ang magiging host. Ilagay ang delivery details para makapag-bayad agad ang mga kasama mo.</p>
+        
         <div class="form-group">
             <label>Cart Name</label>
             <input type="text" id="bg-create-name" class="input" placeholder="Hal. Office Lunch Friday" maxlength="60">
         </div>
+
+        <div class="co-row" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+            <div class="form-group">
+                <label>Recipient (Host)</label>
+                <input type="text" id="bg-create-recipient" class="input" readonly style="background:var(--bg); color:var(--muted); cursor:not-allowed; font-weight:700;">
+            </div>
+            <div class="form-group"><label>Contact Number</label><input type="text" id="bg-create-phone" class="input"></div>
+        </div>
+
+        <div class="co-row" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+            <div class="form-group">
+                <label>Lungsod</label>
+                <select id="bg-create-city" class="input" onchange="app.updateModalBrgyDropdown('create')">
+                    <option value="" disabled selected>Pumili ng Lungsod</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Barangay</label>
+                <select id="bg-create-brgy" class="input" onchange="app.updateModalFee('create')">
+                    <option value="" disabled selected>Pumili ng Barangay</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label>Additional info (Street, Bldg, Subd)</label>
+            <input type="text" id="bg-create-street" class="input">
+        </div>
+
+        <div class="form-group" style="margin-bottom:20px;">
+            <label>Delivery Fee (₱) <span style="color:var(--brand); font-size:10px;">(Auto)</span></label>
+            <input type="number" id="bg-create-fee" class="input" value="0" readonly style="background:var(--bg); color:var(--brand); font-weight:800;">
+        </div>
+
         <button class="btn btn-brand btn-block btn-large" onclick="app.submitCreateGroup()">Create Bayanihan Cart</button>
     </div>
 </div>
@@ -2338,17 +2479,49 @@
 </div>
 
 <div id="bayanihan-convert-modal" class="modal hidden" onclick="if (event.target === this) app.closeModal('bayanihan-convert-modal')">
-    <div class="modal-content" style="max-width:420px; padding:28px;">
+    <div class="modal-content" style="max-width:500px; padding:28px;">
         <button class="modal-close-btn" onclick="app.closeModal('bayanihan-convert-modal')">✕</button>
         <h2 style="font-family:'Baloo 2'; font-size:24px; margin-bottom:6px;">Convert to Bayanihan</h2>
         <p style="color:var(--muted); font-size:13px; font-weight:600; margin-bottom:20px;">
             Ilipat ang mga item sa cart mo para hatiin ang bayad kasama ang tropa.
         </p>
         
-        <!-- 🟢 NEW: Name Input -->
-        <div class="form-group" style="margin-bottom:16px;">
+        <div class="form-group" style="margin-bottom:10px;">
             <label>Cart Name</label>
             <input type="text" id="convert-group-name" class="input" placeholder="Hal. Office Lunch">
+        </div>
+
+        <div class="co-row" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+            <div class="form-group">
+            <label>Recipient (Host)</label>
+            <input type="text" id="bg-convert-recipient" class="input" readonly style="background:var(--bg); color:var(--muted); cursor:not-allowed; font-weight:700;">
+        </div>
+            <div class="form-group"><label>Contact Number</label><input type="text" id="bg-convert-phone" class="input"></div>
+        </div>
+
+        <div class="co-row" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+            <div class="form-group">
+                <label>Lungsod</label>
+                <select id="bg-convert-city" class="input" onchange="app.updateModalBrgyDropdown('convert')">
+                    <option value="" disabled selected>Pumili ng Lungsod</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Barangay</label>
+                <select id="bg-convert-brgy" class="input" onchange="app.updateModalFee('convert')">
+                    <option value="" disabled selected>Pumili ng Barangay</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label>Additional info (Street, Bldg, Subd)</label>
+            <input type="text" id="bg-convert-street" class="input">
+        </div>
+
+        <div class="form-group" style="margin-bottom:20px;">
+            <label>Delivery Fee (₱) <span style="color:var(--brand); font-size:10px;">(Auto)</span></label>
+            <input type="number" id="bg-convert-fee" class="input" value="0" readonly style="background:var(--bg); color:var(--brand); font-weight:800;">
         </div>
 
         <button class="btn btn-brand btn-block btn-large" style="margin-bottom:16px;" onclick="app.createBayanihanFromCart()">
@@ -2416,6 +2589,50 @@
         </div>
 
         <button class="btn btn-brand btn-block btn-large" style="margin-top:20px;" onclick="app.submitRefund()">Submit Request</button>
+    </div>
+</div>
+
+<!-- 🟢 NEW: Delete Account Modal -->
+<div id="delete-account-modal" class="modal hidden" onclick="if (event.target === this) app.closeModal('delete-account-modal')">
+    <div class="modal-content" style="max-width: 460px; padding: 32px;">
+        <button class="modal-close-btn" onclick="app.closeModal('delete-account-modal')">✕</button>
+
+        <div style="display: flex; justify-content: center; margin-bottom: 14px; color: #e5604d;">
+            <svg viewBox="0 0 24 24" width="56" height="56" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                <line x1="12" y1="9" x2="12" y2="13"></line>
+                <line x1="12" y1="17" x2="12.01" y2="17"></line>
+            </svg>
+        </div>
+
+        <h2 style="font-family:'Baloo 2'; font-size: 24px; margin-bottom: 8px; text-align: center; color: var(--ink);">Delete My Account?</h2>
+        <p style="color: var(--muted); font-weight: 600; font-size: 13px; margin-bottom: 22px; line-height: 1.6; text-align: center;">
+            Ang iyong account ay <b>matatanggal</b>. Hindi ka na makaka-login gamit ang email na ito.
+        </p>
+
+        <div class="form-group">
+            <label>Kumpirmahin sa Password</label>
+            <input type="password" id="del-acc-pass" class="input" placeholder="Ilagay ang iyong kasalukuyang password" autocomplete="new-password">
+        </div>
+
+        <label class="cart-checkbox-wrap" style="margin: 4px 0 20px; align-items: flex-start; gap: 10px; cursor: pointer;">
+            <input type="checkbox" id="del-acc-confirm">
+            <span class="cart-checkbox-custom" style="margin-top: 2px;"></span>
+            <span style="font-size: 13px; font-weight: 700; color: var(--ink); line-height: 1.4;">
+                Nauunawaan ko ang epekto nito sa aking account at gusto ko pa ring magpatuloy.
+            </span>
+        </label>
+
+        <div style="display: flex; gap: 10px;">
+            <button class="btn btn-ghost" style="flex: 1;" onclick="app.closeModal('delete-account-modal')">Cancel</button>
+            <button class="btn btn-danger" style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px;" id="del-acc-submit" onclick="app.submitDeleteAccount()">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="3 6 5 6 21 6"></polyline>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                </svg>
+                Delete Account
+            </button>
+        </div>
     </div>
 </div>
 
