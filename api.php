@@ -447,12 +447,12 @@ switch ($action) {
             $mail = new PHPMailer(true);
             try {
                 $mail->isSMTP();
-                $mail->Host       = 'smtp.gmail.com';
+                $mail->Host       = '--.email.com';
                 $mail->SMTPAuth   = true;
-                $mail->Username   = 'pilikartph@gmail.com';
-                $mail->Password   = 'wuocpwsctekjxskw';
+                $mail->Username   = '--@email.com';
+                $mail->Password   = '--';
                 $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
-                $mail->Port       = 587;
+                $mail->Port       = --;
 
                 // Bypass SSL certificate verification for local XAMPP
                 $mail->SMTPOptions = array(
