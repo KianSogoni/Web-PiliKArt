@@ -639,14 +639,19 @@ switch ($action) {
         if (!in_array($status, $allowed, true)) {
             out(['error' => 'Invalid status value.'], 400);
         }
-        if (!$oid) {
-            out(['error' => 'Invalid order ID.'], 400);
-        }
+        if (!$oid) out(['error' => 'Invalid order ID.'], 400);
 
+        // 🟢 NEW: Prevent bypassing the cancellation logic
+        $s = $pdo->prepare('SELECT status FROM orders WHERE id=?');
+        $s->execute([$oid]);
+        if ($s->fetchColumn() === 'Cancelled') {
+            out(['error' => 'Cannot update status: Order is Cancelled. It must be restored via an Appeal first.'], 400);
+        }
+        // 🟢 NEW: If manually changed, clear the appeal status so banners disappear
         if ($status === 'Delivered') {
-            $stmt = $pdo->prepare('UPDATE orders SET status=?, delivered_at=NOW() WHERE id=?');
+            $stmt = $pdo->prepare('UPDATE orders SET status=?, delivered_at=NOW(), appeal_status="none" WHERE id=?');
         } else {
-            $stmt = $pdo->prepare('UPDATE orders SET status=?, delivered_at=NULL WHERE id=?');
+            $stmt = $pdo->prepare('UPDATE orders SET status=?, delivered_at=NULL, appeal_status="none" WHERE id=?');
         }
         $stmt->execute([$status, $oid]);
         
@@ -660,28 +665,132 @@ switch ($action) {
 
         out(['ok' => true]);
  
-case 'admin-archive-order':
-    $oid = (int)$in['order_id'];
-    $s = $pdo->prepare('SELECT user_id, is_archived FROM orders WHERE id=?');
-    $s->execute([$oid]);
-    $o = $s->fetch();
-    if (!$o) out(['error' => 'Order not found'], 404);
-    if ((int)$o['is_archived'] === 1) out(['ok' => true]);
+    case 'admin-cancel-order':
+        $oid = (int)$in['order_id'];
+        $reason = trim($in['reason'] ?? 'Cancelled by admin');
+        $safeReason = htmlspecialchars($reason, ENT_QUOTES, 'UTF-8');
+        
+        $s = $pdo->prepare('SELECT user_id, status, stock_restored FROM orders WHERE id=?');
+        $s->execute([$oid]);
+        $o = $s->fetch();
+        if (!$o) out(['error' => 'Order not found'], 404);
+        
+        // If it's already cancelled, do nothing
+        if ($o['status'] === 'Cancelled') out(['ok' => true]);
 
-    $pdo->beginTransaction();
-    try {
-        restoreOrderStock($pdo, $oid);
-        $pdo->prepare('UPDATE orders SET is_archived=1 WHERE id=?')->execute([$oid]);
-        $pdo->commit();
-    } catch (Exception $e) {
-        $pdo->rollBack();
-        out(['error' => 'Archive failed'], 500);
-    }
+        $pdo->beginTransaction();
+        try {
+            restoreOrderStock($pdo, $oid);
+            
+            // 🟢 FIX: Reset appeal_status and appeal_reason when cancelling again
+            $pdo->prepare('UPDATE orders SET status="Cancelled", cancel_reason=?, appeal_status="none", appeal_reason=NULL, stock_restored=1 WHERE id=?')
+                ->execute([$safeReason, $oid]);
+                
+            $pdo->commit();
+        } catch (Exception $e) {
+            $pdo->rollBack();
+            out(['error' => 'Cancellation failed'], 500);
+        }
 
-    if ($o['user_id']) {
-        notify($pdo, (int)$o['user_id'], 0, "Ang order #$oid ay na-delete na ng admin.");
-    }
-    out(['ok' => true]);
+        if ($o['user_id']) {
+            notify($pdo, (int)$o['user_id'], $oid, "Your Order #$oid was cancelled by the Admin.<br><b>Reason:</b> $safeReason");
+        }
+        out(['ok' => true]);
+
+    case 'submit-appeal':
+        $uid = (int)($_SESSION['user_id'] ?? 0);
+        if (!$uid) out(['error' => 'Not logged in'], 401);
+        
+        $oid = (int)($in['order_id'] ?? 0);
+        $reason = trim($in['reason'] ?? '');
+        if (!$reason) out(['error' => 'Appeal reason is required.'], 400);
+
+        $s = $pdo->prepare('SELECT status, appeal_status FROM orders WHERE id=? AND user_id=?');
+        $s->execute([$oid, $uid]);
+        $order = $s->fetch();
+        
+        if (!$order || $order['status'] !== 'Cancelled') out(['error' => 'Invalid order.'], 400);
+        if ($order['appeal_status'] === 'requested') out(['error' => 'You already have a pending appeal.'], 400);
+
+        $pdo->prepare('UPDATE orders SET appeal_status="requested", appeal_reason=? WHERE id=?')->execute([$reason, $oid]);
+        
+        notifyAdmins($pdo, $oid, "Appeal Request: User is appealing the cancellation of Order #$oid.");
+        out(['ok' => true]);
+
+    case 'admin-handle-appeal':
+        $oid = (int)($in['order_id'] ?? 0);
+        $action = $in['action'] ?? ''; // 'approve' or 'reject'
+        
+        if (!in_array($action, ['approve', 'reject'], true)) out(['error' => 'Invalid action'], 400);
+
+        $s = $pdo->prepare('SELECT user_id, appeal_status FROM orders WHERE id=?');
+        $s->execute([$oid]);
+        $order = $s->fetch();
+        if (!$order) out(['error' => 'Order not found'], 404);
+
+        $pdo->beginTransaction();
+        try {
+            if ($action === 'approve') {
+                // Check if stock is still available
+                $items = $pdo->prepare('SELECT product_id, qty, variation FROM order_items WHERE order_id=?');
+                $items->execute([$oid]);
+                foreach ($items->fetchAll() as $it) {
+                    $p = $pdo->prepare('SELECT sold_out FROM products WHERE id=? AND is_archived=0');
+                    $p->execute([$it['product_id']]);
+                    $prod = $p->fetch();
+                    
+                    // 🟢 FIX: Use the 3NF signature (PDO, ID, variation)
+                    $avail = $prod ? availableStock($pdo, (int)$it['product_id'], $it['variation'] ?? '') : 0;
+                    
+                    if (!$prod || $prod['sold_out'] || $avail < $it['qty']) {
+                        $pdo->rollBack();
+                        out(['error' => 'Cannot approve: Stock is no longer available to fulfill this order.'], 400);
+                    }
+                }
+                
+                // Restore order and deduct stock again
+                $pdo->prepare('UPDATE orders SET status="Pending", appeal_status="approved", stock_restored=0 WHERE id=?')->execute([$oid]);
+                
+                $items = $pdo->prepare('SELECT product_id, qty, variation FROM order_items WHERE order_id=?');
+                $items->execute([$oid]);
+                foreach ($items->fetchAll() as $it) {
+                    decreaseStock($pdo, (int)$it['product_id'], (int)$it['qty'], $it['variation']);
+                }
+                $msg = "Good news! Your appeal for Order #$oid was APPROVED. The order has been restored.";
+            } else {
+                $pdo->prepare('UPDATE orders SET appeal_status="rejected" WHERE id=?')->execute([$oid]);
+                $msg = "Your appeal for Order #$oid was REJECTED. The cancellation stands.";
+            }
+            $pdo->commit();
+        } catch (Exception $e) {
+            $pdo->rollBack();
+            out(['error' => 'Database Error: ' . $e->getMessage()], 500);
+        }
+
+        if ($order['user_id']) {
+            notify($pdo, (int)$order['user_id'], $oid, $msg);
+        }
+        out(['ok' => true]);
+
+    case 'admin-archive-group':
+        $gid = (int)$in['id'];
+        $reason = trim($in['reason'] ?? 'Cancelled by admin');
+        $safeReason = htmlspecialchars($reason, ENT_QUOTES, 'UTF-8'); // 🟢 SANITIZE
+
+        $s = $pdo->prepare('SELECT name FROM group_carts WHERE id=?');
+        $s->execute([$gid]);
+        $gname = $s->fetchColumn();
+        if (!$gname) out(['error' => 'Group not found'], 404);
+
+        $pdo->prepare('UPDATE group_carts SET status="cancelled", is_archived=1 WHERE id=?')->execute([$gid]);
+        
+        $s = $pdo->prepare('SELECT user_id FROM group_cart_members WHERE group_cart_id=?');
+        $s->execute([$gid]);
+        foreach ($s->fetchAll(PDO::FETCH_COLUMN) as $uid) {
+            // 🟢 Use $safeReason here
+            notify($pdo, $uid, 0, "The Bayanihan Cart \"$gname\" was cancelled by the Admin.<br><b>Reason:</b> $safeReason");
+        }
+        out(['ok' => true]);
  
     case 'admin-edit-product':
         $pid = (int)($in['id'] ?? 0);
@@ -736,11 +845,31 @@ case 'admin-archive-order':
         out(['ok' => true]);
  
     case 'admin-delete-product':
-        $pdo->prepare('UPDATE products SET is_archived=1 WHERE id=?')->execute([$in['id']]);
+        $pid = (int)$in['id'];
+        $reason = trim($in['reason'] ?? 'Removed from store');
+        $safeReason = htmlspecialchars($reason, ENT_QUOTES, 'UTF-8'); // 🟢 SANITIZE
+        
         $s = $pdo->prepare('SELECT name FROM products WHERE id=?');
-        $s->execute([$in['id']]);
-        $pname = $s->fetchColumn() ?: 'Item';
-        notifyAdmins($pdo, 0, "Na-archive ang product: $pname.");
+        $s->execute([$pid]);
+        $pname = $s->fetchColumn() ?: 'An item';
+
+        $pdo->prepare('UPDATE products SET is_archived=1 WHERE id=?')->execute([$pid]);
+
+        $stmt = $pdo->prepare("
+            SELECT DISTINCT o.user_id 
+            FROM order_items oi
+            INNER JOIN orders o ON oi.order_id = o.id
+            WHERE oi.product_id = ? AND o.user_id IS NOT NULL
+        ");
+        $stmt->execute([$pid]);
+        $affectedUsers = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+        foreach ($affectedUsers as $uid) {
+            // 🟢 Use $safeReason here
+            notify($pdo, (int)$uid, 0, "The product <b>$pname</b> has been removed from the store by the Admin.<br><b>Reason:</b> $safeReason");
+        }
+
+        notifyAdmins($pdo, 0, "Admin deleted product: $pname. Reason: $safeReason");
         out(['ok' => true]);
  
     case 'admin-add-product':
@@ -1757,6 +1886,8 @@ case 'admin-archive-order':
         }
 
     case 'admin-delete-fee':
+        $reason = trim($in['reason'] ?? '');
+        // Just delete it. Since it's a global setting, users won't be explicitly notified.
         $pdo->prepare('DELETE FROM delivery_fees WHERE id=?')->execute([$in['id']]);
         out(['ok' => true]);
 

@@ -145,6 +145,47 @@ const app = {
         document.getElementById('custom-confirm-modal').classList.remove('hidden');
         this.updateBodyScrollLock();
     },
+
+    promptAdminDelete(type, id, name, actionCallback) {
+        this._adminDeleteTarget = { type, id, name, actionCallback };
+        document.getElementById('adr-type').textContent = type;
+        document.getElementById('adr-name').textContent = name;
+        document.getElementById('adr-reason').value = '';
+        document.getElementById('admin-delete-reason-modal').classList.remove('hidden');
+        this.updateBodyScrollLock();
+    },
+
+    async submitAdminDelete() {
+        const reason = document.getElementById('adr-reason').value.trim();
+        if (!reason) return this.showToast('Please provide a reason for deletion.');
+
+        const { type, id, actionCallback } = this._adminDeleteTarget;
+        const btn = document.getElementById('adr-confirm-btn');
+        this.setBtnLoading(btn, true);
+
+        try {
+            const res = await fetch(`api.php?action=${actionCallback}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: id, order_id: id, reason: reason })
+            });
+            const data = await res.json();
+            
+            if (data.ok) {
+                this.closeModal('admin-delete-reason-modal');
+                this.showToast(`${type} deleted successfully.`);
+                await this.reloadAdminData();
+                if (type === 'Bayanihan Cart') this.go('admin'); 
+            } else {
+                this.showToast(data.error || 'Failed to delete.');
+            }
+        } catch (e) {
+            this.showToast('Connection error.');
+        } finally {
+            this.setBtnLoading(btn, false);
+        }
+    },
+
         // 🟢 NEW: Global Loader Helper
     showLoader(text = 'Inihahanda ang PiliKart...') {
         const loader = document.getElementById('global-loader');
@@ -814,7 +855,7 @@ const app = {
             return `<div class="notif-item ${unread ? 'unread' : ''}" onclick="app.handleNotifClick(${n.id}, ${n.order_id || 0})">
                 <div class="notif-icon">${iconFor(n.message)}</div>
                 <div class="notif-content">
-                    <p>${this.esc(n.message)}</p>
+                    <p>${n.message}</p>
                     <div class="notif-time">${this.relativeTime(n.created_at)}</div>
                 </div>
             </div>`;
@@ -1050,11 +1091,33 @@ const app = {
     checkCartStock() {
         if (!this.products.length || !this.cart.length) return;
         const missing = [];
+        let cartUpdated = false;
+
         this.cart.forEach(c => {
             const p = this.products.find(x => x.id === c.id);
+            
+            // 1. Product was deleted/archived entirely by Admin
+            if (!p) {
+                missing.push(`${c.name} (No longer available)`);
+                return;
+            }
+
+            // 2. Product price changed
+            if (p.price !== c.price) {
+                this.showToast(`Price Update: The price of ${c.name} was changed to ₱${p.price}.`);
+                c.price = p.price;
+                cartUpdated = true;
+            }
+
+            // 3. Stock dropped to 0 or below cart quantity
             const varStock = this.getVariationStock(p, c.variation || '');
-            if (!p || varStock <= 0 || varStock < c.qty) missing.push(c.name + (c.variation ? ` (${c.variation})` : ''));
+            if (varStock <= 0 || varStock < c.qty) {
+                missing.push(c.name + (c.variation ? ` (${c.variation})` : ''));
+            }
         });
+
+        if (cartUpdated) this.saveCart();
+
         if (missing.length > 0) {
             const listEl = document.getElementById('stock-alert-list');
             if (listEl) listEl.innerHTML = missing.map(name => `<li>${this.esc(name)}</li>`).join('');
@@ -3521,6 +3584,7 @@ renderMenu() {
             if (o.status === 'Preparing') statusClass = 'status-preparing';
             if (o.status === 'Shipping') statusClass = 'status-shipping';
             if (o.status === 'Out for Delivery') statusClass = 'status-out';
+            if (o.status === 'Cancelled') statusClass = 'status-out';
             if (o.status === 'Delivered') statusClass = 'status-delivered';
 
             return `
@@ -3549,6 +3613,17 @@ renderMenu() {
 
                 <div class="order-footer" style="flex-wrap: wrap; gap: 10px;">
                     <div style="display:flex; align-items:center; gap:10px;"><span class="footer-label">Kabuuan</span><span class="footer-total">${this.money(o.total)}</span></div>
+                    ${o.status === 'Cancelled' ? `
+                        <div style="padding:16px; background:rgba(229,96,77,0.05); border:1px solid rgba(229,96,77,0.3); border-radius:12px; margin: 12px 24px;">
+                            <h4 style="color:#e5604d; font-weight:800; margin-bottom:8px;">Order Cancelled</h4>
+                            <p style="font-size:13px; color:var(--ink); font-weight:600; margin-bottom:12px;"><b>Admin Reason:</b> ${this.esc(o.cancel_reason || 'No reason provided')}</p>
+                            
+                            ${o.appeal_status === 'none' ? `<button class="btn btn-brand" style="padding:6px 16px; font-size:12px; border-radius:99px;" onclick="app.openAppealModal(${o.id}, '${this.esc(o.cancel_reason || '')}')">Appeal Cancellation</button>` : ''}
+                            ${o.appeal_status === 'requested' ? `<span style="color:#d98c1d; font-weight:800; font-size:12px;">Appeal Pending Admin Review...</span>` : ''}
+                            ${o.appeal_status === 'approved' ? `<span style="color:var(--leaf); font-weight:800; font-size:12px;">✓ Appeal Approved (Order Restored)</span>` : ''}
+                            ${o.appeal_status === 'rejected' ? `<span style="color:#e5604d; font-weight:800; font-size:12px;">✕ Appeal Rejected</span>` : ''}
+                        </div>
+                    ` : ''}
                     ${o.status === 'Delivered' ? ` ${(() => {
                             const deliveryTime = o.delivered_at ? new Date(o.delivered_at).getTime() : new Date(o.created_at).getTime();
                             const hoursElapsed = (Date.now() - deliveryTime) / (1000 * 60 * 60);
@@ -3818,6 +3893,7 @@ toggleAdvancedMenuFilters(btn) {
             if (o.status === 'Preparing') statusClass = 'status-preparing';
             if (o.status === 'Shipping') statusClass = 'status-shipping';
             if (o.status === 'Out for Delivery') statusClass = 'status-out';
+            if (o.status === 'Cancelled') statusClass = 'status-out';
             if (o.status === 'Delivered') statusClass = 'status-delivered';
             const dateStr = o.created_at ? new Date(o.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A';
 
@@ -3830,26 +3906,40 @@ toggleAdvancedMenuFilters(btn) {
                 ${o.refund_status === 'requested' ? `<div style="padding:12px; background:rgba(229,96,77,0.1); border:1px solid rgba(229,96,77,0.3); border-radius:8px; font-size:12px;"><div style="font-weight:800; color:#e5604d; text-transform:uppercase; margin-bottom:6px;">⚠️ Refund Requested</div><div style="color:var(--ink); font-weight:600; margin-bottom:8px;"><b>Reason:</b> ${this.esc(o.refund_reason || 'N/A')}</div><div style="display:flex; gap:8px; flex-wrap:wrap;">${o.refund_proof ? `<button class="btn btn-ghost" style="padding:4px 8px; font-size:11px;" onclick="app.viewProof('${o.refund_proof}')">View Proof</button>` : ''}<button class="btn btn-leaf" style="padding:4px 8px; font-size:11px;" onclick="app.handleAdminRefund(${o.id}, 'approve')">Approve</button><button class="btn btn-danger" style="padding:4px 8px; font-size:11px;" onclick="app.handleAdminRefund(${o.id}, 'reject')">Reject</button></div></div>` : ''}
                 ${o.refund_status === 'approved' ? `<div style="padding:8px; background:rgba(63,122,69,0.1); color:var(--leaf); border-radius:8px; font-size:11px; font-weight:800; text-align:center;">✓ Refund Approved</div>` : ''}
                 ${o.refund_status === 'rejected' ? `<div style="padding:8px; background:rgba(229,96,77,0.1); color:#e5604d; border-radius:8px; font-size:11px; font-weight:800; text-align:center;">✕ Refund Rejected</div>` : ''}
+                ${o.status === 'Cancelled' && o.appeal_status === 'requested' ? `<div style="padding:12px; background:rgba(240,169,59,0.15); border:1px solid var(--amber); border-radius:8px; font-size:12px;"><div style="font-weight:800; color:#d98c1d; text-transform:uppercase; margin-bottom:6px;">Appeal Requested</div><div style="color:var(--ink); font-weight:600; margin-bottom:8px;"><b>Reason:</b> ${this.esc(o.appeal_reason || 'N/A')}</div><div style="display:flex; gap:8px;"><button class="btn btn-leaf" style="padding:4px 8px; font-size:11px;" onclick="app.handleAdminAppeal(${o.id}, 'approve')">Approve & Restore</button><button class="btn btn-danger" style="padding:4px 8px; font-size:11px;" onclick="app.handleAdminAppeal(${o.id}, 'reject')">Reject Appeal</button></div></div>` : ''}
+                ${o.appeal_status === 'approved' ? `<div style="padding:8px; background:rgba(63,122,69,0.1); color:var(--leaf); border-radius:8px; font-size:11px; font-weight:800; text-align:center;">✓ Appeal Approved (Order Restored)</div>` : ''}
+                ${o.appeal_status === 'rejected' ? `<div style="padding:8px; background:rgba(229,96,77,0.1); color:#e5604d; border-radius:8px; font-size:11px; font-weight:800; text-align:center;">✕ Appeal Rejected</div>` : ''}
                 <div class="admin-order-footer"><div class="admin-order-total"><span>Total:</span><b>${this.money(o.total)}</b>${(o.protection_fee && o.protection_fee > 0) ? `<small style="display:block; font-size:10px; color:var(--muted); font-weight:700;">incl. ${this.money(o.protection_fee)} protection</small>` : ''}</div><div class="admin-order-payment">${o.payment === 'gcash' ? (o.payment_proof ? `<button class="btn btn-ghost" style="padding:4px 8px; font-size:11px;" onclick="app.viewProof('${o.payment_proof}')">View GCash Proof</button>` : '<span class="pay-badge" style="background:rgba(47,140,255,0.15); color:#2f8cff;">GCash</span>') : '<span class="pay-badge">COD</span>'}</div></div>
                 <div class="admin-order-actions" style="position: relative;">
                     <div style="flex: 1; position: relative;">
-                        <div class="input" style="padding:8px; font-size:12px; cursor:pointer; display:flex; justify-content:space-between; align-items:center; background-color: var(--surface); color: var(--ink);" onclick="app.toggleStatusDropdown(event, ${o.id})">
-                            <span>${this.esc(o.status)}</span>
-                            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
-                        </div>
-                        <div class="status-dropdown-menu hidden" id="status-dropdown-${o.id}" style="position:absolute; bottom: 100%; left:0; right:0; background:var(--surface); border:1px solid var(--line); border-radius:8px; margin-bottom:4px; z-index:100; box-shadow:var(--shadow); overflow:hidden;">
-                            <!-- 🟢 ADDED 'Preparing' -->
-                            ${['Pending', 'Preparing', 'Shipping', 'Out for Delivery', 'Delivered'].map(st => `
-                                <div style="padding:10px; font-size:12px; cursor:pointer; color:var(--ink); border-bottom: 1px solid var(--line); ${o.status === st ? 'background:var(--surface2); font-weight:800;' : ''}" 
-                                     onclick="app.selectOrderStatus(${o.id}, '${st}')" 
-                                     onmouseover="this.style.background='var(--surface2)'" 
-                                     onmouseout="this.style.background='${o.status === st ? 'var(--surface2)' : 'transparent'}'">
-                                    ${st}
-                                </div>
-                            `).join('')}
-                        </div>
+                        ${o.status === 'Cancelled' ? `
+                            <!-- Static locked box for Cancelled orders -->
+                            <div class="input" style="padding:8px; font-size:12px; display:flex; justify-content:space-between; align-items:center; background-color: rgba(229, 96, 77, 0.1); color: #e5604d; cursor: not-allowed; border-color: rgba(229, 96, 77, 0.3); font-weight: 800;">
+                                <span>${this.esc(o.status)}</span>
+                                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                            </div>
+                        ` : `
+                            <!-- Interactive Dropdown for Active orders -->
+                            <div class="input" style="padding:8px; font-size:12px; cursor:pointer; display:flex; justify-content:space-between; align-items:center; background-color: var(--surface); color: var(--ink);" onclick="app.toggleStatusDropdown(event, ${o.id})">
+                                <span>${this.esc(o.status)}</span>
+                                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                            </div>
+                            <div class="status-dropdown-menu hidden" id="status-dropdown-${o.id}" style="position:absolute; bottom: 100%; left:0; right:0; background:var(--surface); border:1px solid var(--line); border-radius:8px; margin-bottom:4px; z-index:100; box-shadow:var(--shadow); overflow:hidden;">
+                                ${['Pending', 'Preparing', 'Shipping', 'Out for Delivery', 'Delivered'].map(st => `
+                                    <div style="padding:10px; font-size:12px; cursor:pointer; color:var(--ink); border-bottom: 1px solid var(--line); ${o.status === st ? 'background:var(--surface2); font-weight:800;' : ''}" 
+                                         onclick="app.selectOrderStatus(${o.id}, '${st}')" 
+                                         onmouseover="this.style.background='var(--surface2)'" 
+                                         onmouseout="this.style.background='${o.status === st ? 'var(--surface2)' : 'transparent'}'">
+                                        ${st}
+                                    </div>
+                                `).join('')}
+                            </div>
+                        `}
                     </div>
-                    <button class="btn btn-danger" style="padding:8px 12px; font-size:12px;" onclick="app.deleteOrder(${o.id})">Delete</button>
+                    ${o.status === 'Cancelled' 
+                        ? `<button class="btn btn-danger" style="padding:8px 12px; font-size:12px; opacity:0.5; cursor:not-allowed; pointer-events:none;" disabled title="Order is already cancelled">Cancelled</button>`
+                        : `<button class="btn btn-danger" style="padding:8px 12px; font-size:12px;" onclick="app.cancelOrder(${o.id})">Cancel</button>`
+                    }
                 </div>
             </div>`;
         }).join('') || '<div class="empty-state"><h3>No orders found</h3><p>Try adjusting your search or filter.</p></div>';
@@ -4063,6 +4153,56 @@ toggleAdvancedMenuFilters(btn) {
 
     addPeOptionChoice(btn) { const container = btn.previousElementSibling; this._appendChoiceInput(container); },
 
+    _appealOrderId: null,
+    openAppealModal(orderId, cancelReason) {
+        this._appealOrderId = orderId;
+        document.getElementById('appeal-cancel-reason').textContent = cancelReason;
+        document.getElementById('appeal-text').value = '';
+        document.getElementById('appeal-modal').classList.remove('hidden');
+        this.updateBodyScrollLock();
+    },
+
+    async submitAppeal() {
+        const reason = document.getElementById('appeal-text').value.trim();
+        if (!reason) return this.showToast('Please provide a reason for your appeal.');
+
+        const btn = document.getElementById('appeal-submit-btn');
+        this.setBtnLoading(btn, true);
+
+        try {
+            const res = await fetch('api.php?action=submit-appeal', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ order_id: this._appealOrderId, reason: reason })
+            });
+            const data = await res.json();
+            
+            if (data.ok) {
+                this.closeModal('appeal-modal');
+                this.showToast('Appeal submitted! Waiting for Admin review.');
+                await this.refreshData();
+                this.renderOrders();
+            } else {
+                this.showToast(data.error || 'Failed to submit appeal.');
+            }
+        } catch(e) { this.showToast('Connection error.'); } 
+        finally { this.setBtnLoading(btn, false); }
+    },
+
+    async handleAdminAppeal(orderId, action) {
+        const actStr = action === 'approve' ? 'APPROVE and restore' : 'REJECT';
+        this.showConfirm('Review Appeal', `Are you sure you want to ${actStr} the appeal for Order #${orderId}?`, async () => {
+            try {
+                const res = await fetch('api.php?action=admin-handle-appeal', {
+                    method: 'POST', headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({ order_id: orderId, action })
+                });
+                const data = await res.json();
+                if (data.ok) { this.showToast(`Appeal ${action}d.`); await this.reloadAdminData(); } 
+                else this.showToast(data.error || 'Failed.');
+            } catch(e) { this.showToast('Connection error.'); }
+        }, 'Confirm');
+    },
+
     async saveProductEditor(e) {
         if (e) e.preventDefault();
         if (!this.editingProductId) return;
@@ -4221,19 +4361,15 @@ toggleAdvancedMenuFilters(btn) {
         }, 'Update');
     },
 
-    async deleteOrder(id) {
-        this.showConfirm('Delete Order', 'Are you sure you want to permanently delete this order? This action cannot be undone.', async () => {
-            try {
-                const res = await fetch('api.php?action=admin-archive-order', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ order_id: id }) });
-                const data = await res.json();
-                if (data.ok) {
-                    this.showToast('Order deleted.'); 
-                    await this.reloadAdminData();
-                } else {
-                    this.showToast(data.error || 'Failed to delete.');
-                }
-            } catch(e) { this.showToast('Connection error.'); }
-        }, 'Delete');
+    cancelOrder(id) {
+        this.promptAdminDelete('Cancel Order', id, `Order #${id}`, 'admin-cancel-order');
+        // Change the submit button text to say Cancel instead of Delete
+        setTimeout(() => {
+            const btn = document.getElementById('adr-confirm-btn');
+            if (btn) btn.textContent = 'Confirm Cancellation';
+            const title = document.querySelector('#admin-delete-reason-modal .pe-title');
+            if (title) title.style.color = 'var(--brand)';
+        }, 10);
     },
 
     async handleAdminRefund(orderId, action) {
@@ -4247,13 +4383,17 @@ toggleAdvancedMenuFilters(btn) {
         } catch (e) { this.showToast('Connection error.'); }
     },
 
-    deleteProductEditor() { if (!this.editingProductId) return; const id = this.editingProductId; this.closeProductEditor(); this.deleteProduct(id); },
+    deleteProductEditor() { 
+        if (!this.editingProductId) return; 
+        const id = this.editingProductId; 
+        const p = this.products.find(x => x.id === id);
+        this.closeProductEditor(); 
+        this.promptAdminDelete('Product', id, p.name, 'admin-delete-product'); 
+    },
     
-    async deleteProduct(id) {
-        this.showConfirm('Delete Product', 'Are you sure you want to archive this product? It will no longer appear on the menu.', async () => {
-            await fetch('api.php?action=admin-delete-product', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ id }) });
-            this.showToast('Product archived.'); await this.reloadAdminData();
-        }, 'Archive');
+    deleteProduct(id) {
+        const p = this.products.find(x => x.id === id);
+        this.promptAdminDelete('Product', id, p ? p.name : `Product #${id}`, 'admin-delete-product');
     },
 
     openAddProductModal() {
@@ -5274,7 +5414,16 @@ toggleAdvancedMenuFilters(btn) {
             if (!body) return; // Safety check
 
             body.innerHTML = `
-                <div class="page-head"><button class="btn btn-ghost" style="margin-bottom:12px; padding:6px 14px; font-size:13px;" onclick="app.go('admin')">← Back to Dashboard</button><h1>${this.esc(g.name)}</h1><p>Host: ${this.esc(approved.find(m => m.role === 'host')?.name || '—')} · Status: <b>${this.esc(g.status)}</b></p></div>
+                <div class="page-head">
+                    <button class="btn btn-ghost" style="margin-bottom:12px; padding:6px 14px; font-size:13px;" onclick="app.go('admin')">← Back to Dashboard</button>
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                        <div>
+                            <h1>${this.esc(g.name)}</h1>
+                            <p>Host: ${this.esc(approved.find(m => m.role === 'host')?.name || '—')} · Status: <b>${this.esc(g.status)}</b></p>
+                        </div>
+                        ${g.status !== 'cancelled' ? `<button class="btn btn-danger" onclick="app.promptAdminDelete('Bayanihan Cart', ${g.id}, '${this.esc(g.name)}', 'admin-archive-group')">Archive Cart</button>` : ''}
+                    </div>
+                </div>
                 ${gcashPaid.length ? `<div style="padding:14px; background:rgba(47,140,255,0.1); border-left:4px solid #2f8cff; border-radius:10px; margin-bottom:20px;"><b style="color:#2f8cff;">📱 GCash Payments Locked</b><p style="font-size:12px; margin-top:4px; color:var(--ink); font-weight:600;">${gcashPaid.length} member(s) already paid via GCash — this cart cannot be cancelled.</p></div>` : ''}
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:20px;">
                     <div class="co-card"><h3>📍 Delivery</h3><p style="font-size:13px; font-weight:600; line-height:1.7;"><b>Recipient:</b> ${this.esc(g.customer_name || '—')}<br><b>Phone:</b> ${this.esc(g.phone || '—')}<br><b>Address:</b> ${this.esc(this.formatAddress(g.delivery_address) || '—')}<br><b>Payment:</b> ${g.payment ? g.payment.toUpperCase() : 'N/A'}<br><b>Delivery Fee:</b> ${this.money(deliveryFee)}</p></div>
@@ -5322,11 +5471,10 @@ toggleAdvancedMenuFilters(btn) {
         }, 'Save');
     },
 
-    async deleteFee(id) {
-        this.showConfirm('Delete Location', 'Remove this delivery location?', async () => {
-            await fetch('api.php?action=admin-delete-fee', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ id }) });
-            this.showToast('Location deleted.'); await this.refreshData(); this.renderAdminFees();
-        }, 'Delete');
+    deleteFee(id) {
+        const fee = this.deliveryFeesRaw.find(f => f.id === id);
+        const name = fee ? `${fee.barangay}, ${fee.city}` : 'Location';
+        this.promptAdminDelete('Delivery Location', id, name, 'admin-delete-fee');
     },
 
     openAddFeeModal() {
