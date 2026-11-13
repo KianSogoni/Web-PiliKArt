@@ -38,6 +38,128 @@ function notifyAdmins(PDO $pdo, int $orderId, string $message) {
     } catch (Exception $e) {}
 }
 
+function decreaseStock(PDO $pdo, int $pid, int $qty, string $variation = '') {
+    $pdo->prepare('UPDATE products SET stock=GREATEST(0, stock-?), sold_out=(stock-?<=0) WHERE id=?')
+        ->execute([$qty, $qty, $pid]);
+    if ($variation !== '') {
+        $pdo->prepare('UPDATE product_variants SET stock=GREATEST(0, stock-?) WHERE product_id=? AND variation_string=?')
+            ->execute([$qty, $pid, $variation]);
+    }
+}
+
+function restoreOrderStock(PDO $pdo, int $orderId) {
+    $s = $pdo->prepare('SELECT stock_restored FROM orders WHERE id=?');
+    $s->execute([$orderId]);
+    if ((int)$s->fetchColumn() === 1) return;
+
+    $s = $pdo->prepare('SELECT product_id, qty, variation FROM order_items WHERE order_id=?');
+    $s->execute([$orderId]);
+    $items = $s->fetchAll();
+
+    $upStock = $pdo->prepare('UPDATE products SET stock=stock+?, sold_out=0 WHERE id=?');
+    $upVar   = $pdo->prepare('UPDATE product_variants SET stock=stock+? WHERE product_id=? AND variation_string=?');
+
+    foreach ($items as $it) {
+        $upStock->execute([$it['qty'], $it['product_id']]);
+        if (!empty($it['variation'])) {
+            $upVar->execute([$it['qty'], $it['product_id'], $it['variation']]);
+        }
+    }
+    $pdo->prepare('UPDATE orders SET stock_restored=1 WHERE id=?')->execute([$orderId]);
+}
+
+/* ───────── 3NF helpers ───────── */
+
+// READ: rebuild the exact `p.options` JSON the frontend already expects
+function buildOptionsJson(PDO $pdo, int $productId): string {
+    $gStmt = $pdo->prepare('SELECT id, spec_name FROM product_options WHERE product_id=? ORDER BY sort_order, id');
+    $gStmt->execute([$productId]);
+    $groups = $gStmt->fetchAll();
+    if (!$groups) return '';
+
+    $cStmt = $pdo->prepare('SELECT choice_name, price_modifier FROM product_option_choices WHERE option_id=? ORDER BY sort_order, id');
+    $obj = [];
+
+    foreach ($groups as $g) {
+        $cStmt->execute([$g['id']]);
+        $choices = $cStmt->fetchAll();
+        if (!$choices) continue;
+
+        // Match the legacy convention: array when all modifiers are 0, object otherwise
+        $allZero = true;
+        foreach ($choices as $c) { if ((int)$c['price_modifier'] !== 0) { $allZero = false; break; } }
+
+        if ($allZero) {
+            $obj[$g['spec_name']] = array_column($choices, 'choice_name');
+        } else {
+            $map = [];
+            foreach ($choices as $c) $map[$c['choice_name']] = (int)$c['price_modifier'];
+            $obj[$g['spec_name']] = $map;
+        }
+    }
+
+    $vStmt = $pdo->prepare('SELECT variation_string, stock FROM product_variants WHERE product_id=?');
+    $vStmt->execute([$productId]);
+    $obj['_stocks'] = [];
+    foreach ($vStmt->fetchAll() as $v) {
+        $obj['_stocks'][$v['variation_string']] = (int)$v['stock'];
+    }
+
+    return json_encode($obj);
+}
+
+// WRITE: replace all options/variants for a product from the legacy JSON
+function saveProductOptions(PDO $pdo, int $productId, string $optionsJson): int {
+    $pdo->prepare('DELETE FROM product_options WHERE product_id=?')->execute([$productId]);
+    $pdo->prepare('DELETE FROM product_variants WHERE product_id=?')->execute([$productId]);
+
+    if ($optionsJson === '') return 0;
+    $opts = json_decode($optionsJson, true);
+    if (!is_array($opts)) return 0;
+
+    $insOpt    = $pdo->prepare('INSERT INTO product_options (product_id, spec_name, sort_order) VALUES (?,?,?)');
+    $insChoice = $pdo->prepare('INSERT INTO product_option_choices (option_id, choice_name, price_modifier, sort_order) VALUES (?,?,?,?)');
+
+    $gOrder = 0;
+    foreach ($opts as $name => $choices) {
+        if ($name === '_stocks') continue;
+        $insOpt->execute([$productId, $name, $gOrder++]);
+        $optionId = (int)$pdo->lastInsertId();
+
+        $cOrder = 0;
+        if (is_array($choices)) {
+            foreach ($choices as $k => $v) {
+                if (is_int($k)) $insChoice->execute([$optionId, $v, 0, $cOrder++]);
+                else           $insChoice->execute([$optionId, $k, (int)$v, $cOrder++]);
+            }
+        }
+    }
+
+    $totalStock = 0;
+    if (!empty($opts['_stocks']) && is_array($opts['_stocks'])) {
+        $insVar = $pdo->prepare('INSERT INTO product_variants (product_id, variation_string, stock) VALUES (?,?,?)');
+        foreach ($opts['_stocks'] as $varStr => $qty) {
+            $qty = max(0, (int)$qty);
+            $insVar->execute([$productId, $varStr, $qty]);
+            $totalStock += $qty;
+        }
+    }
+    return $totalStock;
+}
+
+// AVAILABILITY: signature changes from (array $product, string $variation) to (PDO $pdo, int $productId, string $variation)
+function availableStock(PDO $pdo, int $productId, string $variation = ''): int {
+    if ($variation !== '') {
+        $s = $pdo->prepare('SELECT stock FROM product_variants WHERE product_id=? AND variation_string=?');
+        $s->execute([$productId, $variation]);
+        $v = $s->fetchColumn();
+        return $v === false ? 0 : (int)$v;
+    }
+    $s = $pdo->prepare('SELECT stock FROM products WHERE id=?');
+    $s->execute([$productId]);
+    return (int)$s->fetchColumn();
+}
+
 function isValidPassword($pw) {
     return strlen($pw) >= 8 && 
            preg_match('/[A-Z]/', $pw) && 
@@ -78,6 +200,8 @@ switch ($action) {
             if (empty($p['image']) && isset($imageMap[$p['name']])) {
                 $p['image'] = $imageMap[$p['name']];
             }
+            // Rebuild the legacy `options` JSON from 3NF tables
+            $p['options'] = buildOptionsJson($pdo, (int)$p['id']);
         }
         unset($p);
 
@@ -294,23 +418,31 @@ switch ($action) {
 
             $ids = array_column($items, 'id');
             $ph = implode(',', array_fill(0, count($ids), '?'));
-            $stmt = $pdo->prepare("SELECT * FROM products WHERE id IN ($ph)");
+            $stmt = $pdo->prepare("SELECT * FROM products WHERE id IN ($ph) AND is_archived=0");
             $stmt->execute($ids);
             $prods = array_column($stmt->fetchAll(), null, 'id');
- 
+            
             $subtotal = 0; $lines = [];
             $hasPaso = false;
             foreach ($items as $it) {
                 $p = $prods[$it['id']] ?? null;
-                if (!$p || $p['sold_out'] || $p['stock'] < $it['qty']) {
-                    $itemName = $p ? $p['name'] : 'Item';
-                    out(['error' => "Kulang ang stock para sa $itemName. (Available: " . ($p['stock'] ?? 0) . ")"], 400);
+                if (!$p) out(['error' => 'Item not found'], 400);
+                
+                // Rebuild `options` for price-modifier parsing below
+                $p['options'] = buildOptionsJson($pdo, (int)$p['id']);
+
+                $varStr = $it['variation'] ?? '';
+                $availableStock = availableStock($pdo, (int)$p['id'], $varStr);
+
+                if ($p['sold_out'] || $availableStock < $it['qty']) {
+                    $itemName = $p['name'] . ($varStr ? " ($varStr)" : "");
+                    out(['error' => "Kulang ang stock para sa $itemName. (Available: $availableStock)"], 400);
                 }
+                
                 if (strtolower($p['category']) === 'paso') $hasPaso = true;
                 
                 // 🟢 SECURE VARIATION PRICE CALCULATION
                 $unitPrice = (float)$p['price'];
-                $varStr = $it['variation'] ?? '';
                 if (!empty($p['options']) && !empty($varStr)) {
                     $optionsObj = json_decode($p['options'], true);
                     if ($optionsObj) {
@@ -354,7 +486,6 @@ switch ($action) {
                 $protectionFee = ceil($subtotal / 200) * 50;
             }
             $total = $subtotal + $fee + $protectionFee;
-
  
             $pdo->beginTransaction();
             $stmt = $pdo->prepare('INSERT INTO orders (user_id, customer_name, phone, address, payment, payment_proof, subtotal, delivery_fee, protection_fee, total) VALUES (?,?,?,?,?,?,?,?,?,?)');
@@ -372,12 +503,12 @@ switch ($action) {
             ]);
             $oid = $pdo->lastInsertId();
  
-            $oiStmt = $pdo->prepare('INSERT INTO order_items (order_id, product_id, name, price, qty, variation) VALUES (?,?,?,?,?,?)'); // NEW
-            $upStmt = $pdo->prepare('UPDATE products SET stock = stock - ?, sold_out = (stock <= 0) WHERE id = ?');
+            $oiStmt = $pdo->prepare('INSERT INTO order_items (order_id, product_id, name, price, qty, variation) VALUES (?,?,?,?,?,?)');
             foreach ($lines as $l) {
-                $oiStmt->execute([$oid, $l['id'], $l['name'], $l['price'], $l['qty'], $l['variation']]); // NEW
-                $upStmt->execute([$l['qty'], $l['id']]);
+                $oiStmt->execute([$oid, $l['id'], $l['name'], $l['price'], $l['qty'], $l['variation']]);
+                decreaseStock($pdo, (int)$l['id'], (int)$l['qty'], $l['variation']);
             }
+
             if (!empty($_SESSION['user_id'])) {
                 try {
                     $pdo->prepare('INSERT INTO notifications (user_id, order_id, message) VALUES (?,?,?)')->execute([$_SESSION['user_id'], $oid, "Salamat, suki! Natanggap na namin ang order #$oid — inihahanda na namin ito nang buong puso."]);
@@ -410,6 +541,9 @@ switch ($action) {
         }
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             out(['error' => 'Mali ang format ng email address.'], 400);
+        }
+        if (!preg_match('/^[a-zA-Z\s\.\-]+$/', $fullname)) {
+            out(['error' => 'Mali ang format ng pangalan.'], 400);
         }
         if (mb_strlen($subject) < 4) {
             out(['error' => 'Ang paksa ay dapat may hindi bababa sa 4 na karakter.'], 400);
@@ -498,8 +632,16 @@ switch ($action) {
         out($stmt->fetchAll());
 
     case 'admin-update-order':
-        $oid = (int)$in['order_id'];
-        $status = $in['status'];
+        $oid = (int)($in['order_id'] ?? 0);
+        $status = $in['status'] ?? '';
+
+        $allowed = ['Pending', 'Preparing', 'Shipping', 'Out for Delivery', 'Delivered'];
+        if (!in_array($status, $allowed, true)) {
+            out(['error' => 'Invalid status value.'], 400);
+        }
+        if (!$oid) {
+            out(['error' => 'Invalid order ID.'], 400);
+        }
 
         if ($status === 'Delivered') {
             $stmt = $pdo->prepare('UPDATE orders SET status=?, delivered_at=NOW() WHERE id=?');
@@ -518,14 +660,28 @@ switch ($action) {
 
         out(['ok' => true]);
  
-    case 'admin-archive-order':
-        $oid = (int)$in['order_id'];
-        $s = $pdo->prepare('SELECT user_id FROM orders WHERE id=?');
-        $s->execute([$oid]);
-        $uid = $s->fetchColumn();
+case 'admin-archive-order':
+    $oid = (int)$in['order_id'];
+    $s = $pdo->prepare('SELECT user_id, is_archived FROM orders WHERE id=?');
+    $s->execute([$oid]);
+    $o = $s->fetch();
+    if (!$o) out(['error' => 'Order not found'], 404);
+    if ((int)$o['is_archived'] === 1) out(['ok' => true]);
+
+    $pdo->beginTransaction();
+    try {
+        restoreOrderStock($pdo, $oid);
         $pdo->prepare('UPDATE orders SET is_archived=1 WHERE id=?')->execute([$oid]);
-        if ($uid) notify($pdo, (int)$uid, 0, "Ang order #$oid ay na-delete na ng admin.");
-        out(['ok' => true]);
+        $pdo->commit();
+    } catch (Exception $e) {
+        $pdo->rollBack();
+        out(['error' => 'Archive failed'], 500);
+    }
+
+    if ($o['user_id']) {
+        notify($pdo, (int)$o['user_id'], 0, "Ang order #$oid ay na-delete na ng admin.");
+    }
+    out(['ok' => true]);
  
     case 'admin-edit-product':
         $pid = (int)($in['id'] ?? 0);
@@ -541,21 +697,41 @@ switch ($action) {
         $cat = strtolower(trim($in['category'] ?? 'paso'));
         if (!in_array($cat, ['paso', 'nipa', 'habi', 'apollo'], true)) $cat = 'paso';
 
-        $stmt = $pdo->prepare('UPDATE products SET name=?, tagline=?, description=?, price=?, category=?, image=?, stock=?, sold_out=?, best_seller=?, tags=?, options=? WHERE id=?');
-        $stmt->execute([
-            $name,
-            trim($in['tagline'] ?? ''),
-            trim($in['description'] ?? ''),
-            $price,
-            $cat,
-            trim($in['image'] ?? ''),
-            $stock,
-            $stock <= 0 ? 1 : 0,
-            (int)($in['best_seller'] ?? 0),
-            trim($in['tags'] ?? ''),
-            trim($in['options'] ?? ''),
-            $pid
-        ]);
+        $optionsIn = trim($in['options'] ?? '');
+
+        // If variations exist, products.stock MUST equal SUM(_stocks)
+        if ($optionsIn !== '') {
+            $optsObj = json_decode($optionsIn, true);
+            if (!empty($optsObj['_stocks']) && is_array($optsObj['_stocks'])) {
+                $stock = 0;
+                foreach ($optsObj['_stocks'] as $q) $stock += (int)$q;
+            }
+        }
+
+        $pdo->beginTransaction();
+        try {
+            $stmt = $pdo->prepare('UPDATE products SET name=?, tagline=?, description=?, price=?, category=?, image=?, stock=?, sold_out=?, best_seller=?, tags=? WHERE id=?');
+            $stmt->execute([
+                $name,
+                trim($in['tagline'] ?? ''),
+                trim($in['description'] ?? ''),
+                $price,
+                $cat,
+                trim($in['image'] ?? ''),
+                $stock,
+                $stock <= 0 ? 1 : 0,
+                (int)($in['best_seller'] ?? 0),
+                trim($in['tags'] ?? ''),
+                $pid
+            ]);
+
+            saveProductOptions($pdo, $pid, $optionsIn);
+
+            $pdo->commit();
+        } catch (Exception $e) {
+            $pdo->rollBack();
+            out(['error' => 'Edit failed: ' . $e->getMessage()], 500);
+        }
         notifyAdmins($pdo, 0, "Na-update ang product: $name.");
         out(['ok' => true]);
  
@@ -568,19 +744,46 @@ switch ($action) {
         out(['ok' => true]);
  
     case 'admin-add-product':
-        $stmt = $pdo->prepare('INSERT INTO products (name,tagline,description,price,category,image,stock,best_seller,tags,options) VALUES (?,?,?,?,?,?,?,?,?,?)');
-        $stmt->execute([
-            $in['name'], 
-            $in['tagline'], 
-            $in['description'], 
-            $in['price'], 
-            $in['category'], 
-            $in['image'], 
-            $in['stock'], 
-            (int)($in['best_seller'] ?? 0),
-            $in['tags'],
-            $in['options'] ?? ''
-        ]);
+        $price = (int)($in['price'] ?? 0);
+        $stock = (int)($in['stock'] ?? 0);
+        
+        if ($price < 0 || $stock < 0) out(['error' => 'Hindi pwedeng negatibo ang presyo o stock.'], 400);
+
+        $optionsIn = trim($in['options'] ?? '');
+
+        // If variations exist, products.stock MUST equal SUM(_stocks)
+        if ($optionsIn !== '') {
+            $optsObj = json_decode($optionsIn, true);
+            if (!empty($optsObj['_stocks']) && is_array($optsObj['_stocks'])) {
+                $stock = 0;
+                foreach ($optsObj['_stocks'] as $q) $stock += (int)$q;
+            }
+        }
+
+        $pdo->beginTransaction();
+        try {
+            $stmt = $pdo->prepare('INSERT INTO products (name,tagline,description,price,category,image,stock,best_seller,tags) VALUES (?,?,?,?,?,?,?,?,?)');
+            $stmt->execute([
+                $in['name'], 
+                $in['tagline'], 
+                $in['description'], 
+                $price, 
+                $in['category'], 
+                $in['image'], 
+                $stock, 
+                (int)($in['best_seller'] ?? 0),
+                $in['tags']
+            ]);
+
+            $newId = (int)$pdo->lastInsertId();
+            saveProductOptions($pdo, $newId, $optionsIn);
+
+            $pdo->commit();
+        } catch (Exception $e) {
+            $pdo->rollBack();
+            out(['error' => 'Add failed: ' . $e->getMessage()], 500);
+        }
+
         notifyAdmins($pdo, 0, "Naidagdag ang bagong product: {$in['name']}.");
         out(['ok' => true]);
     
@@ -1008,10 +1211,11 @@ switch ($action) {
         if ($ex) {
             // 🟢 Fix: Check combined quantity against stock
             $newQty = $ex['qty'] + $qty;
-            if ($p['sold_out'] || $p['stock'] < $newQty) out(['error' => 'Kulang ang stock'], 400);
+            if (availableStock($pdo, (int)$pid, $var) < $newQty) out(['error' => 'Kulang ang stock'], 400);
             $pdo->prepare('UPDATE group_cart_items SET qty=? WHERE id=?')->execute([$newQty, $ex['id']]);
         } else {
-            if ($p['sold_out'] || $p['stock'] < $qty) out(['error' => 'Kulang ang stock'], 400);
+            $available = availableStock($pdo, (int)$pid, $var);
+            if ($p['sold_out'] || $available < $qty) out(['error' => 'Kulang ang stock'], 400);
             $pdo->prepare('INSERT INTO group_cart_items (group_cart_id,user_id,product_id,name,price,qty,variation) VALUES (?,?,?,?,?,?,?)')
                 ->execute([$gid, $uid, $pid, $p['name'], $p['price'], $qty, $var]);
         }
@@ -1046,16 +1250,16 @@ switch ($action) {
         if ($new <= 0) {
             $pdo->prepare('DELETE FROM group_cart_items WHERE id=?')->execute([$iid]);
         } else {
-            $s = $pdo->prepare('SELECT stock, sold_out FROM products WHERE id=? AND is_archived=0');
+            $s = $pdo->prepare('SELECT sold_out FROM products WHERE id=? AND is_archived=0');
             $s->execute([$it['product_id']]);
             $prod = $s->fetch();
-            if (!$prod || $prod['sold_out'] || $prod['stock'] < $new) {
+            $available = availableStock($pdo, (int)$it['product_id'], $it['variation'] ?? '');
+            if (!$prod || $prod['sold_out'] || $available < $new) {
                 out(['error' => 'Kulang ang stock para sa item na ito.'], 400);
             }
             $pdo->prepare('UPDATE group_cart_items SET qty=? WHERE id=?')->execute([$new, $iid]);
         }
-        out(['ok' => true]);
-        
+        out(['ok' => true]); 
 
     case 'group-set-split':
         $uid = (int)($_SESSION['user_id'] ?? 0);
@@ -1227,10 +1431,11 @@ switch ($action) {
         if ($qty <= 0) {
             $pdo->prepare('DELETE FROM group_cart_items WHERE id=?')->execute([$iid]);
         } else {
-            $s = $pdo->prepare('SELECT stock, sold_out FROM products WHERE id=? AND is_archived=0');
+            $s = $pdo->prepare('SELECT sold_out FROM products WHERE id=? AND is_archived=0');
             $s->execute([$it['product_id']]);
             $prod = $s->fetch();
-            if (!$prod || $prod['sold_out'] || $prod['stock'] < $qty) {
+            $available = availableStock($pdo, (int)$it['product_id'], $var);
+            if (!$prod || $prod['sold_out'] || $available < $qty) {
                 out(['error' => 'Kulang ang stock para sa item na ito.'], 400);
             }
             $pdo->prepare('UPDATE group_cart_items SET qty=?, variation=? WHERE id=?')->execute([$qty, $var, $iid]);
@@ -1271,11 +1476,12 @@ switch ($action) {
         if ($hasPaso && stripos($g['delivery_address'], 'Calamba') === false) {
             out(['error' => 'Ang BANGA (pagkain) items ay pwede lang i-deliver sa loob ng Calamba, Laguna. Palitan ang delivery address ng group cart.'], 400);}
 
-        $subtotal = 0; $pids = [];
-        foreach ($items as $it) { $subtotal += $it['price'] * $it['qty']; $pids[] = $it['product_id']; }
+        $subtotal = 0;
+        foreach ($items as $it) { $subtotal += $it['price'] * $it['qty']; }
         
         $fee = (int)$g['delivery_fee'];
         $total = $subtotal + $fee;
+
         $s = $pdo->prepare('SELECT COUNT(*) FROM group_cart_members WHERE group_cart_id=? AND status="approved" AND (paid=0 OR payer_verified=0)');
         $s->execute([$gid]);
         if ((int)$s->fetchColumn() > 0) out(['error' => 'May hindi pa bayad o hindi pa na-verify ng host.'], 400);
@@ -1285,7 +1491,7 @@ switch ($action) {
         $sumPaid = (int)$s->fetchColumn();
         if ($sumPaid < $total) out(['error' => 'Kulang ang bayad ng grupo ng ₱' . ($total - $sumPaid) . '.'], 400);
 
-        // 🟢 "By Items" restriction check
+        // "By Items" restriction check
         if ($g['split_method'] === 'by_adder') {
             $s = $pdo->prepare('SELECT user_id FROM group_cart_members WHERE group_cart_id=? AND status="approved"');
             $s->execute([$gid]);
@@ -1296,7 +1502,7 @@ switch ($action) {
             }
         }
 
-        // 🟢 Determine dynamic payment method
+        // Determine dynamic payment method
         $s = $pdo->prepare('SELECT DISTINCT payment_method FROM group_cart_members WHERE group_cart_id=? AND paid=1');
         $s->execute([$gid]);
         $methods = $s->fetchAll(PDO::FETCH_COLUMN);
@@ -1313,6 +1519,7 @@ switch ($action) {
         $s->execute([$gid]);
         $contribs = $s->fetchAll();
         
+        // Aggregate items by product + variation
         $aggregatedItems = [];
         foreach ($items as $it) {
             $key = $it['product_id'] . '|' . $it['variation'];
@@ -1323,12 +1530,14 @@ switch ($action) {
             }
         }
 
+        // SINGLE stock validation loop (variation-aware)
+        $stockCheck = $pdo->prepare('SELECT sold_out FROM products WHERE id=? AND is_archived=0');
         foreach ($aggregatedItems as $it) {
-            $s = $pdo->prepare('SELECT * FROM products WHERE id=? AND is_archived=0');
-            $s->execute([$it['product_id']]);
-            $p = $s->fetch();
-            if (!$p || $p['sold_out'] || $p['stock'] < $it['qty']) {
-                out(['error' => "Kulang ang stock para sa item na {$it['name']}. (Available: " . ($p['stock'] ?? 0) . ")"], 400);
+            $stockCheck->execute([$it['product_id']]);
+            $p = $stockCheck->fetch();
+            $avail = $p ? availableStock($pdo, (int)$it['product_id'], $it['variation'] ?? '') : 0;
+            if (!$p || $p['sold_out'] || $avail < $it['qty']) {
+                out(['error' => "Kulang ang stock para sa item na {$it['name']}. (Available: $avail)"], 400);
             }
         }
 
@@ -1341,12 +1550,11 @@ switch ($action) {
             $oid = (int)$pdo->lastInsertId();
             
             $oi = $pdo->prepare('INSERT INTO order_items (order_id,product_id,name,price,qty,variation) VALUES (?,?,?,?,?,?)');
-            $up = $pdo->prepare('UPDATE products SET stock=stock-?, sold_out=(stock<=0) WHERE id=?');
-            // Loop through the aggregated items instead of the raw $items array
             foreach ($aggregatedItems as $it) {
                 $oi->execute([$oid, $it['product_id'], $it['name'], $it['price'], $it['qty'], $it['variation']]);
-                $up->execute([$it['qty'], $it['product_id']]);
+                decreaseStock($pdo, (int)$it['product_id'], (int)$it['qty'], $it['variation']);
             }
+            
             $pdo->prepare('UPDATE group_carts SET status="ordered", order_id=? WHERE id=?')->execute([$oid, $gid]);
             foreach ($contribs as $c) {
                 notify($pdo, (int)$c['user_id'], (int)$oid, "Bayanihan order #$oid ay nakumpirma na! Track it in My Orders.");
@@ -1497,36 +1705,52 @@ switch ($action) {
     case 'admin-handle-refund':
         $oid = (int)($in['order_id'] ?? 0);
         $action = $in['action'] ?? '';
-        
         if (!in_array($action, ['approve', 'reject'], true)) {
             out(['error' => 'Invalid action'], 400);
         }
 
-        $newStatus = $action === 'approve' ? 'approved' : 'rejected';
-        
-        $pdo->prepare('UPDATE orders SET refund_status=? WHERE id=?')->execute([$newStatus, $oid]);
-
-        // Optional: Notify the user about the refund update
-        $s = $pdo->prepare('SELECT user_id FROM orders WHERE id=?');
+        $s = $pdo->prepare('SELECT user_id, refund_status FROM orders WHERE id=?');
         $s->execute([$oid]);
-        if ($uid = $s->fetchColumn()) {
-            $msg = $action === 'approve' 
-                ? "Magandang balita! Na-approve na ang refund request mo para sa Order #$oid." 
-                : "Paumanhin, pero na-reject ang refund request mo para sa Order #$oid. Kontakin kami kung may tanong ka.";
-            notify($pdo, (int)$uid, (int)$oid, $msg);
+        $order = $s->fetch();
+        if (!$order) out(['error' => 'Order not found'], 404);
+
+        $pdo->beginTransaction();
+        try {
+            if ($action === 'approve' && $order['refund_status'] !== 'approved') {
+                restoreOrderStock($pdo, $oid);
+            }
+            $newStatus = $action === 'approve' ? 'approved' : 'rejected';
+            $pdo->prepare('UPDATE orders SET refund_status=? WHERE id=?')->execute([$newStatus, $oid]);
+            $pdo->commit();
+        } catch (Exception $e) {
+            $pdo->rollBack();
+            out(['error' => 'Refund failed: ' . $e->getMessage()], 500);
         }
-        
+
+        if ($order['user_id']) {
+            $msg = $action === 'approve'
+                ? "Magandang balita! Na-approve na ang refund request mo para sa Order #$oid."
+                : "Paumanhin, pero na-reject ang refund request mo para sa Order #$oid.";
+            notify($pdo, (int)$order['user_id'], $oid, $msg);
+        }
         out(['ok' => true]);
 
     case 'admin-update-fee':
+        $fee = (int)($in['fee'] ?? 0);
+        if ($fee < 0) out(['error' => 'Hindi pwedeng negatibo ang fee.'], 400);
+        
         $stmt = $pdo->prepare('UPDATE delivery_fees SET fee=? WHERE id=?');
-        $stmt->execute([$in['fee'], $in['id']]);
+        $stmt->execute([$fee, $in['id']]);
         out(['ok' => true]);
+
 
     case 'admin-add-fee':
         try {
+            $fee = (int)($in['fee'] ?? 0);
+            if ($fee < 0) out(['error' => 'Hindi pwedeng negatibo ang fee.'], 400);
+            
             $stmt = $pdo->prepare('INSERT INTO delivery_fees (city, barangay, fee) VALUES (?,?,?)');
-            $stmt->execute([$in['city'], $in['barangay'], $in['fee']]);
+            $stmt->execute([$in['city'], $in['barangay'], $fee]);
             out(['ok' => true]);
         } catch(Exception $e) {
             out(['error' => 'Location already exists or DB error.'], 400);
