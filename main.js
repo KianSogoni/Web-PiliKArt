@@ -1,4 +1,110 @@
 const app = {
+    generateCombinationsUI(containerId, optionsContainerId) {
+        const optContainer = document.getElementById(optionsContainerId);
+        const stockContainer = document.getElementById(containerId);
+        if (!optContainer || !stockContainer) return;
+
+        const isEdit = containerId === 'pe-combo-stocks-container';
+        const stockInputId = isEdit ? 'pe-stock' : 'add-stock';
+        const stockHintId = isEdit ? 'pe-stock-hint' : 'add-stock-hint';
+        const stockInput = document.getElementById(stockInputId);
+        const stockHint = document.getElementById(stockHintId);
+
+        // 1. Read current specs from the DOM
+        const groups = [];
+        optContainer.querySelectorAll('.pe-option-group').forEach(group => {
+            const name = group.querySelector('.pe-opt-name').value.trim();
+            if (!name) return;
+            const choices = [];
+            group.querySelectorAll('.pe-opt-choice-name').forEach(inp => {
+                const val = inp.value.trim();
+                if (val) choices.push(val);
+            });
+            if (choices.length > 0) groups.push({ name, choices });
+        });
+
+        // 2. Preserve existing values so we don't lose them on re-render
+        const currentStocks = {};
+        stockContainer.querySelectorAll('.combo-stock-row').forEach(row => {
+            const combo = row.dataset.combo;
+            const val = row.querySelector('input').value;
+            if (combo && val !== '') currentStocks[combo] = parseInt(val) || 0;
+        });
+
+        // 3. Generate Cartesian Product of Combinations
+        let combinations = [];
+        if (groups.length > 0) {
+            const keys = groups.map(g => g.name);
+            const choices = groups.map(g => g.choices);
+
+            const build = (index, currentCombo) => {
+                if (index === keys.length) {
+                    combinations.push(currentCombo.join(', '));
+                    return;
+                }
+                for (let choice of choices[index]) {
+                    build(index + 1, [...currentCombo, `${keys[index]}: ${choice}`]);
+                }
+            };
+            build(0, []);
+        }
+
+        // 4. Render Inputs & Handle Stock Locking
+        if (combinations.length === 0) {
+            stockContainer.innerHTML = '<p style="font-size:12px; color:var(--muted);">Add specifications above to set combination stocks.</p>';
+            if (stockInput) { stockInput.readOnly = false; stockInput.style.backgroundColor = ''; stockInput.style.cursor = ''; }
+            if (stockHint) stockHint.style.display = 'none';
+            return;
+        }
+
+        // If combinations exist, make the main stock field read-only
+        if (stockInput) {
+            stockInput.readOnly = true;
+            stockInput.style.backgroundColor = 'var(--bg)';
+            stockInput.style.cursor = 'not-allowed';
+        }
+        if (stockHint) stockHint.style.display = 'inline';
+
+        stockContainer.innerHTML = combinations.map(combo => {
+            const val = currentStocks[combo] !== undefined ? currentStocks[combo] : '';
+            return `
+                <div class="combo-stock-row" data-combo="${this.esc(combo)}" style="display:flex; align-items:center; justify-content:space-between; background:var(--bg); padding:8px 12px; border-radius:8px; border:1px solid var(--line);">
+                    <span style="font-size:12px; font-weight:700; color:var(--ink); flex:1; padding-right:10px;">${this.esc(combo)}</span>
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <span style="font-size:11px; font-weight:800; color:var(--muted);">Stock:</span>
+                        <input type="number" class="input combo-stock-input" value="${val}" min="0" placeholder="0" required style="width:80px; padding:4px 8px; text-align:center;" oninput="app.handleNumInput(this); app.updateTotalComboStock('${containerId}', '${stockInputId}')">
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        // Auto-compute the total stock sum
+        this.updateTotalComboStock(containerId, stockInputId);
+    },
+
+    updateTotalComboStock(containerId, stockInputId) {
+        const stockInput = document.getElementById(stockInputId);
+        if (!stockInput) return;
+        let total = 0;
+        document.querySelectorAll(`#${containerId} .combo-stock-input`).forEach(inp => {
+            total += parseInt(inp.value) || 0;
+        });
+        stockInput.value = total;
+    },
+
+    // 🟢 Read combination stocks from UI into a JSON object
+    _getComboStocksFromUI(containerId) {
+        const comboStocks = {};
+        document.querySelectorAll(`#${containerId} .combo-stock-row`).forEach(row => {
+            const combo = row.dataset.combo;
+            const val = parseInt(row.querySelector('input').value);
+            if (combo && !isNaN(val) && val >= 0) {
+                comboStocks[combo] = val;
+            }
+        });
+        return comboStocks;
+    },
+
     showConfirm(title, message, onConfirm, btnText = 'Confirm') {
         document.getElementById('cc-title').innerHTML = title;
         document.getElementById('cc-message').innerHTML = message; 
@@ -74,9 +180,15 @@ const app = {
             btn.disabled = false;
         }
     },
+        handleNumInput(el) {
+        if (el.value !== '' && parseFloat(el.value) < 0) {
+            el.value = '';
+        }
+    },
     updateBudgetFromCart(val) {
-        const num = parseFloat(val);
-        this.budget = isNaN(num) || num <= 0 ? null : num;
+        let num = parseFloat(val);
+        if (isNaN(num) || num < 0) num = 0;
+        this.budget = num > 0 ? num : null;
         
         // Sync the budget to the main menu inputs
         const topMax = document.getElementById('budget-input');
@@ -106,7 +218,7 @@ const app = {
         { keys: ['budget', 'mahal', 'mura', 'tipid'], reply: "Gamitin ang <b>Budget Mode</b> sa itaas ng menu - ilagay mo lang ang max price at awtomatikong itatago namin ang mga mamahaling item. Tipid na, saya pa!<br><button class='pb-action-btn' onclick=\"app.scrollToMenu()\">Go to Menu</button>" },
         { keys: ['refund', 'sira', 'mali', 'reklamo', 'malasakit'], reply: "Naku, pasensya na suki! :( Kung may sira o maling item, may <b>Malasakit Policy</b> kami. Pwede mag-refund within 24 hours (pagkain) o 7 days (gamit) sa My Orders.<br><button class='pb-action-btn' onclick=\"app.go('orders')\">Go to My Orders</button>" },
         { keys: ['protection', 'insurance', 'nawala'], reply: "Ang <b>Delivery Protection</b> ay parang insurance ng order mo. ₱50 kada ₱200 ng inorder mo. Kapag nawala o nasira ng rider, sagot namin 'yan! Pwede mo itong i-tick sa checkout." },
-        { keys: ['theme', 'sunset', 'dark mode', 'ilaw'], reply: "Gusto mo ba ng Sunset Mode? Puntahan mo lang ang hamburger menu sa taas tapos pindutin ang Forest (Dark). Mas madali sa mata kapag gabi!<br><button class='pb-action-btn' onclick=\"app.toggleTheme()\">Toggle Theme</button>" },
+        { keys: ['theme', 'sunset', 'dark mode', 'night mode'], reply: "Gusto mo ba ng Sunset Mode? Puntahan mo lang ang hamburger menu sa taas tapos pindutin ang Forest (Dark). Mas madali sa mata kapag gabi!<br><button class='pb-action-btn' onclick=\"app.toggleTheme()\">Toggle Theme</button>" },
         { keys: ['recipe', 'luto', 'resipi', 'adobong banga', 'sinigang', 'bibingka'], reply: "May Recipe Box kami! Mga lutong bahay na pwede mong i-try sa sarili mong kusina o i-order na lang dito.<br><button class='pb-action-btn' onclick=\"app.go('recipes')\">Open Recipe Box</button>" },
         { keys: ['faq', 'tanong', 'help', 'tulong', 'support'], reply: "Nandito ako para tumulong! Kung may iba ka pang katanungan, puntahan mo ang aming FAQ page o i-message ang support team.<br><button class='pb-action-btn' onclick=\"app.go('faq')\">View FAQ</button>" },
         { keys: ['contact', 'email', 'message'], reply: "May espesyal na request o concern? I-message mo lang kami sa Contact page namin, suki!<br><button class='pb-action-btn' onclick=\"app.go('contact')\">Contact Us</button>" },
@@ -804,7 +916,9 @@ const app = {
     carouselTimer: null,
 
     async init() {
-        document.getElementById('main-content').style.display = 'block';
+        const mainContent = document.getElementById('main-content');
+        mainContent.classList.remove('opacity-0');
+        mainContent.classList.add('opacity-100');
         try {
             const res = await fetch('api.php?action=load');
             const data = await res.json();
@@ -938,7 +1052,8 @@ const app = {
         const missing = [];
         this.cart.forEach(c => {
             const p = this.products.find(x => x.id === c.id);
-            if (!p || p.stock <= 0 || p.stock < c.qty) missing.push(c.name);
+            const varStock = this.getVariationStock(p, c.variation || '');
+            if (!p || varStock <= 0 || varStock < c.qty) missing.push(c.name + (c.variation ? ` (${c.variation})` : ''));
         });
         if (missing.length > 0) {
             const listEl = document.getElementById('stock-alert-list');
@@ -1122,8 +1237,23 @@ const app = {
 
     esc(v) { return String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); },
     money(n) { n = Number(n) || 0; return '\u20B1' + n.toLocaleString('en-US', { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 }); },
-        money(n) { n = Number(n) || 0; return '\u20B1' + n.toLocaleString('en-US', { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 }); },
-    
+
+    getVariationStock(p, varStr) {
+        if (!p) return 0;
+        let stock = p.stock;
+        if (p.options && varStr) {
+            try {
+                const opts = JSON.parse(p.options);
+                if (opts._stocks && Object.keys(opts._stocks).length > 0) {
+                    stock = (opts._stocks[varStr] !== undefined)
+                        ? parseInt(opts._stocks[varStr]) || 0
+                        : 0; // combo not in _stocks = new combo = 0 stock
+                }
+            } catch(e) {}
+        }
+        return stock;
+    },
+
     // 🟢 NEW: Rolling Number Animation
     setAnimatedValue(id, endValue, suffixHtml = '', isMoney = true) {
         const el = document.getElementById(id);
@@ -1623,46 +1753,6 @@ initLandingInteractions() {
         if (err) { err.classList.remove('show'); err.textContent = ''; }
         document.querySelectorAll('.auth-input.invalid').forEach(i => i.classList.remove('invalid'));
     },
-    async submitContactForm(e) {
-        e.preventDefault();
-        const name = document.getElementById('contact-name').value.trim();
-        const email = document.getElementById('contact-email').value.trim();
-        const subject = document.getElementById('contact-subject').value.trim();
-        const message = document.getElementById('contact-message').value.trim();
-
-        if (!name || !email || !subject || !message) return this.showToast('Paki-kumpleto ang lahat ng fields.');
-
-        const btn = e.target.querySelector('button[type="submit"]');
-        const ogText = btn.innerHTML;
-        btn.disabled = true;
-        btn.innerHTML = 'Ipinapadala...';
-
-        try {
-            const res = await fetch('api.php?action=submit_contact', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, email, subject, message })
-            });
-            const data = await res.json();
-
-            if (data.ok) {
-                if (data.email_sent) {
-                    this.showToast('Mensahe naipadala sa Email at Local Mailbox! Salamat, suki.');
-                } else {
-                    this.showToast('Mensahe naka-save sa Local Mailbox (Offline Mode). Salamat, suki.');
-                }
-                e.target.reset();
-                this.go('home'); // Balik sa home after sending
-            } else {
-                this.showToast(data.error || 'Hindi naipadala ang mensahe.');
-            }
-        } catch (err) {
-            this.showToast('Walang koneksyon sa server.');
-        } finally {
-            btn.disabled = false;
-            btn.innerHTML = ogText;
-        }
-    },
 
     prefillContactForm() {
         const nameInput = document.getElementById('contact-name');
@@ -1921,12 +2011,13 @@ renderMenu() {
     if (!qInput || !bInput) return;
 
     const q = qInput.value.toLowerCase();
-    const minPrice = parseFloat(document.getElementById('filter-min-price')?.value) || 0;
+    const minPrice = Math.max(0, parseFloat(document.getElementById('filter-min-price')?.value) || 0);
 
     // Max price: take the smaller of budget-input and filter-max-price
-    let maxPrice = parseFloat(bInput.value) || Infinity;
+    let maxPrice = parseFloat(bInput.value);
+    if (isNaN(maxPrice) || maxPrice < 0) maxPrice = Infinity;
     const advMax = parseFloat(document.getElementById('filter-max-price')?.value);
-    if (!isNaN(advMax) && advMax < maxPrice) maxPrice = advMax;
+    if (!isNaN(advMax) && advMax >= 0 && advMax < maxPrice) maxPrice = advMax;
 
     const sortBy        = document.getElementById('filter-sort')?.value || 'default';
     const inStockOnly   = document.getElementById('filter-in-stock')?.checked || false;
@@ -2121,7 +2212,22 @@ renderMenu() {
         if (p.options) {
             try {
                 const parsedOpts = JSON.parse(p.options);
+                
+                // 🟢 NEW: Find the first valid in-stock combination to auto-select by default
+                let defaultSelections = {};
+                if (!Object.keys(currentSelections).length && parsedOpts._stocks) {
+                    const availableCombo = Object.keys(parsedOpts._stocks).find(combo => parseInt(parsedOpts._stocks[combo]) > 0);
+                    if (availableCombo) {
+                        availableCombo.split(', ').forEach(part => {
+                            const [k, v] = part.split(': ');
+                            defaultSelections[`opt_${k}`] = v;
+                        });
+                    }
+                }
+
                 for (const [groupName, choices] of Object.entries(parsedOpts)) {
+                    if (groupName === '_stocks') continue; // Skip rendering _stocks
+                    
                     let choiceList = [];
                     if (Array.isArray(choices)) {
                         choiceList = choices.map(c => ({ name: c, price: 0 }));
@@ -2135,9 +2241,15 @@ renderMenu() {
                                 <label class="ci-option-label">${groupName}</label>
                                 <div class="ci-radio-pills">
                                     ${choiceList.map((c, i) => {
-                                        const isChecked = currentSelections[`opt_${groupName}`] 
-                                            ? currentSelections[`opt_${groupName}`] === c.name 
-                                            : i === 0;
+                                        let isChecked = false;
+                                        if (currentSelections[`opt_${groupName}`]) {
+                                            isChecked = currentSelections[`opt_${groupName}`] === c.name;
+                                        } else if (defaultSelections[`opt_${groupName}`]) {
+                                            isChecked = defaultSelections[`opt_${groupName}`] === c.name;
+                                        } else {
+                                            isChecked = i === 0; // Fallback if EVERYTHING is out of stock
+                                        }
+
                                         return `
                                         <label class="ci-radio-label">
                                             <input type="radio" name="opt_${groupName}" value="${this.esc(c.name)}" data-price="${c.price}" ${isChecked ? 'checked' : ''} onchange="app.updateModalPrice()">
@@ -2208,19 +2320,117 @@ renderMenu() {
     updateModalPrice() {
         if (!this.pendingCartItem) return;
         let extra = 0;
+        const selectedOptions = [];
+        const currentSelections = {};
+
+        // 1. Gather currently selected options
         document.querySelectorAll('#add-confirm-item-box input[type="radio"]:checked').forEach(inp => {
-            extra += Number(inp.dataset.price) || 0;
+            currentSelections[inp.name] = inp.value;
         });
+
+        if (this.pendingCartItem.options) {
+            const parsedOpts = JSON.parse(this.pendingCartItem.options);
+            for (const groupName of Object.keys(parsedOpts)) {
+                if (groupName === '_stocks') continue;
+                const checked = document.querySelector(`input[name="opt_${groupName}"]:checked`);
+                if (checked) {
+                    selectedOptions.push(`${groupName}: ${checked.value}`);
+                    extra += Number(checked.dataset.price) || 0;
+                }
+            }
+        }
+
         this.pendingPriceModifier = extra;
-        const total = (Number(this.pendingCartItem.price) + extra) * this.pendingQty;
+        const varStr = selectedOptions.join(', ');
+        this.pendingVariationStock = this.getVariationStock(this.pendingCartItem, varStr);
+
+        // 🟢 NEW: Auto-fix if the current selection is out of stock
+        if (this.pendingVariationStock <= 0 && this.pendingCartItem.options) {
+            const parsedOpts = JSON.parse(this.pendingCartItem.options);
+            const availableCombo = Object.keys(parsedOpts._stocks || {}).find(combo => parseInt(parsedOpts._stocks[combo]) > 0);
+            
+            if (availableCombo) {
+                let changed = false;
+                availableCombo.split(', ').forEach(part => {
+                    const [k, v] = part.split(': ');
+                    const radioName = `opt_${k}`;
+                    
+                    if (currentSelections[radioName] !== v) {
+                        const radio = document.querySelector(`#add-confirm-item-box input[name="${radioName}"][value="${v}"]`);
+                        if (radio) {
+                            radio.checked = true;
+                            changed = true;
+                        }
+                    }
+                });
+                
+                // If we had to change the selection to a valid one, re-run the calculation
+                if (changed) {
+                    return this.updateModalPrice(); 
+                }
+            }
+        }
         
-        // 🟢 Changed to animate the total
+        // 2. Update max qty if current qty exceeds new stock
+        if (this.pendingQty > this.pendingVariationStock) {
+            this.pendingQty = Math.max(1, this.pendingVariationStock);
+            const qtyInput = document.querySelector('.qty-input');
+            if (qtyInput) qtyInput.value = this.pendingQty;
+        }
+
+        // Update stock text
+        const stockText = document.querySelector('.ci-stock-text');
+        if (stockText) {
+            stockText.textContent = `${this.pendingVariationStock} available`;
+            stockText.style.color = this.pendingVariationStock <= 0 ? '#e5604d' : 'var(--muted)';
+        }
+        
+        // Update qty input max
+        const qtyInput = document.querySelector('.qty-input');
+        if (qtyInput) {
+            qtyInput.max = this.pendingVariationStock;
+        }
+
+        const total = (Number(this.pendingCartItem.price) + extra) * this.pendingQty;
         this.setAnimatedValue('ci-total-price', total);
+
+        // 3. Disable out-of-stock combinations dynamically
+        if (this.pendingCartItem.options) {
+            const parsedOpts = JSON.parse(this.pendingCartItem.options);
+            
+            document.querySelectorAll('#add-confirm-item-box input[type="radio"]').forEach(inp => {
+                const groupName = inp.name.replace('opt_', '');
+                
+                const testSelections = { ...currentSelections, [inp.name]: inp.value };
+                const testParts = [];
+                
+                for (const key of Object.keys(parsedOpts)) {
+                    if (key === '_stocks') continue;
+                    if (testSelections['opt_' + key]) {
+                        testParts.push(`${key}: ${testSelections['opt_' + key]}`);
+                    }
+                }
+                
+                const testVar = testParts.join(', ');
+                const testStock = this.getVariationStock(this.pendingCartItem, testVar);
+
+                const label = inp.closest('label');
+                
+                // If the hypothetical combination has 0 stock, disable it visually
+                if (testStock <= 0) {
+                    inp.disabled = true;
+                    if (label) label.classList.add('disabled-option');
+                } else {
+                    inp.disabled = false;
+                    if (label) label.classList.remove('disabled-option');
+                }
+            });
+        }
     },
 
     adjustPendingQty(d) {
         if (!this.pendingCartItem) return;
-        this.pendingQty = Math.max(1, Math.min(this.pendingCartItem.stock, this.pendingQty + d));
+        this.pendingQty = Math.max(1, Math.min(this.pendingVariationStock, this.pendingQty + d));
         this.renderAddConfirmModal();
     },
 
@@ -2228,10 +2438,10 @@ renderMenu() {
         if (!this.pendingCartItem) return;
         let qty = parseInt(val);
         if (isNaN(qty) || qty < 1) qty = 1;
-        if (qty > this.pendingCartItem.stock) qty = this.pendingCartItem.stock;
+        if (qty > this.pendingVariationStock) qty = this.pendingVariationStock;
         this.pendingQty = qty;
         this.renderAddConfirmModal();
-    },
+    },   
 
     confirmAddToCart(isBuyNow = false) {
         if (!this.pendingCartItem) return;
@@ -2246,6 +2456,21 @@ renderMenu() {
         });
         const variationStr = selectedOptions.join(', ');
         const finalPrice = Number(p.price) + modifier; 
+
+        if (this.pendingVariationStock <= 0) {
+            this.showToast('Sorry suki, ubos na ang stock para sa combination na ito.');
+            return;
+        }
+
+        // 🟢 Check if adding this exceeds stock based on what's ALREADY in the cart
+        const existingItem = this.cart.find(x => x.id === p.id && (x.variation || '') === variationStr);
+        const existingQty = existingItem ? existingItem.qty : 0;
+        
+        if (existingQty + this.pendingQty > this.pendingVariationStock) {
+            const remaining = this.pendingVariationStock - existingQty;
+            this.showToast(`Hindi na kasya! May ${existingQty} na sa cart mo, at ${remaining} lang ang pwedeng idagdag.`);
+            return;
+        }
 
         // 🟢 BUDGET RESTRICTION CHECK (Now triggers a popup)
         if (this.budget) {
@@ -2266,7 +2491,8 @@ renderMenu() {
         const item = this.cart.find(x => x.id === p.id && (x.variation || '') === variationStr);
         
         if (item) {
-            item.qty += this.pendingQty;
+            // If Buy Now, we reset the quantity. Otherwise, we add to it.
+            item.qty = isBuyNow ? this.pendingQty : (item.qty + this.pendingQty);
             item.selected = true;
         } else {
             this.cart.push({ ...p, price: finalPrice, qty: this.pendingQty, selected: true, variation: variationStr });
@@ -2570,8 +2796,9 @@ renderMenu() {
         const i = this.cart.find(x => x.id === id && (x.variation || '') === (variation || ''));
         if (i) {
             const p = this.products.find(x => x.id === id);
-            if (d > 0 && p && i.qty >= p.stock) {
-                this.showToast(`Pasensya na, suki — ${p.stock} na lang ang stock namin.`);
+            const varStock = this.getVariationStock(p, variation || '');
+            if (d > 0 && p && i.qty >= varStock) {
+                this.showToast(`Pasensya na, suki — ${varStock} na lang ang stock namin para sa kombinasyong ito.`);
                 return;
             }
             if (d > 0 && i.selected && this.budget) {
@@ -2595,9 +2822,10 @@ renderMenu() {
             let qty = parseInt(val);
             if (isNaN(qty) || qty < 1) qty = 1;
             const p = this.products.find(x => x.id === id);
-            if (p && qty > p.stock) {
-                qty = p.stock;
-                this.showToast(`Pasensya na, suki — ${p.stock} na lang ang stock namin.`);
+            const varStock = this.getVariationStock(p, variation || '');
+            if (p && qty > varStock) {
+                qty = varStock;
+                this.showToast(`Pasensya na, suki — ${varStock} na lang ang stock namin para sa kombinasyong ito.`);
             }
             // Check budget if increasing quantity
             if (i.selected && this.budget && qty > i.qty) {
@@ -2756,7 +2984,19 @@ renderMenu() {
         } 
     },
 
-    toggleAllCartItems(checked) { this.cart.forEach(c => c.selected = checked); this.saveCart(); },
+    toggleAllCartItems(checked) {
+        this.cart.forEach(c => {
+            if (checked) {
+                const p = this.products.find(x => x.id === c.id);
+                const available = p ? this.getVariationStock(p, c.variation || '') : 0;
+                // only select rows that still have enough stock
+                c.selected = !(!p || available <= 0 || available < c.qty);
+            } else {
+                c.selected = false;
+            }
+        });
+        this.saveCart();
+    },
 
     updateCartPageSummary() {
         const selected = this.cart.filter(c => c.selected);
@@ -2799,10 +3039,12 @@ renderMenu() {
             }
         }
 
+        // 🟢 USE VARIATION-AWARE STOCK CHECK (matches checkCartStock)
         for (let c of selectedCart) {
             const p = this.products.find(x => x.id === c.id);
-            if (!p || p.stock <= 0 || p.stock < c.qty) {
-                this.showToast(`Sorry suki, ubos na o kulang ang stock ng ${c.name}.`);
+            const available = p ? this.getVariationStock(p, c.variation || '') : 0;
+            if (!p || available <= 0 || available < c.qty) {
+                this.showToast(`Sorry suki, ubos na o kulang ang stock ng ${c.name}${c.variation ? ` (${c.variation})` : ''}.`);
                 await this.refreshData(); 
                 this.checkCartStock();
                 return; 
@@ -2944,7 +3186,9 @@ renderMenu() {
         this.cart.forEach(c => { if (c.selected === undefined) { c.selected = true; needsSave = true; } });
         if (needsSave) this.saveCart();
 
-        if (this.cart.length > 0 && !this.cart.some(c => c.selected)) { this.cart.forEach(c => c.selected = true); this.saveCart(); }
+        if (this.cart.length > 0 && !this.cart.some(c => c.selected) && this.currentView === 'checkout') {
+            // intentionally do NOT auto-reselect; show empty state instead
+        }
 
         const selectedCart = this.cart.filter(c => c.selected);
         const subtotal = selectedCart.reduce((s, x) => s + x.price * x.qty, 0);
@@ -3274,6 +3518,7 @@ renderMenu() {
 
         list.innerHTML = displayOrders.map(o => {
             let statusClass = 'status-pending';
+            if (o.status === 'Preparing') statusClass = 'status-preparing';
             if (o.status === 'Shipping') statusClass = 'status-shipping';
             if (o.status === 'Out for Delivery') statusClass = 'status-out';
             if (o.status === 'Delivered') statusClass = 'status-delivered';
@@ -3508,7 +3753,7 @@ renderMenu() {
     },
 
     switchAdminTab(tab, btn) {
-        document.querySelectorAll('.admin-tab-btn').forEach(b => { b.className = 'btn btn-ghost admin-tab-btn'; });
+        document.querySelectorAll('#view-admin .admin-tab-btn').forEach(b => { b.className = 'btn btn-ghost admin-tab-btn'; });
         btn.className = 'btn btn-brand admin-tab-btn';
         
         // 🟢 Added 'contacts' to the array
@@ -3570,6 +3815,7 @@ toggleAdvancedMenuFilters(btn) {
 
         grid.innerHTML = filteredOrders.map(o => {
             let statusClass = 'status-pending';
+            if (o.status === 'Preparing') statusClass = 'status-preparing';
             if (o.status === 'Shipping') statusClass = 'status-shipping';
             if (o.status === 'Out for Delivery') statusClass = 'status-out';
             if (o.status === 'Delivered') statusClass = 'status-delivered';
@@ -3592,7 +3838,8 @@ toggleAdvancedMenuFilters(btn) {
                             <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
                         </div>
                         <div class="status-dropdown-menu hidden" id="status-dropdown-${o.id}" style="position:absolute; bottom: 100%; left:0; right:0; background:var(--surface); border:1px solid var(--line); border-radius:8px; margin-bottom:4px; z-index:100; box-shadow:var(--shadow); overflow:hidden;">
-                            ${['Pending', 'Shipping', 'Out for Delivery', 'Delivered'].map(st => `
+                            <!-- 🟢 ADDED 'Preparing' -->
+                            ${['Pending', 'Preparing', 'Shipping', 'Out for Delivery', 'Delivered'].map(st => `
                                 <div style="padding:10px; font-size:12px; cursor:pointer; color:var(--ink); border-bottom: 1px solid var(--line); ${o.status === st ? 'background:var(--surface2); font-weight:800;' : ''}" 
                                      onclick="app.selectOrderStatus(${o.id}, '${st}')" 
                                      onmouseover="this.style.background='var(--surface2)'" 
@@ -3697,17 +3944,28 @@ toggleAdvancedMenuFilters(btn) {
             try {
                 const parsed = JSON.parse(p.options);
                 for (const [groupName, choices] of Object.entries(parsed)) {
-                    let choiceList = [];
-                    if (Array.isArray(choices)) {
-                        choices.forEach(c => choiceList.push({ name: c, price: 0 }));
-                    } else if (typeof choices === 'object' && choices !== null) {
-                        for (const [cName, cPrice] of Object.entries(choices)) {
-                            choiceList.push({ name: cName, price: cPrice });
-                        }
-                    }
-                    this.addPeOptionGroup(groupName, choiceList);
+                    if (groupName === '_stocks') continue; // Skip the stocks object
+                    this.addPeOptionGroup(groupName, choices); 
                 }
             } catch(e) { console.warn('Invalid options JSON from DB', e); }
+        }
+
+        // 🟢 Generate the combination UI
+        this.generateCombinationsUI('pe-combo-stocks-container', 'pe-options-container');
+
+        // 🟢 Pre-fill the generated inputs with existing stock values
+        if (p.options) {
+            try {
+                const parsed = JSON.parse(p.options);
+                if (parsed._stocks) {
+                    document.querySelectorAll('#pe-combo-stocks-container .combo-stock-row').forEach(row => {
+                        const combo = row.dataset.combo;
+                        if (parsed._stocks[combo] !== undefined) {
+                            row.querySelector('input').value = parsed._stocks[combo];
+                        }
+                    });
+                }
+            } catch(e) {}
         }
 
         document.getElementById('pe-delete-btn').style.display = 'block';
@@ -3746,13 +4004,59 @@ toggleAdvancedMenuFilters(btn) {
         } else { this._appendChoiceInput(choicesContainer, '', 0); }
     },
 
-    _appendChoiceInput(container, name = '', price = 0) {
+    // 🟢 NEW: Generic function to build the specification UI
+    _renderOptionGroup(containerId, groupName = '', choices = {}) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+        
+        const groupDiv = document.createElement('div');
+        groupDiv.className = 'pe-option-group';
+        groupDiv.style.cssText = 'background:var(--bg); padding:12px; border-radius:12px; border:1px solid var(--line);';
+        
+        const isEdit = containerId === 'pe-options-container';
+        const stockContainerId = isEdit ? 'pe-combo-stocks-container' : 'add-combo-stocks-container';
+
+        groupDiv.innerHTML = `
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                <input type="text" class="input pe-opt-name" placeholder="Specification Name (e.g. Size)" value="${this.esc(groupName)}" style="padding:6px 10px; font-size:13px; width:75%; font-weight:800;" oninput="app.generateCombinationsUI('${stockContainerId}', '${containerId}')">
+                <button type="button" class="qty-circle-btn" onclick="this.closest('.pe-option-group').remove(); app.generateCombinationsUI('${stockContainerId}', '${containerId}')" style="color:#e5604d; border-color:rgba(229,96,77,0.3);" title="Remove Group">✕</button>
+            </div>
+            <div class="pe-opt-choices-container" style="display:flex; flex-direction:column; gap:8px; margin-bottom:10px;"></div>
+            <button type="button" class="btn btn-ghost" style="padding:4px 10px; font-size:11px; border-radius:6px;" onclick="app._appendChoiceInput(this.previousElementSibling, '', 0, '${stockContainerId}', '${containerId}')">+ Add Choice</button>`;
+        
+        container.appendChild(groupDiv);
+
+        const choicesContainer = groupDiv.querySelector('.pe-opt-choices-container');
+        if (choices && Object.keys(choices).length > 0) {
+            if (Array.isArray(choices)) {
+                choices.forEach(c => this._appendChoiceInput(choicesContainer, c, 0, stockContainerId, containerId));
+            } else {
+                Object.entries(choices).forEach(([c, price]) => this._appendChoiceInput(choicesContainer, c, price, stockContainerId, containerId));
+            }
+        } else {
+            this._appendChoiceInput(choicesContainer, '', 0, stockContainerId, containerId);
+        }
+        
+        this.generateCombinationsUI(stockContainerId, containerId);
+    },
+
+    // Wrapper for Edit Modal
+    addPeOptionGroup(groupName = '', choices = {}) {
+        this._renderOptionGroup('pe-options-container', groupName, choices);
+    },
+
+    // Wrapper for Add Modal
+    addAddOptionGroup() {
+        this._renderOptionGroup('add-options-container', '', {});
+    },
+
+    _appendChoiceInput(container, name = '', price = 0, stockContainerId = '', optionsContainerId = '') {
         const div = document.createElement('div');
         div.style.cssText = 'display:flex; align-items:center; gap:8px; margin-bottom:4px;';
         div.innerHTML = `
-            <input type="text" class="input pe-opt-choice-name" placeholder="Choice (e.g. Medium)" value="${this.esc(name)}" style="padding:6px 10px; font-size:12px; flex:2;">
+            <input type="text" class="input pe-opt-choice-name" placeholder="Choice (e.g. Medium)" value="${this.esc(name)}" style="padding:6px 10px; font-size:12px; flex:2;" oninput="app.generateCombinationsUI('${stockContainerId}', '${optionsContainerId}')">
             <input type="number" class="input pe-opt-choice-price" placeholder="Add'l ₱" value="${price}" style="padding:6px 10px; font-size:12px; flex:1;" min="0">
-            <button type="button" class="qty-circle-btn" onclick="this.parentElement.remove()" style="color:#e5604d; border-color:rgba(229,96,77,0.3); width:22px; height:22px; font-size:10px; flex-shrink:0;">✕</button>
+            <button type="button" class="qty-circle-btn" onclick="this.parentElement.remove(); app.generateCombinationsUI('${stockContainerId}', '${optionsContainerId}')" style="color:#e5604d; border-color:rgba(229,96,77,0.3); width:22px; height:22px; font-size:10px; flex-shrink:0;">✕</button>
         `;
         container.appendChild(div);
     },
@@ -3769,8 +4073,8 @@ toggleAdvancedMenuFilters(btn) {
         const stock = parseInt(v('pe-stock'), 10);
 
         if (!name) return this.showToast('Ilagay ang pangalan ng produkto.');
-        if (isNaN(price) || price < 0) return this.showToast('Mali ang presyo.');
-        if (isNaN(stock) || stock < 0) return this.showToast('Mali ang stock.');
+        if (isNaN(price) || price < 0) return this.showToast('Mali ang presyo. Hindi pwedeng negatibo.');
+        if (isNaN(stock) || stock < 0) return this.showToast('Mali ang stock. Hindi pwedeng negatibo.');
 
         const optionsObj = {};
         document.querySelectorAll('#pe-options-container .pe-option-group').forEach(group => {
@@ -3792,6 +4096,20 @@ toggleAdvancedMenuFilters(btn) {
                 optionsObj[groupName] = choicesObj;
             }
         });
+
+        // 🟢 Read from the new UI
+        const comboStocks = this._getComboStocksFromUI('pe-combo-stocks-container');
+        
+        // 🟢 Validation: Enforce combination stocks if specs exist
+        if (Object.keys(optionsObj).length > 0) {
+            const totalRows = document.querySelectorAll('#pe-combo-stocks-container .combo-stock-row').length;
+            const filledRows = Object.keys(comboStocks).length;
+            if (filledRows < totalRows) {
+                return this.showToast('Kailangang ilagay ang stock para sa lahat ng combinations.');
+            }
+            optionsObj._stocks = comboStocks;
+        }
+
         const optionsStr = Object.keys(optionsObj).length > 0 ? JSON.stringify(optionsObj) : '';
 
         const payload = {
@@ -3807,6 +4125,31 @@ toggleAdvancedMenuFilters(btn) {
             best_seller: document.getElementById('pe-bestseller').checked ? 1 : 0,
             options: optionsStr 
         };
+
+        // Detect stock loss from renamed/removed variations
+        const p = this.products.find(x => x.id === this.editingProductId);
+        if (!p) return this.showToast('Product not found.');
+        
+        if (p.options) {
+            try {
+                const oldOpts = JSON.parse(p.options);
+                const oldStocks = oldOpts._stocks || {};
+                let lostUnits = 0;
+                const lostCombos = [];
+                Object.entries(oldStocks).forEach(([combo, qty]) => {
+                    if (!(combo in comboStocks) && qty > 0) {
+                        lostUnits += qty;
+                        lostCombos.push(`${combo} (${qty})`);
+                    }
+                });
+                if (lostUnits > 0) {
+                    return this.showAlert(
+                        'Stock Being Discarded',
+                        `You are removing/renaming these variations, which will <b>delete ${lostUnits} units of stock</b>:<br><br>• ${lostCombos.join('<br>• ')}<br><br>Add them back or reduce their stock first if this is not intended.`
+                    );
+                }
+            } catch(e) {}
+        }
 
         this.showConfirm('Save Changes', 'I-save ang mga pagbabago sa produktong ito?', async () => {
             try {
@@ -3915,6 +4258,8 @@ toggleAdvancedMenuFilters(btn) {
 
     openAddProductModal() {
         document.getElementById('admin-add-form').reset();
+        document.getElementById('add-options-container').innerHTML = '';
+        this.generateCombinationsUI('add-combo-stocks-container', 'add-options-container');
         document.getElementById('add-product-modal').classList.remove('hidden');
         this.updateBodyScrollLock();
     },
@@ -3926,17 +4271,54 @@ toggleAdvancedMenuFilters(btn) {
 
     async addProduct(e) {
         if (e) e.preventDefault();
+        
+        const optionsObj = {};
+        document.querySelectorAll('#add-options-container .pe-option-group').forEach(group => {
+            const groupName = group.querySelector('.pe-opt-name').value.trim();
+            if (!groupName) return;
+
+            const choicesObj = {};
+            let hasChoices = false;
+            group.querySelectorAll('.pe-opt-choice-name').forEach(input => {
+                const cName = input.value.trim();
+                const cPrice = parseInt(input.nextElementSibling.value) || 0;
+                if (cName) {
+                    choicesObj[cName] = cPrice;
+                    hasChoices = true;
+                }
+            });
+
+            if (hasChoices) {
+                optionsObj[groupName] = choicesObj;
+            }
+        });
+
+        // 🟢 Read from new UI
+        const comboStocks = this._getComboStocksFromUI('add-combo-stocks-container');
+        
+        // 🟢 Validation: Enforce combination stocks if specs exist
+        if (Object.keys(optionsObj).length > 0) {
+            const totalRows = document.querySelectorAll('#add-combo-stocks-container .combo-stock-row').length;
+            const filledRows = Object.keys(comboStocks).length;
+            if (filledRows < totalRows) {
+                return this.showToast('Kailangang ilagay ang stock para sa lahat ng combinations.');
+            }
+            optionsObj._stocks = comboStocks;
+        }
+
+        const optionsStr = Object.keys(optionsObj).length > 0 ? JSON.stringify(optionsObj) : '';
+
         const payload = {
             name: document.getElementById('add-name').value.trim(),
             tagline: document.getElementById('add-tagline').value.trim(),
             description: document.getElementById('add-desc').value.trim(),
-            price: document.getElementById('add-price').value,
-            stock: document.getElementById('add-stock').value,
+            price: Math.max(0, parseInt(document.getElementById('add-price').value) || 0),
+            stock: Math.max(0, parseInt(document.getElementById('add-stock').value) || 0),
             category: document.getElementById('add-cat').value,
             image: document.getElementById('add-image').value.trim(),
             tags: document.getElementById('add-tags').value.trim(),
             best_seller: document.getElementById('add-bestseller').checked ? 1 : 0,
-            options: document.getElementById('add-options').value.trim()
+            options: optionsStr
         };
 
         this.showConfirm('Add Product', `I-add ang bagong product na <b>${this.esc(payload.name)}</b> sa store?`, async () => {
@@ -4172,7 +4554,7 @@ toggleAdvancedMenuFilters(btn) {
     },
 
     switchBayanihanTab(tab, btn) {
-        document.querySelectorAll('.admin-tab-btn').forEach(b => { b.className = 'btn btn-ghost admin-tab-btn'; });
+        document.querySelectorAll('#view-bayanihan .admin-tab-btn').forEach(b => { b.className = 'btn btn-ghost admin-tab-btn'; });
         btn.className = 'btn btn-brand admin-tab-btn';
         if (tab === 'active') { document.getElementById('bayanihan-active-list').classList.remove('hidden'); document.getElementById('bayanihan-history-list').classList.add('hidden'); } 
         else { document.getElementById('bayanihan-active-list').classList.add('hidden'); document.getElementById('bayanihan-history-list').classList.remove('hidden'); }
@@ -4463,7 +4845,7 @@ toggleAdvancedMenuFilters(btn) {
             const methodLabel = m.payment_method === 'gcash' ? '📱 GCash' : m.payment_method === 'cash' ? '💵 Cash' : '';
             let flagCtrl = '';
             if (isHost && g.status === 'open') {
-                if (g.split_method === 'fixed_contribution') flagCtrl = `<div style="display:flex; align-items:center; gap:6px; margin-top:6px;"><span style="font-size:10px; font-weight:800; color:var(--muted);">₱ Fixed:</span><input type="number" class="input" style="width:60px; padding:2px 6px; font-size:11px; font-weight:800; border-radius:6px; border:1px solid var(--brand); background:var(--bg);" value="${m.fixed_share_amount || 0}" min="0"><button type="button" class="btn btn-leaf" style="padding: 4px 10px; font-size: 10px; border-radius: 6px; line-height: 1.2; box-shadow: none;" onclick="app.setMemberFixedAmount(${m.id}, this.previousElementSibling.value)">Save</button></div>`;
+                if (g.split_method === 'fixed_contribution') flagCtrl = `<div style="display:flex; align-items:center; gap:6px; margin-top:6px;"><span style="font-size:10px; font-weight:800; color:var(--muted);">₱ Fixed:</span><input type="number" class="input" style="width:60px; padding:2px 6px; font-size:11px; font-weight:800; border-radius:6px; border:1px solid var(--brand); background:var(--bg);" value="${m.fixed_share_amount || 0}" min="0" oninput="app.handleNumInput(this)"><button type="button" class="btn btn-leaf" style="padding: 4px 10px; font-size: 10px; border-radius: 6px; line-height: 1.2; box-shadow: none;" onclick="app.setMemberFixedAmount(${m.id}, this.previousElementSibling.value)">Save</button></div>`;
                 else if (g.split_method === 'one_payer') flagCtrl = `<label class="switch" style="transform:scale(0.6); margin-left:-5px; margin-top:6px;"><input type="checkbox" ${m.is_payer ? 'checked' : ''} onchange="app.setMemberFlag(${m.id}, 'is_payer', this.checked)"><span class="slider round"></span></label><span style="font-size:10px; font-weight:800; color:var(--muted); margin-left:-4px;">Payer</span>`;
             }
             const canPaySelf = isMine && !m.paid && g.status === 'open' && s.amount > 0 && !isReadOnly && isDeliverySet;
@@ -4923,13 +5305,13 @@ toggleAdvancedMenuFilters(btn) {
                     <div><h4 style="color:var(--brand); font-size:15px; margin-bottom:2px;">${this.esc(f.barangay)}</h4><div style="font-size:11px; color:var(--muted); font-weight:700;">${this.esc(f.city)}</div></div>
                     <button class="qty-circle-btn" style="color:#e5604d; border-color:rgba(229,96,77,0.3); width:28px; height:28px;" onclick="app.deleteFee(${f.id})" title="Delete">✕</button>
                 </div>
-                <div style="display:flex; gap:8px; align-items:center;"><span style="font-weight:800; color:var(--muted);">₱</span><input type="number" class="input" style="padding:6px 10px; font-size:14px; font-weight:800;" value="${f.fee}" id="fee-input-${f.id}"><button class="btn btn-leaf" style="padding:6px 12px; font-size:12px;" onclick="app.saveFee(${f.id})">Save</button></div>
+                <div style="display:flex; gap:8px; align-items:center;"><span style="font-weight:800; color:var(--muted);">₱</span><input type="number" class="input" style="padding:6px 10px; font-size:14px; font-weight:800;" value="${f.fee}" id="fee-input-${f.id}" min="0" oninput="app.handleNumInput(this)"><button class="btn btn-leaf" style="padding:6px 12px; font-size:12px;" onclick="app.saveFee(${f.id})">Save</button></div>
             </div>`).join('');
     },
 
     async saveFee(id) {
         const fee = parseInt(document.getElementById(`fee-input-${id}`).value); 
-        if (isNaN(fee) || fee < 0) return this.showToast('Invalid fee amount.');
+        if (isNaN(fee) || fee < 0) return this.showToast('Invalid fee amount. Must be 0 or greater.');
 
         this.showConfirm('Update Fee', 'I-save ang bagong delivery fee?', async () => {
             try {

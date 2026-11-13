@@ -54,7 +54,7 @@ CREATE TABLE orders (
   customer_name VARCHAR(150) NOT NULL,
   phone VARCHAR(30) NOT NULL DEFAULT '',
   address TEXT NOT NULL,
-  payment ENUM('cod','gcash') NOT NULL DEFAULT 'cod',
+  payment ENUM('cod','gcash','mixed') NOT NULL DEFAULT 'cod',
   payment_proof MEDIUMTEXT NOT NULL,
   subtotal INT NOT NULL,
   delivery_fee INT NOT NULL,
@@ -68,6 +68,7 @@ CREATE TABLE orders (
   is_group_order TINYINT(1) DEFAULT 0,
   group_cart_id INT DEFAULT NULL,
   group_contributors JSON DEFAULT NULL,
+  stock_restored TINYINT(1) NOT NULL DEFAULT 0,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
