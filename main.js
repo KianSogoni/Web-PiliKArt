@@ -23,7 +23,7 @@ const app = {
             if (choices.length > 0) groups.push({ name, choices });
         });
 
-        // 2. Preserve existing values so we don't lose them on re-render
+        // 2. Preserve existing values
         const currentStocks = {};
         stockContainer.querySelectorAll('.combo-stock-row').forEach(row => {
             const combo = row.dataset.combo;
@@ -31,7 +31,7 @@ const app = {
             if (combo && val !== '') currentStocks[combo] = parseInt(val) || 0;
         });
 
-        // 3. Generate Cartesian Product of Combinations
+        // 3. Generate Combinations
         let combinations = [];
         if (groups.length > 0) {
             const keys = groups.map(g => g.name);
@@ -52,16 +52,34 @@ const app = {
         // 4. Render Inputs & Handle Stock Locking
         if (combinations.length === 0) {
             stockContainer.innerHTML = '<p style="font-size:12px; color:var(--muted);">Add specifications above to set combination stocks.</p>';
-            if (stockInput) { stockInput.readOnly = false; stockInput.style.backgroundColor = ''; stockInput.style.cursor = ''; }
-            if (stockHint) stockHint.style.display = 'none';
+            if (stockInput) { 
+                if (isEdit) {
+                    // For Edit Modal: Make it editable if no specs exist
+                    stockInput.readOnly = false; 
+                    stockInput.style.backgroundColor = ''; 
+                    stockInput.style.color = '';
+                    stockInput.style.cursor = ''; 
+                    stockInput.setAttribute('required', 'required'); 
+                } else {
+                    // For Add Modal: Keep it permanently uneditable and remove required
+                    stockInput.readOnly = true; 
+                    stockInput.style.backgroundColor = 'var(--bg)'; 
+                    stockInput.style.color = 'var(--muted)';
+                    stockInput.style.cursor = 'not-allowed'; 
+                    stockInput.removeAttribute('required');
+                }
+            }
+            if (stockHint) stockHint.style.display = 'inline'; // Keep hint visible
             return;
         }
 
-        // If combinations exist, make the main stock field read-only
+        // SPECIFICATIONS EXIST: Make stock read-only and NOT required
         if (stockInput) {
             stockInput.readOnly = true;
             stockInput.style.backgroundColor = 'var(--bg)';
+            stockInput.style.color = 'var(--muted)';
             stockInput.style.cursor = 'not-allowed';
+            stockInput.removeAttribute('required'); // 🟢 Remove required to prevent the red error box
         }
         if (stockHint) stockHint.style.display = 'inline';
 
@@ -80,6 +98,54 @@ const app = {
 
         // Auto-compute the total stock sum
         this.updateTotalComboStock(containerId, stockInputId);
+    },
+
+    handleTagInput(e, containerId) {
+        if (e.key === 'Enter' || e.key === ',') {
+            e.preventDefault();
+            const input = e.target;
+            const val = input.value.trim().replace(/,/g, '');
+            if (val) {
+                this.addTag(containerId, val);
+                input.value = '';
+            }
+        } else if (e.key === 'Backspace' && !e.target.value) {
+            const container = document.getElementById(containerId);
+            const pills = container.querySelectorAll('.tag-pill');
+            if (pills.length > 0) {
+                pills[pills.length - 1].remove();
+            }
+        }
+    },
+
+    addTag(containerId, tagText) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+        const input = container.querySelector('.tag-input-field');
+        
+        // Check if tag already exists
+        const existingTags = Array.from(container.querySelectorAll('.tag-pill')).map(t => t.getAttribute('data-tag').toLowerCase());
+        if (existingTags.includes(tagText.toLowerCase())) {
+            return; // Prevent duplicates
+        }
+
+        const pill = document.createElement('span');
+        pill.className = 'tag-pill';
+        pill.setAttribute('data-tag', tagText);
+        pill.innerHTML = `${this.esc(tagText)} <span class="tag-remove" onclick="app.removeTag(this)">×</span>`;
+        
+        container.insertBefore(pill, input);
+    },
+
+    removeTag(btn) {
+        btn.parentElement.remove();
+    },
+
+    getTagsString(containerId) {
+        const container = document.getElementById(containerId);
+        if (!container) return '';
+        const pills = container.querySelectorAll('.tag-pill');
+        return Array.from(pills).map(p => p.getAttribute('data-tag')).join(', ');
     },
 
     updateTotalComboStock(containerId, stockInputId) {
@@ -438,25 +504,6 @@ const app = {
         }, 'Submit');
     },
 
-    deleteUser(userId, userName) {
-        this.showConfirm('Delete Account', `Sigurado ka bang i-delete si <b>${this.esc(userName)}</b>?<br><br>Hindi na siya makaka-login at mawawala siya sa listahan.`, async () => {
-            try {
-                const res = await fetch('api.php?action=admin-archive-user', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ user_id: userId })
-                });
-                const data = await res.json();
-                if (data.ok) {
-                    this.showToast('User account deleted.');
-                    this.renderAdminUsers();
-                } else {
-                    this.showToast(data.error || 'Failed to delete user.');
-                }
-            } catch(e) { this.showToast('Connection error.'); }
-        }, 'Delete');
-    },
-
     async renderAdminUsers() {
         const grid = document.getElementById('admin-users-grid');
         if (!grid) return;
@@ -501,7 +548,6 @@ const app = {
                             ? '<span style="font-size: 11px; color: var(--muted); font-style: italic;">Current Session</span>' 
                             : `<div style="display:flex; gap:6px;">
                                 <button class="btn btn-ghost" style="padding: 4px 12px; font-size: 11px; border-radius: 6px;" onclick='app.openRoleChangeModal(${u.id}, "${u.role}", "${this.esc(u.name)}")'>Change Role</button>
-                                <button class="btn btn-danger" style="padding: 4px 12px; font-size: 11px; border-radius: 6px;" onclick='app.deleteUser(${u.id}, "${this.esc(u.name)}")'>Delete</button>
                                </div>`
                         }
                     </div>
@@ -4025,7 +4071,19 @@ toggleAdvancedMenuFilters(btn) {
         $('pe-stock').value = p.stock;
         $('pe-cat').value = (p.category || 'paso').toLowerCase();
         $('pe-image').value = p.image || '';
-        $('pe-tags').value = p.tags || '';
+        // Clear existing tags
+        const peTagsContainer = document.getElementById('pe-tags-container');
+        if (peTagsContainer) {
+            peTagsContainer.querySelectorAll('.tag-pill').forEach(el => el.remove());
+            
+            // Add tags from p.tags
+            if (p.tags) {
+                p.tags.split(',').forEach(tag => {
+                    const cleanTag = tag.trim();
+                    if (cleanTag) this.addTag('pe-tags-container', cleanTag);
+                });
+            }
+        }
         $('pe-bestseller').checked = Number(p.best_seller) === 1;
 
         const optContainer = document.getElementById('pe-options-container');
@@ -4261,7 +4319,7 @@ toggleAdvancedMenuFilters(btn) {
             stock,
             category: v('pe-cat'),
             image: v('pe-image'),
-            tags: v('pe-tags'),
+            tags: this.getTagsString('pe-tags-container'),
             best_seller: document.getElementById('pe-bestseller').checked ? 1 : 0,
             options: optionsStr 
         };
@@ -4399,6 +4457,13 @@ toggleAdvancedMenuFilters(btn) {
     openAddProductModal() {
         document.getElementById('admin-add-form').reset();
         document.getElementById('add-options-container').innerHTML = '';
+        
+        // Clear tags container
+        const addTagsContainer = document.getElementById('add-tags-container');
+        if (addTagsContainer) {
+            addTagsContainer.querySelectorAll('.tag-pill').forEach(el => el.remove());
+        }
+        
         this.generateCombinationsUI('add-combo-stocks-container', 'add-options-container');
         document.getElementById('add-product-modal').classList.remove('hidden');
         this.updateBodyScrollLock();
@@ -4456,7 +4521,7 @@ toggleAdvancedMenuFilters(btn) {
             stock: Math.max(0, parseInt(document.getElementById('add-stock').value) || 0),
             category: document.getElementById('add-cat').value,
             image: document.getElementById('add-image').value.trim(),
-            tags: document.getElementById('add-tags').value.trim(),
+            tags: this.getTagsString('add-tags-container'),
             best_seller: document.getElementById('add-bestseller').checked ? 1 : 0,
             options: optionsStr
         };

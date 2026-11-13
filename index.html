@@ -2244,8 +2244,10 @@
             </div>
 
             <div class="form-group">
-                <label>Tags (Comma Separated)</label>
-                <input type="text" id="pe-tags" class="input">
+                <label>Tags</label>
+                <div class="tag-input-container" id="pe-tags-container" onclick="document.getElementById('pe-tags-input').focus()">
+                    <input type="text" id="pe-tags-input" class="tag-input-field" placeholder="Type and press Enter..." onkeydown="app.handleTagInput(event, 'pe-tags-container')">
+                </div>
             </div>
 
             <div class="pe-actions" style="justify-content: space-between; width: 100%; display: flex;">
@@ -2593,8 +2595,8 @@
                     <input type="number" id="add-price" class="input" placeholder="e.g. 90" min="0" oninput="app.handleNumInput(this)" required>
                 </div>
                 <div class="form-group">
-                    <label>Stock Quantity <span id="add-stock-hint" style="display:none; font-size:10px; color:var(--muted); font-weight:400; text-transform:none;">(Auto-computed)</span></label>
-                    <input type="number" id="add-stock" class="input" placeholder="e.g. 30" min="0" oninput="app.handleNumInput(this)" required>
+                    <label>Stock Quantity <span id="add-stock-hint" style="display:inline; font-size:10px; color:var(--muted); font-weight:400; text-transform:none;">(Auto-computed)</span></label>
+                    <input type="number" id="add-stock" class="input" placeholder="e.g. 30" min="0" oninput="app.handleNumInput(this)" readonly style="background-color: var(--bg); color: var(--muted); cursor: not-allowed;">
                 </div>
             </div>
 
@@ -2646,8 +2648,10 @@
             </div>
 
             <div class="form-group">
-                <label>Tags (Comma Separated)</label>
-                <input type="text" id="add-tags" class="input" placeholder="e.g. Filipino Food, Chicken, Rice Meal">
+                <label>Tags</label>
+                <div class="tag-input-container" id="add-tags-container" onclick="document.getElementById('add-tags-input').focus()">
+                    <input type="text" id="add-tags-input" class="tag-input-field" placeholder="Type and press Enter..." onkeydown="app.handleTagInput(event, 'add-tags-container')">
+                </div>
             </div>
             <button type="submit" class="btn btn-brand btn-large btn-block" style="margin-top: 10px;">Add Product to Store</button>
         </form>

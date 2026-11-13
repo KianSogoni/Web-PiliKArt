@@ -2492,3 +2492,72 @@ main { overflow-x: hidden; }
 [data-theme="sunset"] .status-preparing { 
     color: #ffc107; 
 }
+
+/* ============================================================
+   TAG INPUT STYLES
+   ============================================================ */
+.tag-input-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 8px 12px;
+    border: 2px solid var(--line);
+    border-radius: 14px;
+    background: var(--surface);
+    cursor: text;
+    transition: all var(--dur-mid) var(--ease-smooth);
+    min-height: 48px;
+    align-items: center;
+}
+.tag-input-container:focus-within {
+    border-color: var(--brand);
+    box-shadow: 0 0 0 4px rgba(230, 126, 60, 0.15);
+    background: var(--surface2);
+}
+.tag-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: color-mix(in srgb, var(--brand) 15%, var(--surface2));
+    color: var(--brand);
+    border: 1px solid color-mix(in srgb, var(--brand) 30%, transparent);
+    padding: 4px 8px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    animation: fadeIn var(--dur-fast) ease;
+}
+.tag-pill .tag-remove {
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1;
+    color: var(--brand);
+    opacity: 0.6;
+    transition: opacity 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+}
+.tag-pill .tag-remove:hover {
+    opacity: 1;
+    background: color-mix(in srgb, var(--brand) 20%, transparent);
+}
+.tag-input-field {
+    border: none;
+    background: transparent;
+    outline: none;
+    color: var(--ink);
+    font-weight: 600;
+    font-size: 14px;
+    flex: 1;
+    min-width: 120px;
+    padding: 4px 0;
+    font-family: "Nunito", sans-serif;
+}
+.tag-input-field::placeholder {
+    color: var(--muted);
+    font-weight: 600;
+}
