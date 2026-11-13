@@ -2820,6 +2820,44 @@
     </div>
 </div>
 
+<!-- Admin Delete Reason Modal -->
+<div id="admin-delete-reason-modal" class="modal hidden" onclick="if (event.target === this) app.closeModal('admin-delete-reason-modal')">
+    <div class="modal-content" style="max-width: 440px; padding: 28px;">
+        <button class="modal-close-btn" onclick="app.closeModal('admin-delete-reason-modal')">✕</button>
+        <h2 class="pe-title" style="padding-right:0; color: #e5604d;">Delete <span id="adr-type">Item</span></h2>
+        <p style="color:var(--muted); font-size:13px; margin-bottom:16px; line-height: 1.5;">
+            You are about to permanently delete <b id="adr-name"></b>. Please provide a reason. This will be logged and sent to the affected user(s) via notifications.
+        </p>
+        <div class="form-group">
+            <label>Reason for Deletion</label>
+            <textarea id="adr-reason" class="input" rows="3" placeholder="e.g., Invalid address, fraudulent order, customer request..."></textarea>
+        </div>
+        <button class="btn btn-danger btn-block btn-large" id="adr-confirm-btn" onclick="app.submitAdminDelete()">Confirm Delete</button>
+    </div>
+</div>
+
+<!-- User Appeal Cancellation Modal -->
+<div id="appeal-modal" class="modal hidden" onclick="if (event.target === this) app.closeModal('appeal-modal')">
+    <div class="modal-content" style="max-width: 460px; padding: 32px;">
+        <button class="modal-close-btn" onclick="app.closeModal('appeal-modal')">✕</button>
+        <h2 class="pe-title" style="padding-right:0; color: var(--brand);">Appeal Cancellation</h2>
+        <p style="color:var(--muted); font-size:13px; margin-bottom:16px;">
+            Your order was cancelled by the Admin. If you believe this was a mistake, you can submit an appeal below.
+        </p>
+        
+        <div style="background: rgba(229, 96, 77, 0.1); border-left: 3px solid #e5604d; padding: 12px; border-radius: 8px; margin-bottom: 16px;">
+            <div style="font-size: 11px; font-weight: 800; color: #e5604d; text-transform: uppercase; margin-bottom: 4px;">Cancellation Reason</div>
+            <div style="font-size: 13px; color: var(--ink); font-weight: 600;" id="appeal-cancel-reason"></div>
+        </div>
+
+        <div class="form-group">
+            <label>Why should we restore this order?</label>
+            <textarea id="appeal-text" class="input" rows="3" placeholder="Explain why the cancellation was a mistake..."></textarea>
+        </div>
+        
+        <button class="btn btn-brand btn-block btn-large" id="appeal-submit-btn" onclick="app.submitAppeal()">Submit Appeal</button>
+    </div>
+</div>
 
 <script src="main.js?v=13"></script>
 </body>
