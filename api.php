@@ -70,6 +70,41 @@ function restoreOrderStock(PDO $pdo, int $orderId) {
 
 /* ───────── 3NF helpers ───────── */
 
+// READ: Fetch tags and return them as a comma-separated string for the frontend
+function getProductTags(PDO $pdo, int $productId): string {
+    $stmt = $pdo->prepare('
+        SELECT t.name 
+        FROM tags t
+        INNER JOIN product_tags pt ON t.id = pt.tag_id
+        WHERE pt.product_id = ?
+        ORDER BY t.name
+    ');
+    $stmt->execute([$productId]);
+    return implode(', ', $stmt->fetchAll(PDO::FETCH_COLUMN));
+}
+
+// WRITE: Parse comma-separated string and save to 3NF tables
+function saveProductTags(PDO $pdo, int $productId, string $tagsString) {
+    // Clear existing tags for this product
+    $pdo->prepare('DELETE FROM product_tags WHERE product_id = ?')->execute([$productId]);
+    
+    if (trim($tagsString) === '') return;
+    
+    $tags = array_unique(array_filter(array_map('trim', explode(',', $tagsString))));
+    $insertTag = $pdo->prepare('INSERT IGNORE INTO tags (name) VALUES (?)');
+    $getTagId = $pdo->prepare('SELECT id FROM tags WHERE name = ?');
+    $insertProductTag = $pdo->prepare('INSERT IGNORE INTO product_tags (product_id, tag_id) VALUES (?, ?)');
+    
+    foreach ($tags as $tag) {
+        $insertTag->execute([$tag]);
+        $getTagId->execute([$tag]);
+        $tagId = $getTagId->fetchColumn();
+        if ($tagId) {
+            $insertProductTag->execute([$productId, $tagId]);
+        }
+    }
+}
+
 // READ: rebuild the exact `p.options` JSON the frontend already expects
 function buildOptionsJson(PDO $pdo, int $productId): string {
     $gStmt = $pdo->prepare('SELECT id, spec_name FROM product_options WHERE product_id=? ORDER BY sort_order, id');
@@ -202,6 +237,8 @@ switch ($action) {
             }
             // Rebuild the legacy `options` JSON from 3NF tables
             $p['options'] = buildOptionsJson($pdo, (int)$p['id']);
+            // 🟢 Rebuild the legacy `tags` string from 3NF tables
+            $p['tags'] = getProductTags($pdo, (int)$p['id']);
         }
         unset($p);
 
@@ -819,7 +856,8 @@ switch ($action) {
 
         $pdo->beginTransaction();
         try {
-            $stmt = $pdo->prepare('UPDATE products SET name=?, tagline=?, description=?, price=?, category=?, image=?, stock=?, sold_out=?, best_seller=?, tags=? WHERE id=?');
+            // 🟢 Removed tags=? from this query
+            $stmt = $pdo->prepare('UPDATE products SET name=?, tagline=?, description=?, price=?, category=?, image=?, stock=?, sold_out=?, best_seller=? WHERE id=?');
             $stmt->execute([
                 $name,
                 trim($in['tagline'] ?? ''),
@@ -830,11 +868,12 @@ switch ($action) {
                 $stock,
                 $stock <= 0 ? 1 : 0,
                 (int)($in['best_seller'] ?? 0),
-                trim($in['tags'] ?? ''),
                 $pid
             ]);
 
             saveProductOptions($pdo, $pid, $optionsIn);
+            // 🟢 Save the tags to the new tables
+            saveProductTags($pdo, $pid, trim($in['tags'] ?? ''));
 
             $pdo->commit();
         } catch (Exception $e) {
@@ -891,7 +930,8 @@ switch ($action) {
 
         $pdo->beginTransaction();
         try {
-            $stmt = $pdo->prepare('INSERT INTO products (name,tagline,description,price,category,image,stock,best_seller,tags) VALUES (?,?,?,?,?,?,?,?,?)');
+            // 🟢 Removed tags from this query
+            $stmt = $pdo->prepare('INSERT INTO products (name,tagline,description,price,category,image,stock,best_seller) VALUES (?,?,?,?,?,?,?,?)');
             $stmt->execute([
                 $in['name'], 
                 $in['tagline'], 
@@ -900,12 +940,13 @@ switch ($action) {
                 $in['category'], 
                 $in['image'], 
                 $stock, 
-                (int)($in['best_seller'] ?? 0),
-                $in['tags']
+                (int)($in['best_seller'] ?? 0)
             ]);
 
             $newId = (int)$pdo->lastInsertId();
             saveProductOptions($pdo, $newId, $optionsIn);
+            // 🟢 Save the tags to the new tables
+            saveProductTags($pdo, $newId, trim($in['tags'] ?? ''));
 
             $pdo->commit();
         } catch (Exception $e) {
