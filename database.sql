@@ -5,14 +5,18 @@ CREATE DATABASE IF NOT EXISTS pilikart CHARACTER SET utf8mb4 COLLATE utf8mb4_uni
 USE pilikart;
 
 SET FOREIGN_KEY_CHECKS = 0;
+DROP TABLE IF EXISTS variant_option_choices;
 DROP TABLE IF EXISTS product_variants;
 DROP TABLE IF EXISTS product_option_choices;
 DROP TABLE IF EXISTS product_options;
 DROP TABLE IF EXISTS product_tags;
 DROP TABLE IF EXISTS tags;
 DROP TABLE IF EXISTS notifications;
+DROP TABLE IF EXISTS order_contributors;
 DROP TABLE IF EXISTS order_items;
 DROP TABLE IF EXISTS orders;
+DROP TABLE IF EXISTS order_shipping_snapshots;
+DROP TABLE IF EXISTS order_item_snapshots;
 DROP TABLE IF EXISTS products;
 DROP TABLE IF EXISTS users;
 DROP TABLE IF EXISTS settings;
@@ -24,14 +28,17 @@ DROP TABLE IF EXISTS contact_messages;
 SET FOREIGN_KEY_CHECKS = 1;
 
 -- ==========================================================
--- 2. CREATE TABLES
+-- 2. CREATE TABLES (Final 3NF Structure)
 -- ==========================================================
+
 CREATE TABLE users (
   id INT AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(100) NOT NULL,
   email VARCHAR(150) NOT NULL UNIQUE,
   phone VARCHAR(30) NOT NULL DEFAULT '',
-  address TEXT NOT NULL,
+  street VARCHAR(255) NOT NULL DEFAULT '',
+  brgy VARCHAR(100) NOT NULL DEFAULT '',
+  city VARCHAR(100) NOT NULL DEFAULT '',
   password_hash VARCHAR(255) NOT NULL,
   role ENUM('customer','admin') NOT NULL DEFAULT 'customer',
   is_archived TINYINT(1) NOT NULL DEFAULT 0,
@@ -84,27 +91,48 @@ CREATE TABLE product_option_choices (
   FOREIGN KEY (option_id) REFERENCES product_options(id) ON DELETE CASCADE
 );
 
+-- 3NF Variant Tables
 CREATE TABLE product_variants (
   id INT AUTO_INCREMENT PRIMARY KEY,
   product_id INT NOT NULL,
-  variation_string VARCHAR(255) NOT NULL,
   stock INT NOT NULL DEFAULT 0,
-  UNIQUE KEY uniq_prod_variant (product_id, variation_string),
   FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+);
+
+CREATE TABLE variant_option_choices (
+  variant_id INT NOT NULL,
+  choice_id INT NOT NULL,
+  PRIMARY KEY (variant_id, choice_id),
+  FOREIGN KEY (variant_id) REFERENCES product_variants(id) ON DELETE CASCADE,
+  FOREIGN KEY (choice_id) REFERENCES product_option_choices(id) ON DELETE CASCADE
+);
+
+-- Immutable Snapshot Tables
+CREATE TABLE order_shipping_snapshots (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NULL,
+  customer_name VARCHAR(150) NOT NULL,
+  phone VARCHAR(30) NOT NULL,
+  delivery_street VARCHAR(255) NOT NULL,
+  delivery_brgy VARCHAR(100) NOT NULL,
+  delivery_city VARCHAR(100) NOT NULL
+);
+
+CREATE TABLE order_item_snapshots (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  product_id INT NOT NULL,
+  product_name VARCHAR(150) NOT NULL,
+  price INT NOT NULL
 );
 
 CREATE TABLE orders (
   id INT AUTO_INCREMENT PRIMARY KEY,
   user_id INT NULL,
-  customer_name VARCHAR(150) NOT NULL,
-  phone VARCHAR(30) NOT NULL DEFAULT '',
-  address TEXT NOT NULL,
+  shipping_snapshot_id INT NOT NULL,
   payment ENUM('cod','gcash','mixed') NOT NULL DEFAULT 'cod',
   payment_proof MEDIUMTEXT NOT NULL,
-  subtotal INT NOT NULL,
   delivery_fee INT NOT NULL,
   protection_fee INT NOT NULL DEFAULT 0,
-  total INT NOT NULL,
   status ENUM('Pending','Preparing','Shipping','Out for Delivery','Delivered','Cancelled') NOT NULL DEFAULT 'Pending',
   delivered_at TIMESTAMP NULL DEFAULT NULL,
   refund_status ENUM('none','requested','approved','rejected') DEFAULT 'none',
@@ -112,23 +140,33 @@ CREATE TABLE orders (
   refund_proof MEDIUMTEXT DEFAULT NULL,
   is_group_order TINYINT(1) DEFAULT 0,
   group_cart_id INT DEFAULT NULL,
-  group_contributors JSON DEFAULT NULL,
   stock_restored TINYINT(1) NOT NULL DEFAULT 0,
   is_archived TINYINT(1) NOT NULL DEFAULT 0,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   cancel_reason TEXT DEFAULT NULL,
   appeal_status ENUM('none','requested','approved','rejected') DEFAULT 'none',
-  appeal_reason TEXT DEFAULT NULL
+  appeal_reason TEXT DEFAULT NULL,
+  FOREIGN KEY (shipping_snapshot_id) REFERENCES order_shipping_snapshots(id)
 );
 
 CREATE TABLE order_items (
   id INT AUTO_INCREMENT PRIMARY KEY,
   order_id INT NOT NULL,
   product_id INT NOT NULL,
-  name VARCHAR(150) NOT NULL,
-  price INT NOT NULL,
+  item_snapshot_id INT NOT NULL,
   qty INT NOT NULL,
-  variation VARCHAR(255) NOT NULL DEFAULT ''
+  variation VARCHAR(255) NOT NULL DEFAULT '',
+  FOREIGN KEY (item_snapshot_id) REFERENCES order_item_snapshots(id)
+);
+
+CREATE TABLE order_contributors (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  order_id INT NOT NULL,
+  user_name VARCHAR(150) NOT NULL,
+  amount_paid INT NOT NULL DEFAULT 0,
+  role ENUM('host','member') DEFAULT 'member',
+  payment_method ENUM('cash','gcash') DEFAULT 'cash',
+  FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
 );
 
 CREATE TABLE settings (
@@ -155,7 +193,9 @@ CREATE TABLE group_carts (
   fixed_amount INT DEFAULT 0,
   customer_name VARCHAR(150) DEFAULT '',
   phone VARCHAR(30) DEFAULT '',
-  delivery_address TEXT DEFAULT '',
+  delivery_street VARCHAR(255) NOT NULL DEFAULT '',
+  delivery_brgy VARCHAR(100) NOT NULL DEFAULT '',
+  delivery_city VARCHAR(100) NOT NULL DEFAULT '',
   delivery_fee INT DEFAULT 0,
   order_id INT DEFAULT NULL,
   is_archived TINYINT(1) NOT NULL DEFAULT 0,
@@ -218,12 +258,12 @@ CREATE TABLE contact_messages (
 -- ==========================================================
 INSERT INTO settings (`key`, `value`) VALUES ('delivery_fee', '50');
 
-INSERT INTO users (name, email, phone, address, password_hash, role) VALUES
-('Store Owner', 'admin@pilikart.ph', '09171234567', '{"street": "Main St.", "brgy": "Poblacion", "city": "Calamba"}', 'admin', 'admin'),
-('Customer Demo', 'customer@example.com', '09189876543', '{"street": "123 Rizal St", "brgy": "Poblacion", "city": "Calamba"}', 'customer', 'customer'),
-('Marc Arambulo', 'marc@pilikart.ph', '09170000001', '{"street": "Bossing St., Arambulo Ave.", "brgy": "San juan", "city": "Calamba"}', 'marc', 'customer'),
-('Bryan Flores', 'bryan@pilikart.ph', '09170000002', '{"street": "LC St., Mabangis Ave.", "brgy": "Siranglupa", "city": "Calamba"}', 'bryan', 'admin'),
-('Kian Sogoni', 'kian@pilikart.ph', '09170000003', '{"street": "123 St., December Ave.", "brgy": "Looc", "city": "Calamba"}', 'kian', 'admin');
+INSERT INTO users (name, email, phone, street, brgy, city, password_hash, role) VALUES
+('Store Owner', 'admin@pilikart.ph', '09171234567', 'Main St.', 'Poblacion', 'Calamba', 'admin', 'admin'),
+('Customer Demo', 'customer@example.com', '09189876543', '123 Rizal St', 'Poblacion', 'Calamba', 'customer', 'customer'),
+('Marc Arambulo', 'marc@pilikart.ph', '09170000001', 'Bossing St., Arambulo Ave.', 'San juan', 'Calamba', 'marc', 'customer'),
+('Bryan Flores', 'bryan@pilikart.ph', '09170000002', 'LC St., Mabangis Ave.', 'Siranglupa', 'Calamba', 'bryan', 'admin'),
+('Kian Sogoni', 'kian@pilikart.ph', '09170000003', '123 St., December Ave.', 'Looc', 'Calamba', 'kian', 'admin');
 
 -- ==========================================================
 -- 4. INSERT DELIVERY FEES
@@ -240,70 +280,70 @@ INSERT INTO delivery_fees (city, barangay, fee) VALUES
 -- 5. INSERT 64 PRODUCTS
 -- ==========================================================
 INSERT INTO products (name, tagline, description, price, category, image, stock, best_seller) VALUES
-('Chicken Adobo with Rice', 'Ang paboritong ulam ng bayan', 'Tender chicken slowly simmered in a harmonious blend of soy sauce, vinegar, and garlic, served over a bed of warm steamed rice.', 90, 'paso', 'assets/paso/Chicken Adobo with Rice.png', 30, 1),
-('Pork Sisig with Rice', 'Sarap na tiyak na babalik-balikan', 'A sizzling culinary masterpiece featuring finely chopped pork, onions, and a hint of calamansi.', 85, 'paso', 'assets/paso/Pork sisig with rice.png', 20, 0),
-('Chicken Inasal with Rice', 'Smoky na lasa, puno ng pagmamahal', 'Grilled chicken meticulously marinated in a fragrant infusion of calamansi, garlic, and lemongrass.', 95, 'paso', 'assets/paso/Chicken Inasal with Rice.png', 25, 0),
-('Pancit Bihon Guisado', 'Pampaswerte at pampasaya sa handaan', 'Stir-fried rice noodles gracefully tossed with fresh vegetables, savory pork, and shrimp.', 75, 'paso', 'assets/paso/Pancit Bihon Guisado.png', 25, 0),
-('Beefsilog', 'Simula ng araw na puno ng pag-asa', 'A quintessential Filipino breakfast featuring tender, savory beef tapa, paired with fragrant garlic fried rice and a farm-fresh egg.', 100, 'paso', 'assets/paso/Beefsilog.png', 25, 0),
-('Lumpiang Shanghai', 'Paboritong meryenda ng buong pamilya', 'Crispy, golden-brown spring rolls generously packed with seasoned ground pork and sweet carrots.', 40, 'paso', 'assets/paso/Lumpiang Shanghai.png', 45, 0),
-('Leche Flan Cup', 'Tamis na laging hinahanap', 'A rich, velvety caramel custard meticulously prepared from egg yolks, evaporated milk, and pure sugar.', 35, 'paso', 'assets/paso/Leche Flan Cup.jpg', 40, 0),
-('Buko Pandan Cup', 'Preskong kaginhawahan sa bawat subo', 'A refreshing, chilled dessert delicately crafted with sweet young coconut strips, fragrant pandan jelly, and rich, creamy milk.', 35, 'paso', 'assets/paso/Buko Pandan Cup.jpg', 35, 0),
-('Turon', 'Sarap ng kabataan sa bawat kagat', 'Sweet saba bananas gently wrapped in crispy spring roll pastry and coated in caramelized brown sugar.', 30, 'paso', 'assets/paso/Turon.png', 50, 0),
-('Classic Fried Chicken with Egg', 'Lutong bahay na hatid ay ginhawa', 'Crispy, golden fried chicken served alongside a generous portion of steamed rice and a fresh egg.', 105, 'paso', 'assets/paso/Classic Fried Chicken.png', 25, 0),
-('Cheese Sticks', 'Kada kagat, puno ng sarap', 'Golden, crispy wrappers filled with rich, gooey melted cheese.', 35, 'paso', 'assets/paso/Cheese Sticks.png', 40, 0),
-('French Fries', 'Crispy na pang-meryenda', 'Perfectly cut, golden-fried potatoes lightly dusted with sea salt.', 50, 'paso', 'assets/paso/French Fries.png', 40, 0),
-('Fudgy Brownies', 'Tsokolateng tamis ng pagmamahal', 'Rich, dense, and intensely chocolatey brownies baked to fudgy perfection.', 45, 'paso', 'assets/paso/Fudgy Brownies.png', 35, 0),
-('Wintermelon Milk Tea', 'Tamang-tama para sa chill na hapon', 'Creamy wintermelon tea gently blended with milk and delightfully chewy tapioca pearls.', 65, 'paso', 'assets/paso/Wintermelon Milk Tea.png', 40, 0),
+('Chicken Adobo with Rice', 'Ang paboritong ulam ng bayan', 'Tender chicken simmered in soy sauce, vinegar, and garlic, served over steamed rice. A classic, filling Filipino meal.', 90, 'paso', 'assets/paso/Chicken Adobo with Rice.png', 30, 1),
+('Pork Sisig with Rice', 'Sarap na tiyak na babalik-balikan', 'Chopped pork with onions and calamansi, served sizzling with rice. Crispy, savory, and slightly tangy.', 85, 'paso', 'assets/paso/Pork sisig with rice.png', 20, 0),
+('Chicken Inasal with Rice', 'Smoky na lasa, puno ng pagmamahal', 'Grilled chicken marinated in calamansi, garlic, and lemongrass. Smoky, juicy, and best eaten with rice.', 95, 'paso', 'assets/paso/Chicken Inasal with Rice.png', 25, 0),
+('Pancit Bihon Guisado', 'Pampaswerte at pampasaya sa handaan', 'Stir-fried rice noodles with fresh vegetables, pork, and shrimp. A staple for birthdays and family gatherings.', 75, 'paso', 'assets/paso/Pancit Bihon Guisado.png', 25, 0),
+('Beefsilog', 'Simula ng araw na puno ng pag-asa', 'Savory beef tapa served with garlic fried rice and a fried egg. A classic Filipino breakfast to start your day.', 100, 'paso', 'assets/paso/Beefsilog.png', 25, 0),
+('Lumpiang Shanghai', 'Paboritong meryenda ng buong pamilya', 'Crispy spring rolls filled with seasoned ground pork and carrots. Served with a sweet and sour dipping sauce.', 40, 'paso', 'assets/paso/Lumpiang Shanghai.png', 45, 0),
+('Leche Flan Cup', 'Tamis na laging hinahanap', 'A smooth caramel custard made from egg yolks, evaporated milk, and sugar. Rich and perfectly sweet.', 35, 'paso', 'assets/paso/Leche Flan Cup.jpg', 40, 0),
+('Buko Pandan Cup', 'Preskong kaginhawahan sa bawat subo', 'A chilled dessert with sweet coconut strips, pandan jelly, and cream. Refreshing and great for a hot day.', 35, 'paso', 'assets/paso/Buko Pandan Cup.jpg', 35, 0),
+('Turon', 'Sarap ng kabataan sa bawat kagat', 'Crispy banana spring rolls coated in caramelized brown sugar. A popular sweet snack for merienda.', 30, 'paso', 'assets/paso/Turon.png', 50, 0),
+('Classic Fried Chicken with Egg', 'Lutong bahay na hatid ay ginhawa', 'Crispy fried chicken served with steamed rice and a fried egg. Simple, filling, and comforting.', 105, 'paso', 'assets/paso/Classic Fried Chicken.png', 25, 0),
+('Cheese Sticks', 'Kada kagat, puno ng sarap', 'Crispy spring roll wrappers filled with gooey melted cheese. A great snack to share.', 35, 'paso', 'assets/paso/Cheese Sticks.png', 40, 0),
+('French Fries', 'Crispy na pang-meryenda', 'Golden-fried potato cuts lightly dusted with salt. The perfect side dish or quick snack.', 50, 'paso', 'assets/paso/French Fries.png', 40, 0),
+('Fudgy Brownies', 'Tsokolateng tamis ng pagmamahal', 'Dense, chocolatey brownies baked to a fudgy texture. Rich and not overly sweet.', 45, 'paso', 'assets/paso/Fudgy Brownies.png', 35, 0),
+('Wintermelon Milk Tea', 'Tamang-tama para sa chill na hapon', 'Creamy wintermelon tea blended with milk and chewy tapioca pearls. Sweet and refreshing.', 65, 'paso', 'assets/paso/Wintermelon Milk Tea.png', 40, 0),
 ('Chicken Pastil', 'Pantawid gutom ng kolehiyo', 'Shredded chicken simmered in soy, vinegar, and garlic, paired with hot rice and placed in banana leaf.', 25, 'paso', 'assets/paso/pastil.png', 30, 0),
-('Arroz Caldo', 'Init ng sabaw, hagod ng pagmamahal', 'A comforting, savory rice porridge cooked with ginger, tender chicken, and a hint of fish sauce.', 85, 'paso', 'assets/paso/arrozcaldo.png', 30, 0),
-('Classic Plastic Tabo', 'Kasama sa bawat ligo, kasama sa tahanan', 'More than just a bathroom essential, it is the trusted companion of Filipino hygiene.', 45, 'nipa', 'assets/nipa/Classic Plastic Tabo.png', 60, 1),
-('Banig', 'Himbing ng tulog sa banig ng probinsya', 'A traditional hand-woven sleeping mat meticulously crafted from dried pandan leaves.', 350, 'nipa', 'assets/nipa/Banig.png', 15, 0),
-('Abaca Scrubbing Pad', 'Malinis ang bahay, alaga pa ang kalikasan', 'An eco-friendly cleaning companion made from durable, hand-woven abaca fibers.', 55, 'nipa', 'assets/nipa/Abaca Scrubbing Pad.png', 40, 0),
-('Bamboo Utensil Set', 'Kubyertos na gawa ng kalikasan', 'A beautiful set of fork, spoon, and knife carved from sustainable bamboo.', 120, 'nipa', 'assets/nipa/Bamboo Utensil Set.png', 30, 0),
-('Coconut Shell Bowl', 'Gawang likas, espesyal ang dating', 'A uniquely crafted bowl polished from real coconut shells.', 150, 'nipa', 'assets/nipa/Coconut Shell Bowl.png', 25, 0),
-('Capiz Shell Lamp', 'Ilaw na nagbibigay ng init sa tahanan', 'An elegant hanging lamp meticulously crafted with translucent Capiz shells.', 450, 'nipa', 'assets/nipa/Capiz Shell Lamp.png', 10, 0),
-('Wooden Serving Tray', 'Paghahain nang may karangalan', 'A sturdy and beautifully grained serving tray carved from local Acacia wood.', 280, 'nipa', 'assets/nipa/Wooden Serving Tray.png', 15, 0),
-('Sampaguita Air Freshener', 'Halimuyak ng tahanang Pinoy', 'A room spray that thoughtfully captures the sweet, nostalgic scent of fresh Sampaguita flowers.', 180, 'nipa', 'assets/nipa/Sampaguita Air Freshener.png', 35, 0),
-('Palayok', 'Mabagal lutuin, puno ng lasa at alaala', 'A traditional clay pot designed to slowly and evenly distribute heat.', 320, 'nipa', 'assets/nipa/Palayok.png', 12, 0),
-('Broom and Dustpan Set', 'Katuwang sa pagpapanatili ng linis', 'A practical and sturdy cleaning set designed to make sweeping floors effortless.', 85, 'nipa', 'assets/nipa/Broom and Dustpan Set.png', 28, 0),
-('Plastic Water Pitcher', 'Sariwang tubig para sa buong angkan', 'A lightweight and durable pitcher with an easy-pour spout.', 75, 'nipa', 'assets/nipa/Plastic Water Pitcher.png', 40, 0),
-('Plastic Clothes Hangers', 'Ayos at maaliwalas na pamamahay', 'A set of sturdy hangers designed to keep your garments neatly organized.', 60, 'nipa', 'assets/nipa/Plastic Clothes Hangers.png', 30, 0),
-('Bath Towel', 'Lambot na yakap pagkatapos maligo', 'Wrap yourself in absolute comfort with this ultra-soft and highly absorbent cotton towel.', 100, 'nipa', 'assets/nipa/Bath Towel.png', 50, 0),
-('Small Waste Bin', 'Maliit na basurahan, malaking tulong', 'A compact, lightweight waste bin that fits perfectly in personal spaces.', 65, 'nipa', 'assets/nipa/Small Waste Bin.png', 40, 0),
-('Plastic Laundry Basket', 'Organisado at maayos na labahan', 'A durable, ventilated laundry basket that keeps garments organized and allows air to circulate.', 120, 'nipa', 'assets/nipa/Plastic Laundry Basket.png', 40, 0),
-('Woven Bayong', 'Mabisang katuwang sa pamimili', 'A traditional Filipino market bag, robustly handwoven from dried palm leaves.', 150, 'nipa', 'assets/nipa/Woven Bayong.png', 25, 0),
-('Indigenous Woven Scarf', 'Habi ng kultura, suot ng lahi', 'A beautiful, unisex scarf meticulously handwoven by indigenous Filipino tribes.', 450, 'habi', 'assets/habi/scarf.png', 20, 1),
-('Barot Saya', 'Proud na suot, yaman ng kultura', 'The prestigious pride of the Filipiniana wardrobe.', 850, 'habi', 'assets/habi/barotsaya.png', 15, 0),
-('Inabel Woven Tote Bag', 'Gawang Ilocos, yaman na dala-dala', 'A beautifully crafted tote bag made from authentic Inabel fabric.', 450, 'habi', 'assets/habi/tote.png', 20, 0),
-('Pina Fabric Scarf', 'Pinong habi, marangal na ganda', 'Delicately woven from the fine fibers of pineapple leaves.', 350, 'habi', 'assets/habi/fabric scarf.png', 15, 0),
-('Calamansi Lip & Cheek Tint', 'Natural na ganda mula sa kalikasan', 'A fresh, lightweight beauty tint gently made from local calamansi extract.', 149, 'habi', 'assets/habi/cheek tint.png', 40, 0),
-('Virgin Coconut Oil', 'Likas na lunas para sa kutis at buhok', 'Cold-pressed from the finest local coconuts, this pure VCO is a versatile and nourishing miracle oil.', 199, 'habi', 'assets/habi/coconut oil.png', 50, 0),
-('Sampaguita Perfume', 'Amoy ng bulaklak, alaala ng bayan', 'A gentle, floral scent that beautifully captures the essence of the national flower.', 250, 'habi', 'assets/habi/sampaguitaperfume.png', 25, 0),
-('Banig Slide Slippers', 'Sarap ng pambahay sa bawat hakbang', 'Step into absolute comfort with these casual slippers made from traditional woven banig material.', 120, 'habi', 'assets/habi/slippers.png', 30, 0),
-('Tnalak Coin Purse', 'Gawang kamay, pusong Pilipino', 'A vibrant, handwoven coin purse meticulously crafted from authentic T''nalak fabric.', 150, 'habi', 'assets/habi/coinpurse.png', 25, 0),
-('Barong-inspired Polo', 'Modernong suot, may pusong Pinoy', 'A modern, refined take on the classic Barong Tagalog.', 650, 'habi', 'assets/habi/barongpolo.png', 12, 0),
-('Sinamay Hat', 'Proteksyon sa araw, may klasikong ganda', 'A wide-brimmed hat skillfully woven from fine sinamay fibers.', 280, 'habi', 'assets/habi/hat.png', 15, 0),
-('Velvet Matte Lipstick', 'Kulay na may kumpiyansa', 'A highly pigmented, smooth matte lipstick that glides on effortlessly.', 199, 'habi', 'assets/habi/lipstick.png', 30, 0),
-('Dewy Liquid Foundation', 'Kutis na puno ng ningning', 'A lightweight, breathable liquid foundation that seamlessly evens out your skin tone.', 299, 'habi', 'assets/habi/foundation.png', 25, 0),
-('Glow Blush', 'Ningning ng pisngi, hatid ay ngiti', 'A silky, blendable blush that adds a healthy, natural pop of color to your cheeks.', 159, 'habi', 'assets/habi/blush.png', 35, 0),
-('Waterproof Mascara', 'Titig na hindi kakalas', 'A smudge-proof, waterproof mascara that effectively lengthens and volumizes your lashes.', 189, 'habi', 'assets/habi/mascara.png', 40, 0),
-('Soft Focus Concealer', 'Tagong kapaguran, liwanag ang bida', 'A creamy, full-coverage concealer that effortlessly hides dark circles and blemishes.', 179, 'habi', 'assets/habi/concealer.png', 30, 0),
-('Mini Karaoke Machine', 'Kantahan na, buong pamilya ay masaya!', 'Because no Filipino celebration is complete without a microphone in hand!', 1500, 'apollo', 'assets/apollo/minikaraokemachine.png', 20, 1),
-('Bamboo Bluetooth Speaker', 'Musika at saya, kahit saan dalhin', 'A powerful Bluetooth speaker elegantly housed in real bamboo wood.', 1250, 'apollo', 'assets/apollo/bamboobluetoothspeaker.png', 20, 0),
-('Handwoven Inabel Phone Case', 'Gadget na may pusong Pinoy', 'Protect your phone while proudly displaying your Filipino heritage.', 350, 'apollo', 'assets/apollo/handwoveninabelphonecase.png', 30, 0),
-('Wooden Powerbank', 'Laging handa, laging may karga', 'Never run out of battery while on the go with a sleek wooden-cased fast-charging power bank.', 899, 'apollo', 'assets/apollo/woodenpowerbank.png', 15, 0),
-('Abaca Laptop Sleeve', 'Likas na proteksyon sa iyong gadget', 'Keep your laptop safe and scratch-free with this padded sleeve.', 650, 'apollo', 'assets/apollo/abacalaptopsleeve.png', 12, 0),
-('Acacia Wood Phone Stand', 'Tibay ng kahoy, suporta sa''yo', 'A sturdy desk companion carved from genuine Philippine Acacia wood.', 250, 'apollo', 'assets/apollo/acaciawoodphonestand.png', 25, 0),
-('Rattan Cable Organizer', 'Ayos ang kable, ayos ang espasyo', 'A beautifully hand-woven rattan basket thoughtfully keeps your charging cables and adapters neatly organized.', 180, 'apollo', 'assets/apollo/rattancableorganizer.png', 20, 0),
-('Capiz Shell Mousepad', 'Swabeng galaw, Pinoy na karangyaan', 'Upgrade your workspace with this unique mousepad elegantly layered with Capiz shells.', 220, 'apollo', 'assets/apollo/capizshellmousepad.png', 15, 0),
-('Bamboo Tripod', 'Kuha ng alaala, tibay ng kawayan', 'Capture life''s best moments with this lightweight, adjustable tripod made from sustainable bamboo.', 450, 'apollo', 'assets/apollo/bambootripod.png', 18, 0),
-('Woven Tablet Case', 'Proteksyon na gawa sa kulturang Pinoy', 'A stylish, padded case made with vibrant native woven textiles.', 550, 'apollo', 'assets/apollo/woventabletcase.png', 14, 0),
-('Charging Cord (Type-C)', 'Mabilis na karga, tuloy ang saya', 'A durable, high-speed braided Type-C cable built to withstand daily wear and tear.', 199, 'apollo', 'assets/apollo/chargingcord.png', 50, 0),
-('USB Flash Drive', 'Bitbit ang alaala at dokumento', 'A compact and highly reliable storage drive for carrying important documents, photos, and videos.', 289, 'apollo', 'assets/apollo/usbflashdrive.png', 30, 0),
-('Wireless Mouse', 'Tahimik na galaw, tumpak na aksyon', 'An ergonomic wireless mouse with silent click buttons.', 499, 'apollo', 'assets/apollo/wirelessmouse.png', 40, 0),
-('Mechanical Keyboard', 'Sarap mag-type, sarap magtrabaho', 'A responsive mechanical keyboard with tactile switches.', 1299, 'apollo', 'assets/apollo/mechanicalkeyboard.png', 18, 0),
-('Wireless Microphone', 'Boses ay malinaw, mensahe ay malinaw', 'A high-quality, clip-on wireless microphone that captures crystal-clear audio.', 499, 'apollo', 'assets/apollo/wirelessmicrophone.png', 20, 0),
-('Solar-Powered Lamp', 'Liwanag sa gitna ng dilim', 'A reliable, eco-friendly solar-powered lamp designed to provide bright illumination.', 550, 'apollo', 'assets/apollo/solarpoweredlamp.png', 30, 0);
+('Arroz Caldo', 'Init ng sabaw, hagod ng pagmamahal', 'A warm rice porridge cooked with ginger, tender chicken, and a hint of fish sauce. Comforting and filling.', 85, 'paso', 'assets/paso/arrozcaldo.png', 30, 0),
+('Classic Plastic Tabo', 'Kasama sa bawat ligo, kasama sa tahanan', 'A sturdy plastic dipper with a handle. A basic, reliable bathroom essential for every Filipino home.', 45, 'nipa', 'assets/nipa/Classic Plastic Tabo.png', 60, 1),
+('Banig', 'Himbing ng tulog sa banig ng probinsya', 'A traditional sleeping mat hand-woven from dried pandan leaves. Cool, breathable, and durable.', 350, 'nipa', 'assets/nipa/Banig.png', 15, 0),
+('Abaca Scrubbing Pad', 'Malinis ang bahay, alaga pa ang kalikasan', 'A tough cleaning pad made from woven abaca fibers. Cuts through grease without scratching your pans.', 55, 'nipa', 'assets/nipa/Abaca Scrubbing Pad.png', 40, 0),
+('Bamboo Utensil Set', 'Kubyertos na gawa ng kalikasan', 'A fork, spoon, and knife carved from sustainable bamboo. Lightweight, durable, and eco-friendly.', 120, 'nipa', 'assets/nipa/Bamboo Utensil Set.png', 30, 0),
+('Coconut Shell Bowl', 'Gawang likas, espesyal ang dating', 'A unique bowl polished from real coconut shells. Great for serving soups, desserts, or for decor.', 150, 'nipa', 'assets/nipa/Coconut Shell Bowl.png', 25, 0),
+('Capiz Shell Lamp', 'Ilaw na nagbibigay ng init sa tahanan', 'A hanging lamp made with translucent Capiz shells. Casts a warm, soft glow in any room.', 450, 'nipa', 'assets/nipa/Capiz Shell Lamp.png', 10, 0),
+('Wooden Serving Tray', 'Paghahain nang may karangalan', 'A sturdy serving tray carved from Acacia wood. Perfect for presenting dishes or organizing items.', 280, 'nipa', 'assets/nipa/Wooden Serving Tray.png', 15, 0),
+('Sampaguita Air Freshener', 'Halimuyak ng tahanang Pinoy', 'A room spray that captures the sweet, familiar scent of fresh Sampaguita flowers.', 180, 'nipa', 'assets/nipa/Sampaguita Air Freshener.png', 35, 0),
+('Palayok', 'Mabagal lutuin, puno ng lasa at alaala', 'A traditional clay pot that distributes heat slowly and evenly. Brings out the best flavors in stews.', 320, 'nipa', 'assets/nipa/Palayok.png', 12, 0),
+('Broom and Dustpan Set', 'Katuwang sa pagpapanatili ng linis', 'A lightweight and practical cleaning set. Makes sweeping floors quick and easy.', 85, 'nipa', 'assets/nipa/Broom and Dustpan Set.png', 28, 0),
+('Plastic Water Pitcher', 'Sariwang tubig para sa buong angkan', 'A durable pitcher with an easy-pour spout. Keeps water or juice ready on the dining table.', 75, 'nipa', 'assets/nipa/Plastic Water Pitcher.png', 40, 0),
+('Plastic Clothes Hangers', 'Ayos at maaliwalas na pamamahay', 'A set of ten sturdy plastic hangers. A simple solution to keep your wardrobe organized.', 60, 'nipa', 'assets/nipa/Plastic Clothes Hangers.png', 30, 0),
+('Bath Towel', 'Lambot na yakap pagkatapos maligo', 'A soft and highly absorbent cotton towel. Dries you off quickly and stays comfortable.', 100, 'nipa', 'assets/nipa/Bath Towel.png', 50, 0),
+('Small Waste Bin', 'Maliit na basurahan, malaking tulong', 'A compact waste bin that fits perfectly in bedrooms or bathrooms. Keeps small spaces tidy.', 65, 'nipa', 'assets/nipa/Small Waste Bin.png', 40, 0),
+('Plastic Laundry Basket', 'Organisado at maayos na labahan', 'A ventilated laundry basket that keeps clothes organized and allows air to circulate.', 120, 'nipa', 'assets/nipa/Plastic Laundry Basket.png', 40, 0),
+('Woven Bayong', 'Mabisang katuwang sa pamimili', 'A sturdy market bag handwoven from dried palm leaves. An eco-friendly and stylish alternative to plastic.', 150, 'nipa', 'assets/nipa/Woven Bayong.png', 25, 0),
+('Indigenous Woven Scarf', 'Habi ng kultura, suot ng lahi', 'A unisex scarf handwoven by indigenous Filipino tribes. Soft, warm, and rich in cultural history.', 450, 'habi', 'assets/habi/scarf.png', 20, 1),
+('Barot Saya', 'Proud na suot, yaman ng kultura', 'A traditional Filipiniana dress woven with grace and history. Elegant and perfect for formal occasions.', 850, 'habi', 'assets/habi/barotsaya.png', 15, 0),
+('Inabel Woven Tote Bag', 'Gawang Ilocos, yaman na dala-dala', 'A durable tote bag made from authentic Inabel fabric from Ilocos. Spacious enough for your daily essentials.', 450, 'habi', 'assets/habi/tote.png', 20, 0),
+('Pina Fabric Scarf', 'Pinong habi, marangal na ganda', 'A lightweight scarf woven from fine pineapple leaf fibers. Delicate, elegant, and uniquely Filipino.', 350, 'habi', 'assets/habi/fabric scarf.png', 15, 0),
+('Calamansi Lip & Cheek Tint', 'Natural na ganda mula sa kalikasan', 'A lightweight makeup tint made from calamansi extract. Gives a natural, healthy flush to your lips and cheeks.', 149, 'habi', 'assets/habi/cheek tint.png', 40, 0),
+('Virgin Coconut Oil', 'Likas na lunas para sa kutis at buhok', 'Cold-pressed pure coconut oil. Versatile and nourishing for your hair, skin, or even cooking.', 199, 'habi', 'assets/habi/coconut oil.png', 50, 0),
+('Sampaguita Perfume', 'Amoy ng bulaklak, alaala ng bayan', 'A light floral perfume that captures the nostalgic scent of the national flower.', 250, 'habi', 'assets/habi/sampaguitaperfume.png', 25, 0),
+('Banig Slide Slippers', 'Sarap ng pambahay sa bawat hakbang', 'Comfortable slippers made from traditional woven banig material. Soft, lightweight, and great for home.', 120, 'habi', 'assets/habi/slippers.png', 30, 0),
+('Tnalak Coin Purse', 'Gawang kamay, pusong Pilipino', 'A handwoven coin purse made from authentic Tnalak fabric by Tboli artisans. Small, vibrant, and meaningful.', 150, 'habi', 'assets/habi/coinpurse.png', 25, 0),
+('Barong-inspired Polo', 'Modernong suot, may pusong Pinoy', 'A modern take on the classic Barong Tagalog. Lightweight, breathable, and subtly embroidered.', 650, 'habi', 'assets/habi/barongpolo.png', 12, 0),
+('Sinamay Hat', 'Proteksyon sa araw, may klasikong ganda', 'A wide-brimmed hat woven from fine sinamay fibers. Provides good shade and adds elegance to any outfit.', 280, 'habi', 'assets/habi/hat.png', 15, 0),
+('Velvet Matte Lipstick', 'Kulay na may kumpiyansa', 'A highly pigmented, smooth matte lipstick. Glides on easily and stays vibrant all day.', 199, 'habi', 'assets/habi/lipstick.png', 30, 0),
+('Dewy Liquid Foundation', 'Kutis na puno ng ningning', 'A lightweight liquid foundation that evens out skin tone. Gives a fresh, natural, dewy finish.', 299, 'habi', 'assets/habi/foundation.png', 25, 0),
+('Glow Blush', 'Ningning ng pisngi, hatid ay ngiti', 'A silky, blendable blush that adds a natural pop of color to your cheeks.', 159, 'habi', 'assets/habi/blush.png', 35, 0),
+('Waterproof Mascara', 'Titig na hindi kakalas', 'A smudge-proof mascara that lengthens and volumizes your lashes. Lasts through long days and happy tears.', 189, 'habi', 'assets/habi/mascara.png', 40, 0),
+('Soft Focus Concealer', 'Tagong kapaguran, liwanag ang bida', 'A creamy, full-coverage concealer for dark circles and blemishes. Blends easily for a smooth finish.', 179, 'habi', 'assets/habi/concealer.png', 30, 0),
+('Mini Karaoke Machine', 'Kantahan na, buong pamilya ay masaya!', 'A portable machine that brings the videoke experience anywhere. Perfect for parties and family gatherings.', 1500, 'apollo', 'assets/apollo/minikaraokemachine.png', 20, 1),
+('Bamboo Bluetooth Speaker', 'Musika at saya, kahit saan dalhin', 'A powerful Bluetooth speaker housed in real bamboo. Delivers rich sound with a natural, elegant look.', 1250, 'apollo', 'assets/apollo/bamboobluetoothspeaker.png', 20, 0),
+('Handwoven Inabel Phone Case', 'Gadget na may pusong Pinoy', 'A durable phone case wrapped in authentic Inabel fabric. Protects your phone while showing off Filipino culture.', 350, 'apollo', 'assets/apollo/handwoveninabelphonecase.png', 30, 0),
+('Wooden Powerbank', 'Laging handa, laging may karga', 'A fast-charging power bank with a sleek wooden casing. Durable, stylish, and reliable on the go.', 899, 'apollo', 'assets/apollo/woodenpowerbank.png', 15, 0),
+('Abaca Laptop Sleeve', 'Likas na proteksyon sa iyong gadget', 'A padded laptop sleeve handwoven from durable abaca fiber. Eco-friendly protection for your device.', 650, 'apollo', 'assets/apollo/abacalaptopsleeve.png', 12, 0),
+('Acacia Wood Phone Stand', 'Tibay ng kahoy, suporta sa''yo', 'A sturdy phone stand carved from Acacia wood. Holds your phone at the perfect angle for videos or calls.', 250, 'apollo', 'assets/apollo/acaciawoodphonestand.png', 25, 0),
+('Rattan Cable Organizer', 'Ayos ang kable, ayos ang espasyo', 'A hand-woven rattan basket to keep your charging cables and adapters neatly organized.', 180, 'apollo', 'assets/apollo/rattancableorganizer.png', 20, 0),
+('Capiz Shell Mousepad', 'Swabeng galaw, Pinoy na karangyaan', 'A smooth mousepad layered with Capiz shells. Provides precise tracking and a unique look for your desk.', 220, 'apollo', 'assets/apollo/capizshellmousepad.png', 15, 0),
+('Bamboo Tripod', 'Kuha ng alaala, tibay ng kawayan', 'A lightweight, adjustable tripod made from sustainable bamboo. Stable support for photos and content creation.', 450, 'apollo', 'assets/apollo/bambootripod.png', 18, 0),
+('Woven Tablet Case', 'Proteksyon na gawa sa kulturang Pinoy', 'A padded tablet case made with vibrant native woven textiles. Offers reliable protection and style.', 550, 'apollo', 'assets/apollo/woventabletcase.png', 14, 0),
+('Charging Cord (Type-C)', 'Mabilis na karga, tuloy ang saya', 'A durable, high-speed braided Type-C cable. Built to withstand daily wear and tear.', 199, 'apollo', 'assets/apollo/chargingcord.png', 50, 0),
+('USB Flash Drive', 'Bitbit ang alaala at dokumento', 'A compact and reliable USB drive for carrying documents, photos, and videos.', 289, 'apollo', 'assets/apollo/usbflashdrive.png', 30, 0),
+('Wireless Mouse', 'Tahimik na galaw, tumpak na aksyon', 'An ergonomic wireless mouse with silent click buttons. Comfortable grip and precise tracking.', 499, 'apollo', 'assets/apollo/wirelessmouse.png', 40, 0),
+('Mechanical Keyboard', 'Sarap mag-type, sarap magtrabaho', 'A responsive mechanical keyboard with tactile switches. Makes typing for work, coding, or gaming feel great.', 1299, 'apollo', 'assets/apollo/mechanicalkeyboard.png', 18, 0),
+('Wireless Microphone', 'Boses ay malinaw, mensahe ay malinaw', 'A high-quality, clip-on wireless microphone. Captures crystal-clear audio for vlogging or meetings.', 499, 'apollo', 'assets/apollo/wirelessmicrophone.png', 20, 0),
+('Solar-Powered Lamp', 'Liwanag sa gitna ng dilim', 'A reliable solar-powered lamp. Provides bright light during emergencies, brownouts, or outdoor use.', 550, 'apollo', 'assets/apollo/solarpoweredlamp.png', 30, 0);
 
 -- ==========================================================
 -- 6. INSERT product_options (one row per spec group)
@@ -479,383 +519,7 @@ INSERT INTO product_option_choices (option_id, choice_name, price_modifier, sort
 (99, 'Black', 0, 0), (99, 'Orange', 0, 1);
 
 -- ==========================================================
--- 8. INSERT product_variants
--- ==========================================================
-INSERT INTO product_variants (product_id, variation_string, stock) VALUES
-(1, 'Size: Small, Spice Level: Mild', 5),
-(1, 'Size: Small, Spice Level: Spicy', 5),
-(1, 'Size: Medium, Spice Level: Mild', 5),
-(1, 'Size: Medium, Spice Level: Spicy', 5),
-(1, 'Size: Large, Spice Level: Mild', 5),
-(1, 'Size: Large, Spice Level: Spicy', 5),
-(2, 'Size: Regular, Add Egg: No', 5),
-(2, 'Size: Regular, Add Egg: Yes', 5),
-(2, 'Size: Large, Add Egg: No', 5),
-(2, 'Size: Large, Add Egg: Yes', 5),
-(3, 'Size: Regular, Spice Level: Mild', 7),
-(3, 'Size: Regular, Spice Level: Spicy', 6),
-(3, 'Size: Large, Spice Level: Mild', 6),
-(3, 'Size: Large, Spice Level: Spicy', 6),
-(4, 'Size: Regular, Add Calamansi: No', 7),
-(4, 'Size: Regular, Add Calamansi: Yes', 6),
-(4, 'Size: Party Tray, Add Calamansi: No', 6),
-(4, 'Size: Party Tray, Add Calamansi: Yes', 6),
-(5, 'Egg Style: Sunny-side up, Add Extra Rice: No', 5),
-(5, 'Egg Style: Sunny-side up, Add Extra Rice: Yes', 4),
-(5, 'Egg Style: Scrambled, Add Extra Rice: No', 4),
-(5, 'Egg Style: Scrambled, Add Extra Rice: Yes', 4),
-(5, 'Egg Style: Hard-boiled, Add Extra Rice: No', 4),
-(5, 'Egg Style: Hard-boiled, Add Extra Rice: Yes', 4),
-(6, 'Pack Size: 5 pcs', 15),
-(6, 'Pack Size: 10 pcs', 15),
-(6, 'Pack Size: 15 pcs', 15),
-(7, 'Size: Regular', 20),
-(7, 'Size: Large', 20),
-(8, 'Size: Regular, Sweetness: Normal', 9),
-(8, 'Size: Regular, Sweetness: Less Sweet', 9),
-(8, 'Size: Large, Sweetness: Normal', 9),
-(8, 'Size: Large, Sweetness: Less Sweet', 8),
-(9, 'Pack Size: 2 pcs', 17),
-(9, 'Pack Size: 4 pcs', 17),
-(9, 'Pack Size: 6 pcs', 16),
-(10, 'Chicken Part: Leg & Thigh, Add Gravy: No', 7),
-(10, 'Chicken Part: Leg & Thigh, Add Gravy: Yes', 6),
-(10, 'Chicken Part: Breast, Add Gravy: No', 6),
-(10, 'Chicken Part: Breast, Add Gravy: Yes', 6),
-(11, 'Pack Size: 8 pcs, Dip: Ketchup', 10),
-(11, 'Pack Size: 8 pcs, Dip: Mayo', 10),
-(11, 'Pack Size: 12 pcs, Dip: Ketchup', 10),
-(11, 'Pack Size: 12 pcs, Dip: Mayo', 10),
-(12, 'Size: Regular, Flavor: Sea Salt', 7),
-(12, 'Size: Regular, Flavor: Cheese', 7),
-(12, 'Size: Regular, Flavor: Sour Cream', 7),
-(12, 'Size: Large, Flavor: Sea Salt', 7),
-(12, 'Size: Large, Flavor: Cheese', 6),
-(12, 'Size: Large, Flavor: Sour Cream', 6),
-(13, 'Pack Size: 2 pcs, Add Walnuts: No', 6),
-(13, 'Pack Size: 2 pcs, Add Walnuts: Yes', 6),
-(13, 'Pack Size: 4 pcs, Add Walnuts: No', 6),
-(13, 'Pack Size: 4 pcs, Add Walnuts: Yes', 6),
-(13, 'Pack Size: 6 pcs, Add Walnuts: No', 6),
-(13, 'Pack Size: 6 pcs, Add Walnuts: Yes', 5),
-(14, 'Size: Medium, Sugar Level: 0%, Ice Level: Regular, Add Pearls: No', 2),
-(14, 'Size: Medium, Sugar Level: 0%, Ice Level: Regular, Add Pearls: Yes', 2),
-(14, 'Size: Medium, Sugar Level: 0%, Ice Level: Less Ice, Add Pearls: No', 2),
-(14, 'Size: Medium, Sugar Level: 0%, Ice Level: Less Ice, Add Pearls: Yes', 2),
-(14, 'Size: Medium, Sugar Level: 0%, Ice Level: No Ice, Add Pearls: No', 1),
-(14, 'Size: Medium, Sugar Level: 0%, Ice Level: No Ice, Add Pearls: Yes', 1),
-(14, 'Size: Medium, Sugar Level: 50%, Ice Level: Regular, Add Pearls: No', 1),
-(14, 'Size: Medium, Sugar Level: 50%, Ice Level: Regular, Add Pearls: Yes', 1),
-(14, 'Size: Medium, Sugar Level: 50%, Ice Level: Less Ice, Add Pearls: No', 1),
-(14, 'Size: Medium, Sugar Level: 50%, Ice Level: Less Ice, Add Pearls: Yes', 1),
-(14, 'Size: Medium, Sugar Level: 50%, Ice Level: No Ice, Add Pearls: No', 1),
-(14, 'Size: Medium, Sugar Level: 50%, Ice Level: No Ice, Add Pearls: Yes', 1),
-(14, 'Size: Medium, Sugar Level: 100%, Ice Level: Regular, Add Pearls: No', 1),
-(14, 'Size: Medium, Sugar Level: 100%, Ice Level: Regular, Add Pearls: Yes', 1),
-(14, 'Size: Medium, Sugar Level: 100%, Ice Level: Less Ice, Add Pearls: No', 1),
-(14, 'Size: Medium, Sugar Level: 100%, Ice Level: Less Ice, Add Pearls: Yes', 1),
-(14, 'Size: Medium, Sugar Level: 100%, Ice Level: No Ice, Add Pearls: No', 1),
-(14, 'Size: Medium, Sugar Level: 100%, Ice Level: No Ice, Add Pearls: Yes', 1),
-(14, 'Size: Large, Sugar Level: 0%, Ice Level: Regular, Add Pearls: No', 1),
-(14, 'Size: Large, Sugar Level: 0%, Ice Level: Regular, Add Pearls: Yes', 1),
-(14, 'Size: Large, Sugar Level: 0%, Ice Level: Less Ice, Add Pearls: No', 1),
-(14, 'Size: Large, Sugar Level: 0%, Ice Level: Less Ice, Add Pearls: Yes', 1),
-(14, 'Size: Large, Sugar Level: 0%, Ice Level: No Ice, Add Pearls: No', 1),
-(14, 'Size: Large, Sugar Level: 0%, Ice Level: No Ice, Add Pearls: Yes', 1),
-(14, 'Size: Large, Sugar Level: 50%, Ice Level: Regular, Add Pearls: No', 1),
-(14, 'Size: Large, Sugar Level: 50%, Ice Level: Regular, Add Pearls: Yes', 1),
-(14, 'Size: Large, Sugar Level: 50%, Ice Level: Less Ice, Add Pearls: No', 1),
-(14, 'Size: Large, Sugar Level: 50%, Ice Level: Less Ice, Add Pearls: Yes', 1),
-(14, 'Size: Large, Sugar Level: 50%, Ice Level: No Ice, Add Pearls: No', 1),
-(14, 'Size: Large, Sugar Level: 50%, Ice Level: No Ice, Add Pearls: Yes', 1),
-(14, 'Size: Large, Sugar Level: 100%, Ice Level: Regular, Add Pearls: No', 1),
-(14, 'Size: Large, Sugar Level: 100%, Ice Level: Regular, Add Pearls: Yes', 1),
-(14, 'Size: Large, Sugar Level: 100%, Ice Level: Less Ice, Add Pearls: No', 1),
-(14, 'Size: Large, Sugar Level: 100%, Ice Level: Less Ice, Add Pearls: Yes', 1),
-(14, 'Size: Large, Sugar Level: 100%, Ice Level: No Ice, Add Pearls: No', 1),
-(14, 'Size: Large, Sugar Level: 100%, Ice Level: No Ice, Add Pearls: Yes', 1),
-(15, 'Size: Regular, Spice Level: Mild, Add Egg: No', 4),
-(15, 'Size: Regular, Spice Level: Mild, Add Egg: Yes', 4),
-(15, 'Size: Regular, Spice Level: Spicy, Add Egg: No', 4),
-(15, 'Size: Regular, Spice Level: Spicy, Add Egg: Yes', 4),
-(15, 'Size: Large, Spice Level: Mild, Add Egg: No', 4),
-(15, 'Size: Large, Spice Level: Mild, Add Egg: Yes', 4),
-(15, 'Size: Large, Spice Level: Spicy, Add Egg: No', 3),
-(15, 'Size: Large, Spice Level: Spicy, Add Egg: Yes', 3),
-(16, 'Size: Regular, Add Egg: No, Extra Chicharon: No', 4),
-(16, 'Size: Regular, Add Egg: No, Extra Chicharon: Yes', 4),
-(16, 'Size: Regular, Add Egg: Yes, Extra Chicharon: No', 4),
-(16, 'Size: Regular, Add Egg: Yes, Extra Chicharon: Yes', 4),
-(16, 'Size: Large, Add Egg: No, Extra Chicharon: No', 4),
-(16, 'Size: Large, Add Egg: No, Extra Chicharon: Yes', 4),
-(16, 'Size: Large, Add Egg: Yes, Extra Chicharon: No', 3),
-(16, 'Size: Large, Add Egg: Yes, Extra Chicharon: Yes', 3),
-(17, 'Color: Blue, Size: Regular', 8),
-(17, 'Color: Blue, Size: Large', 8),
-(17, 'Color: Red, Size: Regular', 8),
-(17, 'Color: Red, Size: Large', 8),
-(17, 'Color: Green, Size: Regular', 7),
-(17, 'Color: Green, Size: Large', 7),
-(17, 'Color: Pink, Size: Regular', 7),
-(17, 'Color: Pink, Size: Large', 7),
-(18, 'Size: Single, Pattern: Geometric', 3),
-(18, 'Size: Single, Pattern: Floral', 3),
-(18, 'Size: Double, Pattern: Geometric', 3),
-(18, 'Size: Double, Pattern: Floral', 2),
-(18, 'Size: Queen, Pattern: Geometric', 2),
-(18, 'Size: Queen, Pattern: Floral', 2),
-(19, 'Pack Size: 1 pc', 14),
-(19, 'Pack Size: 3 pcs', 13),
-(19, 'Pack Size: 5 pcs', 13),
-(20, 'Set Type: Fork & Spoon, Add Bamboo Straw: No', 8),
-(20, 'Set Type: Fork & Spoon, Add Bamboo Straw: Yes', 8),
-(20, 'Set Type: Full Set, Add Bamboo Straw: No', 7),
-(20, 'Set Type: Full Set, Add Bamboo Straw: Yes', 7),
-(21, 'Size: Small', 9),
-(21, 'Size: Medium', 8),
-(21, 'Size: Large', 8),
-(22, 'Size: Small, Bulb Included: No', 2),
-(22, 'Size: Small, Bulb Included: Yes', 2),
-(22, 'Size: Medium, Bulb Included: No', 2),
-(22, 'Size: Medium, Bulb Included: Yes', 2),
-(22, 'Size: Large, Bulb Included: No', 1),
-(22, 'Size: Large, Bulb Included: Yes', 1),
-(23, 'Size: Small', 5),
-(23, 'Size: Medium', 5),
-(23, 'Size: Large', 5),
-(24, 'Size: 250ml', 18),
-(24, 'Size: 500ml', 17),
-(25, 'Size: 3L', 6),
-(25, 'Size: 5L', 6),
-(26, 'Color: Blue', 10),
-(26, 'Color: Green', 9),
-(26, 'Color: Pink', 9),
-(27, 'Size: 1.5L', 20),
-(27, 'Size: 2.5L', 20),
-(28, 'Color: White, Pack Size: 10 pcs', 5),
-(28, 'Color: White, Pack Size: 20 pcs', 5),
-(28, 'Color: Black, Pack Size: 10 pcs', 5),
-(28, 'Color: Black, Pack Size: 20 pcs', 5),
-(28, 'Color: Assorted, Pack Size: 10 pcs', 5),
-(28, 'Color: Assorted, Pack Size: 20 pcs', 5),
-(29, 'Color: White, Size: Standard', 7),
-(29, 'Color: White, Size: Large', 7),
-(29, 'Color: Beige, Size: Standard', 6),
-(29, 'Color: Beige, Size: Large', 6),
-(29, 'Color: Blue, Size: Standard', 6),
-(29, 'Color: Blue, Size: Large', 6),
-(29, 'Color: Pink, Size: Standard', 6),
-(29, 'Color: Pink, Size: Large', 6),
-(30, 'Color: White', 14),
-(30, 'Color: Grey', 13),
-(30, 'Color: Black', 13),
-(31, 'Size: 25L, Color: White', 10),
-(31, 'Size: 25L, Color: Blue', 10),
-(31, 'Size: 40L, Color: White', 10),
-(31, 'Size: 40L, Color: Blue', 10),
-(32, 'Size: Small, Design: Checkered', 5),
-(32, 'Size: Small, Design: Striped', 4),
-(32, 'Size: Medium, Design: Checkered', 4),
-(32, 'Size: Medium, Design: Striped', 4),
-(32, 'Size: Large, Design: Checkered', 4),
-(32, 'Size: Large, Design: Striped', 4),
-(33, 'Color: Red', 5),
-(33, 'Color: Blue', 5),
-(33, 'Color: Green', 5),
-(33, 'Color: Yellow', 5),
-(34, 'Size: Small', 4),
-(34, 'Size: Medium', 4),
-(34, 'Size: Large', 4),
-(34, 'Size: XL', 3),
-(35, 'Design: Stripe A', 7),
-(35, 'Design: Stripe B', 7),
-(35, 'Design: Solid', 6),
-(36, 'Color: Natural', 8),
-(36, 'Color: White', 7),
-(37, 'Shade: Peach', 14),
-(37, 'Shade: Rose', 13),
-(37, 'Shade: Berry', 13),
-(38, 'Size: 250ml', 25),
-(38, 'Size: 500ml', 25),
-(39, 'Size: 30ml', 9),
-(39, 'Size: 50ml', 8),
-(39, 'Size: 100ml', 8),
-(40, 'Size: 6, Color: Natural', 3),
-(40, 'Size: 6, Color: Black', 3),
-(40, 'Size: 7, Color: Natural', 3),
-(40, 'Size: 7, Color: Black', 3),
-(40, 'Size: 8, Color: Natural', 3),
-(40, 'Size: 8, Color: Black', 3),
-(40, 'Size: 9, Color: Natural', 3),
-(40, 'Size: 9, Color: Black', 3),
-(40, 'Size: 10, Color: Natural', 3),
-(40, 'Size: 10, Color: Black', 3),
-(41, 'Design: Motif A', 13),
-(41, 'Design: Motif B', 12),
-(42, 'Size: S, Color: White', 2),
-(42, 'Size: S, Color: Cream', 2),
-(42, 'Size: M, Color: White', 1),
-(42, 'Size: M, Color: Cream', 1),
-(42, 'Size: L, Color: White', 1),
-(42, 'Size: L, Color: Cream', 1),
-(42, 'Size: XL, Color: White', 1),
-(42, 'Size: XL, Color: Cream', 1),
-(42, 'Size: XXL, Color: White', 1),
-(42, 'Size: XXL, Color: Cream', 1),
-(43, 'Size: Small, Color: Natural', 3),
-(43, 'Size: Small, Color: Black', 3),
-(43, 'Size: Medium, Color: Natural', 3),
-(43, 'Size: Medium, Color: Black', 2),
-(43, 'Size: Large, Color: Natural', 2),
-(43, 'Size: Large, Color: Black', 2),
-(44, 'Shade: Red', 8),
-(44, 'Shade: Nude', 8),
-(44, 'Shade: Pink', 7),
-(44, 'Shade: Mauve', 7),
-(45, 'Shade: Light', 7),
-(45, 'Shade: Medium', 6),
-(45, 'Shade: Tan', 6),
-(45, 'Shade: Deep', 6),
-(46, 'Shade: Peach', 12),
-(46, 'Shade: Pink', 12),
-(46, 'Shade: Coral', 11),
-(47, 'Color: Black', 20),
-(47, 'Color: Brown', 20),
-(48, 'Shade: Light', 10),
-(48, 'Shade: Medium', 10),
-(48, 'Shade: Tan', 10),
-(49, 'Color: Black, Extra Mic: No', 4),
-(49, 'Color: Black, Extra Mic: Yes', 4),
-(49, 'Color: Pink, Extra Mic: No', 3),
-(49, 'Color: Pink, Extra Mic: Yes', 3),
-(49, 'Color: Blue, Extra Mic: No', 3),
-(49, 'Color: Blue, Extra Mic: Yes', 3),
-(50, 'Color: Light Bamboo', 10),
-(50, 'Color: Dark Bamboo', 10),
-(51, 'Model: iPhone 13', 6),
-(51, 'Model: iPhone 14', 6),
-(51, 'Model: iPhone 15', 6),
-(51, 'Model: Samsung S22', 6),
-(51, 'Model: Samsung S23', 6),
-(52, 'Capacity: 10,000mAh, Wood Type: Acacia', 4),
-(52, 'Capacity: 10,000mAh, Wood Type: Mahogany', 4),
-(52, 'Capacity: 20,000mAh, Wood Type: Acacia', 4),
-(52, 'Capacity: 20,000mAh, Wood Type: Mahogany', 3),
-(53, 'Size: 13-inch', 4),
-(53, 'Size: 14-inch', 4),
-(53, 'Size: 15-inch', 4),
-(54, 'Finish: Natural', 13),
-(54, 'Finish: Dark Walnut', 12),
-(55, 'Size: Small', 10),
-(55, 'Size: Large', 10),
-(56, 'Shape: Round', 8),
-(56, 'Shape: Rectangular', 7),
-(57, 'Height: 50-inch, Color: Natural', 5),
-(57, 'Height: 50-inch, Color: Black', 5),
-(57, 'Height: 70-inch, Color: Natural', 4),
-(57, 'Height: 70-inch, Color: Black', 4),
-(58, 'Size: 10-inch', 5),
-(58, 'Size: 11-inch', 5),
-(58, 'Size: 12-inch', 4),
-(59, 'Length: 1m, Color: Black', 9),
-(59, 'Length: 1m, Color: White', 9),
-(59, 'Length: 1.5m, Color: Black', 8),
-(59, 'Length: 1.5m, Color: White', 8),
-(59, 'Length: 2m, Color: Black', 8),
-(59, 'Length: 2m, Color: White', 8),
-(60, 'Capacity: 32GB, Color: Silver', 8),
-(60, 'Capacity: 32GB, Color: Black', 8),
-(60, 'Capacity: 64GB, Color: Silver', 7),
-(60, 'Capacity: 64GB, Color: Black', 7),
-(61, 'Color: Black, DPI: 1600', 7),
-(61, 'Color: Black, DPI: 2400', 7),
-(61, 'Color: White, DPI: 1600', 7),
-(61, 'Color: White, DPI: 2400', 7),
-(61, 'Color: Grey, DPI: 1600', 6),
-(61, 'Color: Grey, DPI: 2400', 6),
-(62, 'Switch Type: Blue, Color: Black', 3),
-(62, 'Switch Type: Blue, Color: White', 3),
-(62, 'Switch Type: Red, Color: Black', 3),
-(62, 'Switch Type: Red, Color: White', 3),
-(62, 'Switch Type: Brown, Color: Black', 3),
-(62, 'Switch Type: Brown, Color: White', 3),
-(63, 'Type: Lavalier', 10),
-(63, 'Type: Handheld', 10),
-(64, 'Color: Black', 15),
-(64, 'Color: Orange', 15);
-
--- ==========================================================
--- 9. PRODUCT TEXT REWRITE (descriptions shortened)
--- ==========================================================
-UPDATE products SET description = 'Tender chicken simmered in soy sauce, vinegar, and garlic, served over steamed rice. A classic, filling Filipino meal.' WHERE name = 'Chicken Adobo with Rice';
-UPDATE products SET description = 'Chopped pork with onions and calamansi, served sizzling with rice. Crispy, savory, and slightly tangy.' WHERE name = 'Pork Sisig with Rice';
-UPDATE products SET description = 'Grilled chicken marinated in calamansi, garlic, and lemongrass. Smoky, juicy, and best eaten with rice.' WHERE name = 'Chicken Inasal with Rice';
-UPDATE products SET description = 'Stir-fried rice noodles with fresh vegetables, pork, and shrimp. A staple for birthdays and family gatherings.' WHERE name = 'Pancit Bihon Guisado';
-UPDATE products SET description = 'Savory beef tapa served with garlic fried rice and a fried egg. A classic Filipino breakfast to start your day.' WHERE name = 'Beefsilog';
-UPDATE products SET description = 'Crispy spring rolls filled with seasoned ground pork and carrots. Served with a sweet and sour dipping sauce.' WHERE name = 'Lumpiang Shanghai';
-UPDATE products SET description = 'A smooth caramel custard made from egg yolks, evaporated milk, and sugar. Rich and perfectly sweet.' WHERE name = 'Leche Flan Cup';
-UPDATE products SET description = 'A chilled dessert with sweet coconut strips, pandan jelly, and cream. Refreshing and great for a hot day.' WHERE name = 'Buko Pandan Cup';
-UPDATE products SET description = 'Crispy banana spring rolls coated in caramelized brown sugar. A popular sweet snack for merienda.' WHERE name = 'Turon';
-UPDATE products SET description = 'Crispy fried chicken served with steamed rice and a fried egg. Simple, filling, and comforting.' WHERE name = 'Classic Fried Chicken with Egg';
-UPDATE products SET description = 'Crispy spring roll wrappers filled with gooey melted cheese. A great snack to share.' WHERE name = 'Cheese Sticks';
-UPDATE products SET description = 'Golden-fried potato cuts lightly dusted with salt. The perfect side dish or quick snack.' WHERE name = 'French Fries';
-UPDATE products SET description = 'Dense, chocolatey brownies baked to a fudgy texture. Rich and not overly sweet.' WHERE name = 'Fudgy Brownies';
-UPDATE products SET description = 'Creamy wintermelon tea blended with milk and chewy tapioca pearls. Sweet and refreshing.' WHERE name = 'Wintermelon Milk Tea';
-UPDATE products SET description = 'A warm rice porridge cooked with ginger, tender chicken, and a hint of fish sauce. Comforting and filling.' WHERE name = 'Arroz Caldo';
-
-UPDATE products SET description = 'A sturdy plastic dipper with a handle. A basic, reliable bathroom essential for every Filipino home.' WHERE name = 'Classic Plastic Tabo';
-UPDATE products SET description = 'A traditional sleeping mat hand-woven from dried pandan leaves. Cool, breathable, and durable.' WHERE name = 'Banig';
-UPDATE products SET description = 'A tough cleaning pad made from woven abaca fibers. Cuts through grease without scratching your pans.' WHERE name = 'Abaca Scrubbing Pad';
-UPDATE products SET description = 'A fork, spoon, and knife carved from sustainable bamboo. Lightweight, durable, and eco-friendly.' WHERE name = 'Bamboo Utensil Set';
-UPDATE products SET description = 'A unique bowl polished from real coconut shells. Great for serving soups, desserts, or for decor.' WHERE name = 'Coconut Shell Bowl';
-UPDATE products SET description = 'A hanging lamp made with translucent Capiz shells. Casts a warm, soft glow in any room.' WHERE name = 'Capiz Shell Lamp';
-UPDATE products SET description = 'A sturdy serving tray carved from Acacia wood. Perfect for presenting dishes or organizing items.' WHERE name = 'Wooden Serving Tray';
-UPDATE products SET description = 'A room spray that captures the sweet, familiar scent of fresh Sampaguita flowers.' WHERE name = 'Sampaguita Air Freshener';
-UPDATE products SET description = 'A traditional clay pot that distributes heat slowly and evenly. Brings out the best flavors in stews.' WHERE name = 'Palayok';
-UPDATE products SET description = 'A lightweight and practical cleaning set. Makes sweeping floors quick and easy.' WHERE name = 'Broom and Dustpan Set';
-UPDATE products SET description = 'A durable pitcher with an easy-pour spout. Keeps water or juice ready on the dining table.' WHERE name = 'Plastic Water Pitcher';
-UPDATE products SET description = 'A set of ten sturdy plastic hangers. A simple solution to keep your wardrobe organized.' WHERE name = 'Plastic Clothes Hangers';
-UPDATE products SET description = 'A soft and highly absorbent cotton towel. Dries you off quickly and stays comfortable.' WHERE name = 'Bath Towel';
-UPDATE products SET description = 'A compact waste bin that fits perfectly in bedrooms or bathrooms. Keeps small spaces tidy.' WHERE name = 'Small Waste Bin';
-UPDATE products SET description = 'A ventilated laundry basket that keeps clothes organized and allows air to circulate.' WHERE name = 'Plastic Laundry Basket';
-UPDATE products SET description = 'A sturdy market bag handwoven from dried palm leaves. An eco-friendly and stylish alternative to plastic.' WHERE name = 'Woven Bayong';
-
-UPDATE products SET description = 'A unisex scarf handwoven by indigenous Filipino tribes. Soft, warm, and rich in cultural history.' WHERE name = 'Indigenous Woven Scarf';
-UPDATE products SET description = 'A traditional Filipiniana dress woven with grace and history. Elegant and perfect for formal occasions.' WHERE name = 'Barot Saya';
-UPDATE products SET description = 'A durable tote bag made from authentic Inabel fabric from Ilocos. Spacious enough for your daily essentials.' WHERE name = 'Inabel Woven Tote Bag';
-UPDATE products SET description = 'A lightweight scarf woven from fine pineapple leaf fibers. Delicate, elegant, and uniquely Filipino.' WHERE name = 'Pina Fabric Scarf';
-UPDATE products SET description = 'A lightweight makeup tint made from calamansi extract. Gives a natural, healthy flush to your lips and cheeks.' WHERE name = 'Calamansi Lip & Cheek Tint';
-UPDATE products SET description = 'Cold-pressed pure coconut oil. Versatile and nourishing for your hair, skin, or even cooking.' WHERE name = 'Virgin Coconut Oil';
-UPDATE products SET description = 'A light floral perfume that captures the nostalgic scent of the national flower.' WHERE name = 'Sampaguita Perfume';
-UPDATE products SET description = 'Comfortable slippers made from traditional woven banig material. Soft, lightweight, and great for home.' WHERE name = 'Banig Slide Slippers';
-UPDATE products SET description = 'A handwoven coin purse made from authentic Tnalak fabric by Tboli artisans. Small, vibrant, and meaningful.' WHERE name = 'Tnalak Coin Purse';
-UPDATE products SET description = 'A modern take on the classic Barong Tagalog. Lightweight, breathable, and subtly embroidered.' WHERE name = 'Barong-inspired Polo';
-UPDATE products SET description = 'A wide-brimmed hat woven from fine sinamay fibers. Provides good shade and adds elegance to any outfit.' WHERE name = 'Sinamay Hat';
-UPDATE products SET description = 'A highly pigmented, smooth matte lipstick. Glides on easily and stays vibrant all day.' WHERE name = 'Velvet Matte Lipstick';
-UPDATE products SET description = 'A lightweight liquid foundation that evens out skin tone. Gives a fresh, natural, dewy finish.' WHERE name = 'Dewy Liquid Foundation';
-UPDATE products SET description = 'A silky, blendable blush that adds a natural pop of color to your cheeks.' WHERE name = 'Glow Blush';
-UPDATE products SET description = 'A smudge-proof mascara that lengthens and volumizes your lashes. Lasts through long days and happy tears.' WHERE name = 'Waterproof Mascara';
-UPDATE products SET description = 'A creamy, full-coverage concealer for dark circles and blemishes. Blends easily for a smooth finish.' WHERE name = 'Soft Focus Concealer';
-
-UPDATE products SET description = 'A portable machine that brings the videoke experience anywhere. Perfect for parties and family gatherings.' WHERE name = 'Mini Karaoke Machine';
-UPDATE products SET description = 'A powerful Bluetooth speaker housed in real bamboo. Delivers rich sound with a natural, elegant look.' WHERE name = 'Bamboo Bluetooth Speaker';
-UPDATE products SET description = 'A durable phone case wrapped in authentic Inabel fabric. Protects your phone while showing off Filipino culture.' WHERE name = 'Handwoven Inabel Phone Case';
-UPDATE products SET description = 'A fast-charging power bank with a sleek wooden casing. Durable, stylish, and reliable on the go.' WHERE name = 'Wooden Powerbank';
-UPDATE products SET description = 'A padded laptop sleeve handwoven from durable abaca fiber. Eco-friendly protection for your device.' WHERE name = 'Abaca Laptop Sleeve';
-UPDATE products SET description = 'A sturdy phone stand carved from Acacia wood. Holds your phone at the perfect angle for videos or calls.' WHERE name = 'Acacia Wood Phone Stand';
-UPDATE products SET description = 'A hand-woven rattan basket to keep your charging cables and adapters neatly organized.' WHERE name = 'Rattan Cable Organizer';
-UPDATE products SET description = 'A smooth mousepad layered with Capiz shells. Provides precise tracking and a unique look for your desk.' WHERE name = 'Capiz Shell Mousepad';
-UPDATE products SET description = 'A lightweight, adjustable tripod made from sustainable bamboo. Stable support for photos and content creation.' WHERE name = 'Bamboo Tripod';
-UPDATE products SET description = 'A padded tablet case made with vibrant native woven textiles. Offers reliable protection and style.' WHERE name = 'Woven Tablet Case';
-UPDATE products SET description = 'A durable, high-speed braided Type-C cable. Built to withstand daily wear and tear.' WHERE name = 'Charging Cord (Type-C)';
-UPDATE products SET description = 'A compact and reliable USB drive for carrying documents, photos, and videos.' WHERE name = 'USB Flash Drive';
-UPDATE products SET description = 'An ergonomic wireless mouse with silent click buttons. Comfortable grip and precise tracking.' WHERE name = 'Wireless Mouse';
-UPDATE products SET description = 'A responsive mechanical keyboard with tactile switches. Makes typing for work, coding, or gaming feel great.' WHERE name = 'Mechanical Keyboard';
-UPDATE products SET description = 'A high-quality, clip-on wireless microphone. Captures crystal-clear audio for vlogging or meetings.' WHERE name = 'Wireless Microphone';
-UPDATE products SET description = 'A reliable solar-powered lamp. Provides bright light during emergencies, brownouts, or outdoor use.' WHERE name = 'Solar-Powered Lamp';
-
--- ==========================================================
--- 10. INSERT TAGS (NATIVE 3NF)
+-- 8. INSERT TAGS (NATIVE 3NF)
 -- ==========================================================
 INSERT INTO tags (name) VALUES
 ('Accessories'), ('Abaca'), ('Appetizer'), ('Audio'), ('Baked Goods'),
@@ -890,7 +554,7 @@ INSERT INTO tags (name) VALUES
 ('Ulam'), ('USB'), ('Videoke'), ('VCO'), ('Waste Management'),
 ('Wireless'), ('Wood'), ('Woven'), ('Woven Bag'), ('Zero Waste');
 
--- Map Products to Tags directly by ID
+-- Map Products to Tags
 INSERT INTO product_tags (product_id, tag_id) SELECT 1, id FROM tags WHERE name IN ('Filipino Food', 'Chicken', 'Rice Meal', 'Ulam');
 INSERT INTO product_tags (product_id, tag_id) SELECT 2, id FROM tags WHERE name IN ('Pork', 'Filipino Food', 'Rice Meal', 'Sizzling');
 INSERT INTO product_tags (product_id, tag_id) SELECT 3, id FROM tags WHERE name IN ('Grilled', 'Chicken', 'Rice Meal', 'Filipino Food');
@@ -955,3 +619,102 @@ INSERT INTO product_tags (product_id, tag_id) SELECT 61, id FROM tags WHERE name
 INSERT INTO product_tags (product_id, tag_id) SELECT 62, id FROM tags WHERE name IN ('Tech', 'Computer', 'Keyboard', 'Mechanical');
 INSERT INTO product_tags (product_id, tag_id) SELECT 63, id FROM tags WHERE name IN ('Tech', 'Audio', 'Microphone', 'Wireless');
 INSERT INTO product_tags (product_id, tag_id) SELECT 64, id FROM tags WHERE name IN ('Tech', 'Solar', 'Lamp', 'Emergency', 'Eco-Friendly');
+
+-- ==========================================================
+-- 9. AUTOMATED VARIANT GENERATOR (STOCK = 5)
+-- ==========================================================
+
+-- Clear existing variants
+DELETE FROM variant_option_choices;
+DELETE FROM product_variants;
+
+-- Create a temporary table to hold all the combinations
+DROP TEMPORARY TABLE IF EXISTS tmp_combos;
+CREATE TEMPORARY TABLE tmp_combos (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    product_id INT,
+    c1 INT, c2 INT, c3 INT, c4 INT
+);
+
+-- Generate combinations for 1-option products
+INSERT INTO tmp_combos (product_id, c1)
+SELECT po.product_id, poc.id
+FROM product_options po
+JOIN product_option_choices poc ON po.id = poc.option_id
+WHERE po.product_id IN (SELECT product_id FROM product_options GROUP BY product_id HAVING COUNT(*) = 1);
+
+-- Generate combinations for 2-option products
+INSERT INTO tmp_combos (product_id, c1, c2)
+SELECT po1.product_id, poc1.id, poc2.id
+FROM product_options po1
+JOIN product_option_choices poc1 ON po1.id = poc1.option_id
+JOIN product_options po2 ON po1.product_id = po2.product_id AND po2.sort_order = 1
+JOIN product_option_choices poc2 ON po2.id = poc2.option_id
+WHERE po1.product_id IN (SELECT product_id FROM product_options GROUP BY product_id HAVING COUNT(*) = 2) AND po1.sort_order = 0;
+
+-- Generate combinations for 3-option products
+INSERT INTO tmp_combos (product_id, c1, c2, c3)
+SELECT po1.product_id, poc1.id, poc2.id, poc3.id
+FROM product_options po1
+JOIN product_option_choices poc1 ON po1.id = poc1.option_id
+JOIN product_options po2 ON po1.product_id = po2.product_id AND po2.sort_order = 1
+JOIN product_option_choices poc2 ON po2.id = poc2.option_id
+JOIN product_options po3 ON po1.product_id = po3.product_id AND po3.sort_order = 2
+JOIN product_option_choices poc3 ON po3.id = poc3.option_id
+WHERE po1.product_id IN (SELECT product_id FROM product_options GROUP BY product_id HAVING COUNT(*) = 3) AND po1.sort_order = 0;
+
+-- Generate combinations for 4-option products
+INSERT INTO tmp_combos (product_id, c1, c2, c3, c4)
+SELECT po1.product_id, poc1.id, poc2.id, poc3.id, poc4.id
+FROM product_options po1
+JOIN product_option_choices poc1 ON po1.id = poc1.option_id
+JOIN product_options po2 ON po1.product_id = po2.product_id AND po2.sort_order = 1
+JOIN product_option_choices poc2 ON po2.id = poc2.option_id
+JOIN product_options po3 ON po1.product_id = po3.product_id AND po3.sort_order = 2
+JOIN product_option_choices poc3 ON po3.id = poc3.option_id
+JOIN product_options po4 ON po1.product_id = po4.product_id AND po4.sort_order = 3
+JOIN product_option_choices poc4 ON po4.id = poc4.option_id
+WHERE po1.product_id IN (SELECT product_id FROM product_options GROUP BY product_id HAVING COUNT(*) = 4) AND po1.sort_order = 0;
+
+-- Create and execute a Stored Procedure to insert into the 3NF tables
+DROP PROCEDURE IF EXISTS SeedVariants;
+DELIMITER //
+CREATE PROCEDURE SeedVariants()
+BEGIN
+    DECLARE done INT DEFAULT FALSE;
+    DECLARE v_pid, v_c1, v_c2, v_c3, v_c4, v_vid INT;
+    DECLARE cur CURSOR FOR SELECT product_id, c1, c2, c3, c4 FROM tmp_combos;
+    DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = TRUE;
+
+    OPEN cur;
+    read_loop: LOOP
+        FETCH cur INTO v_pid, v_c1, v_c2, v_c3, v_c4;
+        IF done THEN LEAVE read_loop; END IF;
+
+        -- Insert into product_variants with default stock of 5
+        INSERT INTO product_variants (product_id, stock) VALUES (v_pid, 5);
+        SET v_vid = LAST_INSERT_ID();
+
+        -- Link the combinations to variant_option_choices
+        INSERT INTO variant_option_choices (variant_id, choice_id) VALUES (v_vid, v_c1);
+        IF v_c2 IS NOT NULL THEN INSERT INTO variant_option_choices (variant_id, choice_id) VALUES (v_vid, v_c2); END IF;
+        IF v_c3 IS NOT NULL THEN INSERT INTO variant_option_choices (variant_id, choice_id) VALUES (v_vid, v_c3); END IF;
+        IF v_c4 IS NOT NULL THEN INSERT INTO variant_option_choices (variant_id, choice_id) VALUES (v_vid, v_c4); END IF;
+
+    END LOOP;
+    CLOSE cur;
+END //
+DELIMITER ;
+
+-- Run the procedure and clean up
+CALL SeedVariants();
+DROP PROCEDURE SeedVariants;
+DROP TEMPORARY TABLE IF EXISTS tmp_combos;
+
+UPDATE products p
+SET p.stock = (
+    SELECT COALESCE(SUM(pv.stock), 0)
+    FROM product_variants pv
+    WHERE pv.product_id = p.id
+)
+WHERE p.id IN (SELECT DISTINCT product_id FROM product_variants);

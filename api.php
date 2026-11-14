@@ -42,8 +42,20 @@ function decreaseStock(PDO $pdo, int $pid, int $qty, string $variation = '') {
     $pdo->prepare('UPDATE products SET stock=GREATEST(0, stock-?), sold_out=(stock-?<=0) WHERE id=?')
         ->execute([$qty, $qty, $pid]);
     if ($variation !== '') {
-        $pdo->prepare('UPDATE product_variants SET stock=GREATEST(0, stock-?) WHERE product_id=? AND variation_string=?')
-            ->execute([$qty, $pid, $variation]);
+        $s = $pdo->prepare("
+            SELECT pv.id FROM product_variants pv
+            LEFT JOIN variant_option_choices voc ON pv.id = voc.variant_id
+            LEFT JOIN product_option_choices poc ON voc.choice_id = poc.id
+            LEFT JOIN product_options po ON poc.option_id = po.id
+            WHERE pv.product_id = ?
+            GROUP BY pv.id
+            HAVING GROUP_CONCAT(CONCAT(po.spec_name, ': ', poc.choice_name) ORDER BY po.sort_order SEPARATOR ', ') = ?
+        ");
+        $s->execute([$pid, $variation]);
+        $vid = $s->fetchColumn();
+        if ($vid) {
+            $pdo->prepare('UPDATE product_variants SET stock=GREATEST(0, stock-?) WHERE id=?')->execute([$qty, $vid]);
+        }
     }
 }
 
@@ -57,16 +69,29 @@ function restoreOrderStock(PDO $pdo, int $orderId) {
     $items = $s->fetchAll();
 
     $upStock = $pdo->prepare('UPDATE products SET stock=stock+?, sold_out=0 WHERE id=?');
-    $upVar   = $pdo->prepare('UPDATE product_variants SET stock=stock+? WHERE product_id=? AND variation_string=?');
 
     foreach ($items as $it) {
         $upStock->execute([$it['qty'], $it['product_id']]);
         if (!empty($it['variation'])) {
-            $upVar->execute([$it['qty'], $it['product_id'], $it['variation']]);
+            $vStmt = $pdo->prepare("
+                SELECT pv.id FROM product_variants pv
+                LEFT JOIN variant_option_choices voc ON pv.id = voc.variant_id
+                LEFT JOIN product_option_choices poc ON voc.choice_id = poc.id
+                LEFT JOIN product_options po ON poc.option_id = po.id
+                WHERE pv.product_id = ?
+                GROUP BY pv.id
+                HAVING GROUP_CONCAT(CONCAT(po.spec_name, ': ', poc.choice_name) ORDER BY po.sort_order SEPARATOR ', ') = ?
+            ");
+            $vStmt->execute([$it['product_id'], $it['variation']]);
+            $vid = $vStmt->fetchColumn();
+            if ($vid) {
+                $pdo->prepare('UPDATE product_variants SET stock=stock+? WHERE id=?')->execute([$it['qty'], $vid]);
+            }
         }
     }
     $pdo->prepare('UPDATE orders SET stock_restored=1 WHERE id=?')->execute([$orderId]);
 }
+
 
 /* ───────── 3NF helpers ───────── */
 
@@ -105,7 +130,6 @@ function saveProductTags(PDO $pdo, int $productId, string $tagsString) {
     }
 }
 
-// READ: rebuild the exact `p.options` JSON the frontend already expects
 function buildOptionsJson(PDO $pdo, int $productId): string {
     $gStmt = $pdo->prepare('SELECT id, spec_name FROM product_options WHERE product_id=? ORDER BY sort_order, id');
     $gStmt->execute([$productId]);
@@ -120,7 +144,6 @@ function buildOptionsJson(PDO $pdo, int $productId): string {
         $choices = $cStmt->fetchAll();
         if (!$choices) continue;
 
-        // Match the legacy convention: array when all modifiers are 0, object otherwise
         $allZero = true;
         foreach ($choices as $c) { if ((int)$c['price_modifier'] !== 0) { $allZero = false; break; } }
 
@@ -133,17 +156,27 @@ function buildOptionsJson(PDO $pdo, int $productId): string {
         }
     }
 
-    $vStmt = $pdo->prepare('SELECT variation_string, stock FROM product_variants WHERE product_id=?');
+    // Reconstruct variants using GROUP_CONCAT from the new tables
+    $vStmt = $pdo->prepare("
+        SELECT pv.id, pv.stock, 
+               GROUP_CONCAT(CONCAT(po.spec_name, ': ', poc.choice_name) ORDER BY po.sort_order SEPARATOR ', ') AS variation_string
+        FROM product_variants pv
+        LEFT JOIN variant_option_choices voc ON pv.id = voc.variant_id
+        LEFT JOIN product_option_choices poc ON voc.choice_id = poc.id
+        LEFT JOIN product_options po ON poc.option_id = po.id
+        WHERE pv.product_id = ?
+        GROUP BY pv.id
+    ");
     $vStmt->execute([$productId]);
     $obj['_stocks'] = [];
     foreach ($vStmt->fetchAll() as $v) {
-        $obj['_stocks'][$v['variation_string']] = (int)$v['stock'];
+        $str = $v['variation_string'] ?? '';
+        $obj['_stocks'][$str] = (int)$v['stock'];
     }
 
     return json_encode($obj);
 }
 
-// WRITE: replace all options/variants for a product from the legacy JSON
 function saveProductOptions(PDO $pdo, int $productId, string $optionsJson): int {
     $pdo->prepare('DELETE FROM product_options WHERE product_id=?')->execute([$productId]);
     $pdo->prepare('DELETE FROM product_variants WHERE product_id=?')->execute([$productId]);
@@ -154,6 +187,8 @@ function saveProductOptions(PDO $pdo, int $productId, string $optionsJson): int 
 
     $insOpt    = $pdo->prepare('INSERT INTO product_options (product_id, spec_name, sort_order) VALUES (?,?,?)');
     $insChoice = $pdo->prepare('INSERT INTO product_option_choices (option_id, choice_name, price_modifier, sort_order) VALUES (?,?,?,?)');
+    
+    $choiceMap = []; // Map "Size: Small" => Choice ID
 
     $gOrder = 0;
     foreach ($opts as $name => $choices) {
@@ -164,28 +199,52 @@ function saveProductOptions(PDO $pdo, int $productId, string $optionsJson): int 
         $cOrder = 0;
         if (is_array($choices)) {
             foreach ($choices as $k => $v) {
-                if (is_int($k)) $insChoice->execute([$optionId, $v, 0, $cOrder++]);
-                else           $insChoice->execute([$optionId, $k, (int)$v, $cOrder++]);
+                $choiceName = is_int($k) ? $v : $k;
+                $price = is_int($k) ? 0 : (int)$v;
+                
+                $insChoice->execute([$optionId, $choiceName, $price, $cOrder++]);
+                $choiceId = (int)$pdo->lastInsertId();
+                $choiceMap["$name: $choiceName"] = $choiceId;
             }
         }
     }
 
     $totalStock = 0;
     if (!empty($opts['_stocks']) && is_array($opts['_stocks'])) {
-        $insVar = $pdo->prepare('INSERT INTO product_variants (product_id, variation_string, stock) VALUES (?,?,?)');
+        $insVar = $pdo->prepare('INSERT INTO product_variants (product_id, stock) VALUES (?, ?)');
+        $insVarChoice = $pdo->prepare('INSERT INTO variant_option_choices (variant_id, choice_id) VALUES (?, ?)');
+        
         foreach ($opts['_stocks'] as $varStr => $qty) {
             $qty = max(0, (int)$qty);
-            $insVar->execute([$productId, $varStr, $qty]);
+            $insVar->execute([$productId, $qty]);
+            $variantId = (int)$pdo->lastInsertId();
+            
+            if ($varStr !== '') {
+                $parts = explode(', ', $varStr);
+                foreach ($parts as $part) {
+                    if (isset($choiceMap[$part])) {
+                        $insVarChoice->execute([$variantId, $choiceMap[$part]]);
+                    }
+                }
+            }
             $totalStock += $qty;
         }
     }
     return $totalStock;
 }
 
-// AVAILABILITY: signature changes from (array $product, string $variation) to (PDO $pdo, int $productId, string $variation)
 function availableStock(PDO $pdo, int $productId, string $variation = ''): int {
     if ($variation !== '') {
-        $s = $pdo->prepare('SELECT stock FROM product_variants WHERE product_id=? AND variation_string=?');
+        $s = $pdo->prepare("
+            SELECT pv.stock
+            FROM product_variants pv
+            LEFT JOIN variant_option_choices voc ON pv.id = voc.variant_id
+            LEFT JOIN product_option_choices poc ON voc.choice_id = poc.id
+            LEFT JOIN product_options po ON poc.option_id = po.id
+            WHERE pv.product_id = ?
+            GROUP BY pv.id
+            HAVING GROUP_CONCAT(CONCAT(po.spec_name, ': ', poc.choice_name) ORDER BY po.sort_order SEPARATOR ', ') = ?
+        ");
         $s->execute([$productId, $variation]);
         $v = $s->fetchColumn();
         return $v === false ? 0 : (int)$v;
@@ -211,7 +270,7 @@ switch ($action) {
     case 'load':
         $user = null;
         if (!empty($_SESSION['user_id'])) {
-            $stmt = $pdo->prepare('SELECT id, name, email, role, phone, address FROM users WHERE id=?');
+            $stmt = $pdo->prepare('SELECT id, name, email, role, phone, street, brgy, city FROM users WHERE id=?');
             $stmt->execute([$_SESSION['user_id']]);
             $user = $stmt->fetch();
         }
@@ -247,21 +306,44 @@ switch ($action) {
         $orders = [];
         $notifs = [];
         if ($user) {
+            // Join the shipping snapshot to get the historical address
+            $orderSql = "
+                SELECT o.*, s.customer_name, s.phone, s.delivery_street, s.delivery_brgy, s.delivery_city 
+                FROM orders o
+                INNER JOIN order_shipping_snapshots s ON o.shipping_snapshot_id = s.id
+                WHERE o.is_archived=0
+            ";
             if ($user['role'] === 'admin') {
-                $orders = $pdo->query('SELECT * FROM orders WHERE is_archived=0 ORDER BY id DESC LIMIT 50')->fetchAll();
+                $orders = $pdo->query("$orderSql ORDER BY o.id DESC LIMIT 50")->fetchAll();
             } else {
-                $stmt = $pdo->prepare('SELECT * FROM orders WHERE user_id=? AND is_archived=0 ORDER BY id DESC');
+                $stmt = $pdo->prepare("$orderSql AND o.user_id=? ORDER BY o.id DESC");
                 $stmt->execute([$user['id']]);
                 $orders = $stmt->fetchAll();
             }
+            
             foreach ($orders as &$o) {
-                $stmt = $pdo->prepare('SELECT * FROM order_items WHERE order_id=?');
+                // Join the item snapshot to get the historical name and price
+                $stmt = $pdo->prepare('
+                    SELECT oi.*, s.product_name AS name, s.price 
+                    FROM order_items oi
+                    INNER JOIN order_item_snapshots s ON oi.item_snapshot_id = s.id
+                    WHERE oi.order_id=?
+                ');
                 $stmt->execute([$o['id']]);
                 $o['items'] = $stmt->fetchAll();
-                if (!empty($o['group_contributors'])) {
-                    try { $o['contributors'] = json_decode($o['group_contributors'], true) ?: []; }
-                    catch (Exception $e) { $o['contributors'] = []; }
+                
+                // Calculate totals dynamically
+                $subtotal = 0;
+                foreach ($o['items'] as $item) {
+                    $subtotal += $item['price'] * $item['qty'];
                 }
+                $o['subtotal'] = $subtotal;
+                $o['total'] = $subtotal + $o['delivery_fee'] + $o['protection_fee'];
+                
+                // Fetch contributors
+                $cStmt = $pdo->prepare('SELECT * FROM order_contributors WHERE order_id=?');
+                $cStmt->execute([$o['id']]);
+                $o['contributors'] = $cStmt->fetchAll();
             }
             unset($o);
             
@@ -319,10 +401,8 @@ switch ($action) {
 
         $hash = password_hash($pw, PASSWORD_DEFAULT);
 
-        $address = json_encode(['street' => $street, 'brgy' => $brgy, 'city' => $city]);
-
-        $stmt = $pdo->prepare('INSERT INTO users (name, email, phone, address, password_hash, role) VALUES (?,?,?,?,?,?)');
-        $stmt->execute([$name, $email, '', $address, $hash, 'customer']);
+        $stmt = $pdo->prepare('INSERT INTO users (name, email, phone, street, brgy, city, password_hash, role) VALUES (?,?,?,?,?,?,?,?)');
+        $stmt->execute([$name, $email, '', $street, $brgy, $city, $hash, 'customer']);
         $uid = (int)$pdo->lastInsertId();
 
         session_regenerate_id(true);
@@ -360,7 +440,10 @@ switch ($action) {
         $name = trim($in['name'] ?? '');
         $email = trim(strtolower($in['email'] ?? ''));
         $phone = trim($in['phone'] ?? '');
-        $address = trim($in['address'] ?? '');
+        $addrData = json_decode($in['address'] ?? '{}', true);
+        $street = $addrData['street'] ?? '';
+        $brgy = $addrData['brgy'] ?? '';
+        $city = $addrData['city'] ?? '';
 
         if ($name === '') out(['error' => 'Ilagay ang pangalan mo.'], 400);
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) out(['error' => 'Mali ang email format.'], 400);
@@ -375,8 +458,8 @@ switch ($action) {
         $stmt->execute([$email, $_SESSION['user_id']]);
         if ($stmt->fetch()) out(['error' => 'Ginagamit na ang email na ito ng ibang account.'], 409);
 
-        $stmt = $pdo->prepare('UPDATE users SET name=?, email=?, phone=?, address=? WHERE id=?');
-        $stmt->execute([$name, $email, $cleanPhone, $address, $_SESSION['user_id']]);
+        $stmt = $pdo->prepare('UPDATE users SET name=?, email=?, phone=?, street=?, brgy=?, city=? WHERE id=?');
+        $stmt->execute([$name, $email, $cleanPhone, $street, $brgy, $city, $_SESSION['user_id']]);
         
         $_SESSION['name'] = $name;
         notify($pdo, (int)$_SESSION['user_id'], 0, 'Na-update na ang iyong profile information.');
@@ -513,8 +596,12 @@ switch ($action) {
             }
 
             // PASO restriction — food items deliverable only within Calamba
-            $address = (string)($in['address'] ?? '');
-            if ($hasPaso && stripos($address, 'Calamba') === false) {
+            $addrData = json_decode($in['address'] ?? '{}', true);
+            $street = $addrData['street'] ?? '';
+            $brgy = $addrData['brgy'] ?? '';
+            $city = $addrData['city'] ?? '';
+
+            if ($hasPaso && stripos($city, 'Calamba') === false) {
                 out(['error' => 'Ang BANGA (pagkain) items ay pwede lang i-deliver sa loob ng Calamba, Laguna.'], 400);}
 
             $fee = isset($in['fee']) ? (int)$in['fee'] : (int)$pdo->query("SELECT `value` FROM settings WHERE `key`='delivery_fee'")->fetchColumn();
@@ -525,24 +612,41 @@ switch ($action) {
             $total = $subtotal + $fee + $protectionFee;
  
             $pdo->beginTransaction();
-            $stmt = $pdo->prepare('INSERT INTO orders (user_id, customer_name, phone, address, payment, payment_proof, subtotal, delivery_fee, protection_fee, total) VALUES (?,?,?,?,?,?,?,?,?,?)');
-            $stmt->execute([
+            
+            // 1. Insert into the Shipping Snapshot table
+            $snapStmt = $pdo->prepare('INSERT INTO order_shipping_snapshots (user_id, customer_name, phone, delivery_street, delivery_brgy, delivery_city) VALUES (?,?,?,?,?,?)');
+            $snapStmt->execute([
                 $_SESSION['user_id'] ?? null,
                 $in['name'],
                 $cleanPhone,
-                $address,
+                $street,
+                $brgy,
+                $city
+            ]);
+            $snapId = $pdo->lastInsertId();
+
+            // 2. Insert into orders using the snapshot ID
+            $stmt = $pdo->prepare('INSERT INTO orders (user_id, shipping_snapshot_id, payment, payment_proof, delivery_fee, protection_fee) VALUES (?,?,?,?,?,?)');
+            $stmt->execute([
+                $_SESSION['user_id'] ?? null,
+                $snapId,
                 ($in['payment'] ?? 'cod') === 'gcash' ? 'gcash' : 'cod',
                 $in['proof'] ?? '',
-                $subtotal,
                 $fee,
-                $protectionFee,
-                $total
+                $protectionFee
             ]);
             $oid = $pdo->lastInsertId();
  
-            $oiStmt = $pdo->prepare('INSERT INTO order_items (order_id, product_id, name, price, qty, variation) VALUES (?,?,?,?,?,?)');
+            $oiStmt = $pdo->prepare('INSERT INTO order_items (order_id, product_id, item_snapshot_id, qty, variation) VALUES (?,?,?,?,?)');
+            
             foreach ($lines as $l) {
-                $oiStmt->execute([$oid, $l['id'], $l['name'], $l['price'], $l['qty'], $l['variation']]);
+                // 3. Insert into the Item Snapshot table
+                $itemSnapStmt = $pdo->prepare('INSERT INTO order_item_snapshots (product_id, product_name, price) VALUES (?,?,?)');
+                $itemSnapStmt->execute([$l['id'], $l['name'], $l['price']]);
+                $itemSnapId = $pdo->lastInsertId();
+
+                // 4. Insert into order_items
+                $oiStmt->execute([$oid, $l['id'], $itemSnapId, $l['qty'], $l['variation']]);
                 decreaseStock($pdo, (int)$l['id'], (int)$l['qty'], $l['variation']);
             }
 
@@ -930,7 +1034,6 @@ switch ($action) {
 
         $pdo->beginTransaction();
         try {
-            // 🟢 Removed tags from this query
             $stmt = $pdo->prepare('INSERT INTO products (name,tagline,description,price,category,image,stock,best_seller) VALUES (?,?,?,?,?,?,?,?)');
             $stmt->execute([
                 $in['name'], 
@@ -965,8 +1068,9 @@ switch ($action) {
         $limitClause = ($limit === 'all') ? '' : "LIMIT " . (int)$limit;
 
         $stmt = $pdo->query("
-            SELECT p.name, SUM(oi.qty) AS total_sold, SUM(oi.qty * oi.price) AS total_revenue
+            SELECT p.name, SUM(oi.qty) AS total_sold, SUM(oi.qty * s.price) AS total_revenue
             FROM order_items oi
+            INNER JOIN order_item_snapshots s ON oi.item_snapshot_id = s.id
             INNER JOIN products p ON oi.product_id = p.id
             INNER JOIN orders o ON oi.order_id = o.id
             WHERE o.is_archived = 0
@@ -981,8 +1085,9 @@ switch ($action) {
         $stmt = $pdo->query("
             SELECT p.category AS name, 
                    SUM(oi.qty) AS total_sold, 
-                   SUM(oi.qty * oi.price) AS total_revenue
+                   SUM(oi.qty * s.price) AS total_revenue
             FROM order_items oi
+            INNER JOIN order_item_snapshots s ON oi.item_snapshot_id = s.id
             INNER JOIN products p ON oi.product_id = p.id
             INNER JOIN orders o ON oi.order_id = o.id
             WHERE o.is_archived = 0
@@ -994,16 +1099,22 @@ switch ($action) {
         // Uses: LIKE, WHERE, OR, ORDER BY
         $q = '%' . ($_GET['q'] ?? '') . '%';
         $stmt = $pdo->prepare("
-            SELECT * FROM orders 
-            WHERE customer_name LIKE ? OR address LIKE ? OR id LIKE ?
-            ORDER BY id DESC
+            SELECT o.*, s.customer_name, s.phone, s.delivery_street, s.delivery_brgy, s.delivery_city 
+            FROM orders o
+            INNER JOIN order_shipping_snapshots s ON o.shipping_snapshot_id = s.id
+            WHERE s.customer_name LIKE ? OR s.delivery_street LIKE ? OR s.delivery_brgy LIKE ? OR s.delivery_city LIKE ? OR o.id LIKE ?
+            ORDER BY o.id DESC
         ");
-        $stmt->execute([$q, $q, $q]);
+        $stmt->execute([$q, $q, $q, $q, $q]);
         $orders = $stmt->fetchAll();
         
-        // Fetch items for each order so they render properly
         foreach ($orders as &$o) {
-            $stmtItems = $pdo->prepare('SELECT * FROM order_items WHERE order_id=?');
+            $stmtItems = $pdo->prepare('
+                SELECT oi.*, s.product_name AS name, s.price 
+                FROM order_items oi 
+                INNER JOIN order_item_snapshots s ON oi.item_snapshot_id = s.id
+                WHERE oi.order_id=?
+            ');
             $stmtItems->execute([$o['id']]);
             $o['items'] = $stmtItems->fetchAll();
         }
@@ -1011,7 +1122,7 @@ switch ($action) {
 
     case 'admin-get-users':
         $stmt = $pdo->query("
-            SELECT u.id, u.name, u.email, u.phone, u.address, u.role, u.created_at, 
+            SELECT u.id, u.name, u.email, u.phone, u.street, u.brgy, u.city, u.role, u.created_at, 
                    (SELECT COUNT(*) FROM orders o WHERE o.user_id = u.id AND o.is_archived = 0) AS order_count
             FROM users u
             WHERE u.is_archived = 0
@@ -1120,7 +1231,10 @@ switch ($action) {
         $name = trim($in['name'] ?? '') ?: 'Bayanihan Cart';
         $customer_name = trim($in['customer_name'] ?? '');
         $phone = trim($in['phone'] ?? '');
-        $address = trim($in['address'] ?? '');
+        $addrData = json_decode($in['address'] ?? '{}', true);
+        $street = $addrData['street'] ?? '';
+        $brgy = $addrData['brgy'] ?? '';
+        $city = $addrData['city'] ?? '';
         $fee = isset($in['fee']) ? (int)$in['fee'] : 0;
 
         $chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -1134,8 +1248,8 @@ switch ($action) {
         }
         
         $pdo->beginTransaction();
-        $pdo->prepare('INSERT INTO group_carts (host_id, code, name, status, customer_name, phone, delivery_address, delivery_fee) VALUES (?,?,?,?,?,?,?,?)')
-            ->execute([$uid, $code, $name, 'open', $customer_name, $phone, $address, $fee]);
+        $pdo->prepare('INSERT INTO group_carts (host_id, code, name, status, customer_name, phone, delivery_street, delivery_brgy, delivery_city, delivery_fee) VALUES (?,?,?,?,?,?,?,?,?,?)')
+            ->execute([$uid, $code, $name, 'open', $customer_name, $phone, $street, $brgy, $city, $fee]);
         $gid = (int)$pdo->lastInsertId();
         $pdo->prepare('INSERT INTO group_cart_members (group_cart_id, user_id, role, status) VALUES (?,?,?,?)')
             ->execute([$gid, $uid, 'host', 'approved']);
@@ -1157,7 +1271,7 @@ switch ($action) {
         $me = $s->fetch();
         if (!$me) out(['error' => 'Not a member'], 403);
         $s = $pdo->prepare("
-            SELECT m.*, u.name, u.email, u.phone
+            SELECT m.*, u.name, u.email, u.phone, u.street, u.brgy, u.city 
             FROM group_cart_members m
             INNER JOIN users u ON m.user_id = u.id
             WHERE m.group_cart_id=?
@@ -1203,7 +1317,7 @@ switch ($action) {
         }
 
         $s = $pdo->prepare("
-            SELECT m.*, u.name, u.email, u.phone, u.address 
+            SELECT m.*, u.name, u.email, u.phone, u.street, u.brgy, u.city 
             FROM group_cart_members m
             INNER JOIN users u ON m.user_id = u.id
             WHERE m.group_cart_id=?
@@ -1567,12 +1681,15 @@ switch ($action) {
         
         $name = trim($in['name'] ?? '');
         $phone = trim(str_replace([' ','-'], '', $in['phone'] ?? ''));
-        $addr = trim($in['address'] ?? '');
+        $addrData = json_decode($in['address'] ?? '{}', true);
+        $street = $addrData['street'] ?? '';
+        $brgy = $addrData['brgy'] ?? '';
+        $city = $addrData['city'] ?? '';
         $fee = max(0, (int)($in['fee'] ?? 0));
         $oldFee = (int)$g['delivery_fee'];
         
-        $pdo->prepare('UPDATE group_carts SET customer_name=?, phone=?, delivery_address=?, delivery_fee=? WHERE id=?')
-            ->execute([$name, $phone, $addr, $fee, $gid]);
+        $pdo->prepare('UPDATE group_carts SET customer_name=?, phone=?, delivery_street=?, delivery_brgy=?, delivery_city=?, delivery_fee=? WHERE id=?')
+            ->execute([$name, $phone, $street, $brgy, $city, $fee, $gid]);
         if ($fee !== $oldFee) resetGroupPayments($pdo, $gid);
         out(['ok' => true]);
 
@@ -1629,7 +1746,7 @@ switch ($action) {
         }
 
         if ($g['status'] !== 'open') out(['error' => 'Already processed'], 400);
-        if (!$g['customer_name'] || !$g['phone'] || !$g['delivery_address']) {
+        if (!$g['customer_name'] || !$g['phone'] || !$g['delivery_street'] || !$g['delivery_brgy'] || !$g['delivery_city']) {
             out(['error' => 'Kumpletuhin muna ang delivery details.'], 400);
         }
         $s = $pdo->prepare('SELECT * FROM group_cart_items WHERE group_cart_id=?');
@@ -1643,7 +1760,7 @@ switch ($action) {
             $p->execute([$it['product_id']]);
             if (strtolower($p->fetchColumn()) === 'paso') { $hasPaso = true; break; }
         }
-        if ($hasPaso && stripos($g['delivery_address'], 'Calamba') === false) {
+        if ($hasPaso && stripos($g['delivery_city'], 'Calamba') === false) {
             out(['error' => 'Ang BANGA (pagkain) items ay pwede lang i-deliver sa loob ng Calamba, Laguna. Palitan ang delivery address ng group cart.'], 400);}
 
         $subtotal = 0;
@@ -1710,22 +1827,42 @@ switch ($action) {
                 out(['error' => "Kulang ang stock para sa item na {$it['name']}. (Available: $avail)"], 400);
             }
         }
-
         $pdo->beginTransaction();
         try {
-            $pdo->prepare('INSERT INTO orders (user_id, customer_name, phone, address, payment, payment_proof, subtotal, delivery_fee, protection_fee, total, is_group_order, group_cart_id, group_contributors, status) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)')
-                ->execute([$uid, $g['customer_name'], $g['phone'], $g['delivery_address'],
-                           $finalPayment, '', $subtotal, $fee, 0, $total, 1, $gid,
-                           json_encode($contribs), 'Pending']);
+            // 1. Shipping Snapshot (Uses the group cart's saved address)
+            $snapStmt = $pdo->prepare('INSERT INTO order_shipping_snapshots (user_id, customer_name, phone, delivery_street, delivery_brgy, delivery_city) VALUES (?,?,?,?,?,?)');
+            $snapStmt->execute([
+                $uid,
+                $g['customer_name'],
+                $g['phone'],
+                $g['delivery_street'],
+                $g['delivery_brgy'],
+                $g['delivery_city']
+            ]);
+            $snapId = $pdo->lastInsertId();
+
+            // 2. Insert Order
+            $pdo->prepare('INSERT INTO orders (user_id, shipping_snapshot_id, payment, payment_proof, delivery_fee, protection_fee, is_group_order, group_cart_id, status) VALUES (?,?,?,?,?,?,?,?,?)')
+                ->execute([$uid, $snapId, $finalPayment, '', $fee, 0, 1, $gid, 'Pending']);
             $oid = (int)$pdo->lastInsertId();
             
-            $oi = $pdo->prepare('INSERT INTO order_items (order_id,product_id,name,price,qty,variation) VALUES (?,?,?,?,?,?)');
+            $oi = $pdo->prepare('INSERT INTO order_items (order_id,product_id,item_snapshot_id,qty,variation) VALUES (?,?,?,?,?)');
             foreach ($aggregatedItems as $it) {
-                $oi->execute([$oid, $it['product_id'], $it['name'], $it['price'], $it['qty'], $it['variation']]);
+                // 3. Item Snapshot
+                $itemSnapStmt = $pdo->prepare('INSERT INTO order_item_snapshots (product_id, product_name, price) VALUES (?,?,?)');
+                $itemSnapStmt->execute([$it['product_id'], $it['name'], $it['price']]);
+                $itemSnapId = $pdo->lastInsertId();
+
+                // 4. Order Item
+                $oi->execute([$oid, $it['product_id'], $itemSnapId, $it['qty'], $it['variation']]);
                 decreaseStock($pdo, (int)$it['product_id'], (int)$it['qty'], $it['variation']);
             }
             
             $pdo->prepare('UPDATE group_carts SET status="ordered", order_id=? WHERE id=?')->execute([$oid, $gid]);
+            $insContrib = $pdo->prepare('INSERT INTO order_contributors (order_id, user_name, amount_paid, role, payment_method) VALUES (?,?,?,?,?)');
+            foreach ($contribs as $c) {
+                $insContrib->execute([$oid, $c['name'], $c['paid_amount'], $c['role'], $c['payment_method'] ?? 'cash']);
+            }
             foreach ($contribs as $c) {
                 notify($pdo, (int)$c['user_id'], (int)$oid, "Bayanihan order #$oid ay nakumpirma na! Track it in My Orders.");
             }

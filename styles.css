@@ -61,13 +61,6 @@ header {
     padding: 15px 0; 
     transition: background var(--dur-mid), border-color var(--dur-mid); 
 }
-body.no-scroll #global-header {
-    position: fixed !important;
-    top: 0;
-    left: 0;
-    width: 100%;
-    z-index: 135 !important; /* Above backdrop, below sidebar (140) */
-}
 /* NAV BUTTONS */
 .circle-nav-btn { position: relative; background: var(--surface2); border: 2px solid var(--line); width: 44px; height: 44px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; color: var(--ink); transition: transform var(--dur-fast) var(--ease-smooth), background var(--dur-mid), color var(--dur-mid), border-color var(--dur-mid); flex-shrink: 0; }
 .circle-nav-btn:hover { background: var(--brand); color: #fff; border-color: var(--brand); transform: translateY(-2px); }
@@ -319,13 +312,19 @@ body.no-scroll #global-header {
 .nav-drawer-backdrop { 
     position: fixed; 
     inset: 0; 
-    background: rgba(0, 0, 0, 0.4); 
+    background: rgba(0, 0, 0, 0.5); /* Slightly darker */
+    backdrop-filter: blur(8px); /* 🟢 Adds the frosted glass effect */
+    -webkit-backdrop-filter: blur(8px);
     z-index: 130; 
     opacity: 0; 
     visibility: hidden; 
-    transition: opacity 0.25s ease, visibility 0.25s ease; /* Changed to 0.25s */
+    transition: opacity 0.25s ease, visibility 0.25s ease; 
 }
-.nav-drawer-backdrop.show { opacity: 1; visibility: visible; }
+
+.nav-drawer-backdrop.show { 
+    opacity: 1; 
+    visibility: visible; 
+}
 .nav-drawer { 
     position: fixed; 
     top: 0; 
@@ -405,7 +404,17 @@ body.no-scroll #global-header {
 .nd-toggle-wrap:not(.is-sunset) #nd-opt-day svg, .nd-toggle-wrap.is-sunset #nd-opt-sunset svg { stroke: #ffffff !important; }
 .nd-toggle-wrap:not(.is-sunset) #nd-opt-sunset, .nd-toggle-wrap.is-sunset #nd-opt-day { color: var(--muted) !important; }
 .nd-toggle-wrap:not(.is-sunset) #nd-opt-sunset svg, .nd-toggle-wrap.is-sunset #nd-opt-day svg { stroke: var(--muted) !important; }
-.drawer { position: fixed; inset: 0; z-index: 150; background: rgba(0, 0, 0, 0.4); display: flex; justify-content: flex-end; animation: fadeIn var(--dur-mid) var(--ease-smooth) both; }
+.drawer { 
+    position: fixed; 
+    inset: 0; 
+    z-index: 150; 
+    background: rgba(0, 0, 0, 0.5); 
+    backdrop-filter: blur(8px); /* 🟢 Adds the frosted glass effect */
+    -webkit-backdrop-filter: blur(8px);
+    display: flex; 
+    justify-content: flex-end; 
+    animation: fadeIn var(--dur-mid) var(--ease-smooth) both; 
+}
 .drawer-panel { width: 100%; max-width: 400px; background: var(--bg); padding: 20px; display: flex; flex-direction: column; height: 100%; overflow-y: auto; animation: slideIn var(--dur-slow) var(--ease-smooth) both; box-shadow: -20px 0 60px rgba(0, 0, 0, 0.2); }
 /* 🟢 Removed the fadeOut for the backdrop so it stays solid while the panel slides out */
 .drawer.closing { animation: none !important; }

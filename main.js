@@ -540,7 +540,7 @@ const app = {
                     <div style="font-size: 12px; color: var(--muted); font-weight: 600; line-height: 1.6; word-break: break-word;">
                         <div>📧 ${this.esc(u.email)}</div>
                         <div>📱 ${this.esc(u.phone || 'No phone')}</div>
-                        <div>📍 ${this.esc(this.formatAddress(u.address) || 'No address')}</div>
+                        <div>📍 ${this.esc(this.formatAddress(null, u.street, u.brgy, u.city) || 'No address')}</div>
                     </div>
                     <div style="margin-top: 8px; display:flex; justify-content:space-between; align-items:center; width:100%; border-top: 1px dashed var(--line); padding-top: 12px;">
                         <span style="font-size: 11px; font-weight:800; color: var(--muted);">${u.order_count} Order(s)</span>
@@ -750,11 +750,8 @@ const app = {
             // Locations Logic
             const cityCount = {}; const brgyCount = {};
             this.orders.forEach(o => {
-                try {
-                    const addr = JSON.parse(o.address);
-                    if (addr.city) cityCount[addr.city] = (cityCount[addr.city] || 0) + 1;
-                    if (addr.brgy) brgyCount[addr.brgy] = (brgyCount[addr.brgy] || 0) + 1;
-                } catch(e) {}
+                if (o.delivery_city) cityCount[o.delivery_city] = (cityCount[o.delivery_city] || 0) + 1;
+                if (o.delivery_brgy) brgyCount[o.delivery_brgy] = (brgyCount[o.delivery_brgy] || 0) + 1;
             });
 
             const renderLocations = (obj) => Object.entries(obj).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([name, count]) => `<div class="admin-item-row" style="padding:8px 0; border-bottom:1px dashed var(--line);"><span>${this.esc(name)}</span> <b style="color:var(--brand);">${count} orders</b></div>`).join('');
@@ -1006,9 +1003,21 @@ const app = {
         const mainContent = document.getElementById('main-content');
         mainContent.classList.remove('opacity-0');
         mainContent.classList.add('opacity-100');
+        this.lagunaData = {}; 
+        this.deliveryFeesRaw = [];
         try {
             const res = await fetch('api.php?action=load');
-            const data = await res.json();
+            const text = await res.text(); // 🟢 Get text first
+            
+            let data;
+            try {
+                data = JSON.parse(text);
+            } catch (err) {
+                // 🟢 This will print the exact PHP error to your console
+                console.error("BACKEND PHP ERROR:", text); 
+                throw new Error("Invalid JSON from server");
+            }
+
             this.user = data.user;
             this.products = data.products || [];
             this.orders = data.orders || [];
@@ -1034,15 +1043,11 @@ const app = {
             });
             this.updateFaqDeliveryInfo(); 
 
-            if (this.user && this.user.address) {
-                try {
-                    let addrObj = null;
-                    if (this.user.address.trim().startsWith('{')) addrObj = JSON.parse(this.user.address);
-                    if (addrObj && addrObj.city && addrObj.brgy && this.lagunaData[addrObj.city] && this.lagunaData[addrObj.city][addrObj.brgy] !== undefined) {
-                        this.fee = this.lagunaData[addrObj.city][addrObj.brgy];
-                        this.feeSet = true;
-                    }
-                } catch (e) { }
+            if (this.user && this.user.city && this.user.brgy) {
+                if (this.lagunaData[this.user.city] && this.lagunaData[this.user.city][this.user.brgy] !== undefined) {
+                    this.fee = this.lagunaData[this.user.city][this.user.brgy];
+                    this.feeSet = true;
+                }
             }
         } catch (e) { 
             console.warn('Backend not connected or error:', e); 
@@ -1178,13 +1183,12 @@ const app = {
         this.showToast('Inalis na ang mga kulang/ubos na items sa cart mo.');
     },
 
-    formatAddress(addrStr) {
-        if (!addrStr) return '';
-        try {
-            const obj = JSON.parse(addrStr);
-            if (obj.street !== undefined || obj.brgy !== undefined || obj.city !== undefined) return [obj.street, obj.brgy, obj.city].filter(Boolean).join(', ');
-        } catch(e) {}
-        return addrStr;
+    formatAddress(obj, street, brgy, city) {
+        // Fallback if old JSON is passed (just in case)
+        if (typeof obj === 'string' && obj.startsWith('{')) {
+            try { const parsed = JSON.parse(obj); return [parsed.street, parsed.brgy, parsed.city].filter(Boolean).join(', '); } catch(e) {}
+        }
+        return [street, brgy, city].filter(Boolean).join(', ');
     },
 
     populateCities() {
@@ -1636,9 +1640,22 @@ const app = {
         const isLanding = document.getElementById('view-landing') && !document.getElementById('view-landing').classList.contains('hidden');
 
         if (isDrawerOpen || isModalOpen || isAuthOpen || isNavOpen || isLanding) {
-            document.body.classList.add('no-scroll');
+            // Lock the body in place exactly where it is
+            const scrollY = window.scrollY;
+            document.body.style.position = 'fixed';
+            document.body.style.top = `-${scrollY}px`;
+            document.body.style.width = '100%';
+            document.body.style.overflow = 'hidden';
         } else {
-            document.body.classList.remove('no-scroll');
+            // Unlock and restore scroll position
+            const scrollY = document.body.style.top;
+            document.body.style.position = '';
+            document.body.style.top = '';
+            document.body.style.width = '';
+            document.body.style.overflow = '';
+            if (scrollY) {
+                window.scrollTo(0, parseInt(scrollY || '0') * -1);
+            }
         }
     },
 
@@ -2816,10 +2833,12 @@ renderMenu() {
         document.getElementById('bg-convert-recipient').value = this.user.name || '';
         document.getElementById('bg-convert-phone').value = this.user.phone || '';
         
-        let addr = { street: '', brgy: '', city: '' };
-        if (this.user.address) {
-            try { if (this.user.address.trim().startsWith('{')) addr = JSON.parse(this.user.address); else addr.street = this.user.address; } catch(e){}
-        }
+        let addr = { 
+            street: this.user.street || '', 
+            brgy: this.user.brgy || '', 
+            city: this.user.city || '' 
+        };
+
         document.getElementById('bg-convert-street').value = addr.street || '';
 
         const citySelect = document.getElementById('bg-convert-city');
@@ -3168,13 +3187,7 @@ renderMenu() {
             return;
         }
 
-        let profileCity = '';
-        if (this.user.address) {
-            try {
-                const addr = JSON.parse(this.user.address);
-                profileCity = addr.city || '';
-            } catch(e) { profileCity = this.user.address; }
-        }
+        let profileCity = this.user.city || '';
 
         if (profileCity && profileCity.toLowerCase() !== 'calamba') {
             const listContainer = document.getElementById('paso-restriction-items');
@@ -3224,7 +3237,7 @@ renderMenu() {
         this.go('bayanihan');
     },
 
-        prefillCheckout() {
+    prefillCheckout() {
         const guestNote = document.getElementById('co-guest-note');
         const noAddressNote = document.getElementById('co-no-address-note');
         const nameInput = document.getElementById('co-name');
@@ -3246,15 +3259,12 @@ renderMenu() {
         if (nameInput) nameInput.value = this.user.name || '';
         if (phoneInput) phoneInput.value = this.user.phone || '';
 
-        if (this.user.address) {
-            let addrObj = { street: '', brgy: '', city: '' };
-            try { 
-                if (this.user.address.trim().startsWith('{')) {
-                    addrObj = JSON.parse(this.user.address);
-                } else {
-                    addrObj.street = this.user.address;
-                }
-            } catch(e) {}
+        if (this.user.city || this.user.brgy || this.user.street) {
+            let addrObj = { 
+                street: this.user.street || '', 
+                brgy: this.user.brgy || '', 
+                city: this.user.city || '' 
+            };
 
             // Check if the user's saved city and barangay are in our delivery list
             if (addrObj.city && addrObj.brgy && this.lagunaData[addrObj.city] && this.lagunaData[addrObj.city][addrObj.brgy] !== undefined) {
@@ -3264,12 +3274,12 @@ renderMenu() {
                     if (brgySelect) brgySelect.value = addrObj.brgy;
                     this.updateShippingFee();
                 }
-                if (streetInput) streetInput.value = addrObj.street || '';
+                if (streetInput) streetInput.value = addrObj.street;
                 if (noAddressNote) noAddressNote.classList.add('hidden');
             } else {
                 // Address is incomplete or outside the delivery area
                 if (noAddressNote) noAddressNote.classList.remove('hidden');
-                if (streetInput) streetInput.value = addrObj.street || '';
+                if (streetInput) streetInput.value = addrObj.street;
                 if (citySelect && addrObj.city) {
                     citySelect.value = addrObj.city;
                     this.updateBrgyDropdown();
@@ -3541,13 +3551,25 @@ renderMenu() {
             const data = await res.json();
 
             if (data.ok) {
-            this.lastOrder = { id: data.order_id, items: snapshot, subtotal, fee: this.fee, protectionFee, total: subtotal + this.fee + protectionFee, name, address, payment };
-            this.cart = this.cart.filter(c => !c.selected); this.saveCart();
-            this.gcashBase64 = ''; this.protectionEnabled = false;
-            this.resetCheckoutForm(); this.go('success'); this.refreshData();
-        
-            this.triggerHappyBot();
-        } else { 
+                this.lastOrder = { 
+                    id: data.order_id, 
+                    items: snapshot, 
+                    subtotal, 
+                    fee: this.fee, 
+                    protectionFee, 
+                    total: subtotal + this.fee + protectionFee, 
+                    name, 
+                    street, 
+                    brgy, 
+                    city, 
+                    payment 
+                };
+                this.cart = this.cart.filter(c => !c.selected); this.saveCart();
+                this.gcashBase64 = ''; this.protectionEnabled = false;
+                this.resetCheckoutForm(); this.go('success'); this.refreshData();
+            
+                this.triggerHappyBot();
+            } else { 
                 this.showToast(data.error || 'Hindi natuloy ang order. Subukan ulit, suki.'); 
             }
             if (data.error && (data.error.includes('stock') || data.error.includes('Kulang'))) {
@@ -3605,7 +3627,7 @@ renderMenu() {
                     ${o.protectionFee ? `<div class="sum-row"><span>Protection fee</span><span>${this.money(o.protectionFee)}</span></div>` : ''}
                     <div class="sum-row total"><span>Kabuuan</span><span>${this.money(o.total)}</span></div>
                 </div>
-                <p class="deliver-to">Ihahatid sa: <b>${this.esc(this.formatAddress(o.address))}</b> &middot; ${o.payment === 'gcash' ? 'GCash' : 'Cash on Delivery'}</p>
+                <p class="deliver-to">Ihahatid sa: <b>${this.esc(this.formatAddress(null, o.street, o.brgy, o.city))}</b> &middot; ${o.payment === 'gcash' ? 'GCash' : 'Cash on Delivery'}</p>
             </div>
             <div class="success-actions">
                 <button class="btn btn-brand btn-large" onclick="app.go('orders')">I-track sa Mga Order Ko</button>
@@ -3700,8 +3722,11 @@ renderMenu() {
         document.getElementById('acc-email').value = this.user.email || '';
         document.getElementById('acc-phone').value = this.user.phone || '';
 
-        let addrObj = { street: '', brgy: '', city: '' };
-        try { if (this.user.address && this.user.address.trim().startsWith('{')) addrObj = JSON.parse(this.user.address); else if (this.user.address) { addrObj.street = this.user.address; if (this.user.address.toLowerCase().includes('calamba')) addrObj.city = 'Calamba'; } } catch(e) {}
+        let addrObj = { 
+            street: this.user.street || '', 
+            brgy: this.user.brgy || '', 
+            city: this.user.city || '' 
+        };
 
         const citySelect = document.getElementById('acc-city');
         citySelect.innerHTML = '<option value="" disabled selected>Pumili ng Lungsod</option>';
@@ -3922,7 +3947,7 @@ toggleAdvancedMenuFilters(btn) {
         if (!grid) return;
 
         const filteredOrders = this.orders.filter(o => {
-            const formattedAddr = this.formatAddress(o.address);
+            const formattedAddr = this.formatAddress(null, o.delivery_street, o.delivery_brgy, o.delivery_city);
             const customerName = (o.customer_name || '').toLowerCase();
             const searchMatch = String(o.id).includes(this.adminOrderFilter.search) || customerName.includes(this.adminOrderFilter.search) || formattedAddr.toLowerCase().includes(this.adminOrderFilter.search) || (o.phone && o.phone.includes(this.adminOrderFilter.search));
             const statusMatch = this.adminOrderFilter.status === 'all' || o.status === this.adminOrderFilter.status;
@@ -4112,6 +4137,9 @@ toggleAdvancedMenuFilters(btn) {
                             row.querySelector('input').value = parsed._stocks[combo];
                         }
                     });
+                    
+                    // 🟢 ADD THIS LINE TO FIX THE TOTAL:
+                    this.updateTotalComboStock('pe-combo-stocks-container', 'pe-stock');
                 }
             } catch(e) {}
         }
@@ -4686,13 +4714,12 @@ toggleAdvancedMenuFilters(btn) {
         document.getElementById('bg-create-recipient').value = this.user ? this.user.name : '';
         document.getElementById('bg-create-phone').value = this.user ? this.user.phone : '';
         
-        let addr = { street: '', brgy: '', city: '' };
-        if (this.user && this.user.address) {
-            try {
-                if (this.user.address.trim().startsWith('{')) addr = JSON.parse(this.user.address);
-                else addr.street = this.user.address;
-            } catch(e){}
-        }
+        let addr = { 
+            street: this.user.street || '', 
+            brgy: this.user.brgy || '', 
+            city: this.user.city || '' 
+        };
+
         document.getElementById('bg-create-street').value = addr.street || '';
 
         // Populate City Dropdown
@@ -4901,7 +4928,7 @@ toggleAdvancedMenuFilters(btn) {
         const itemsByUser = {}; g.items.forEach(it => { if (!itemsByUser[it.user_id]) itemsByUser[it.user_id] = { name: it.user_name, items: [] }; itemsByUser[it.user_id].items.push(it); });
         const hostMember = g.members.find(m => m.role === 'host');
         const isOrdered = g.status === 'ordered'; const isCancelled = g.status === 'cancelled'; const orderStatus = g.order_status || 'Pending';
-        const isDeliverySet = !!(g.customer_name && g.phone && g.delivery_address);
+        const isDeliverySet = !!(g.customer_name && g.phone && g.delivery_street && g.delivery_brgy && g.delivery_city);
 
         const topCards = `
             <div style="display:flex; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
@@ -4914,7 +4941,7 @@ toggleAdvancedMenuFilters(btn) {
         if (isReadOnly) {
             actions = `<div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:20px;"><div style="flex:1; padding:14px; background:rgba(240, 169, 59, 0.15); border:1px solid var(--amber); border-radius:14px; text-align:center; color:var(--ink); font-weight:700;">📬 You are invited to this cart. Accept to join and split the bill.</div><button class="btn btn-leaf btn-large" onclick="app.acceptInvite(${g.id})">✓ Accept Invite</button><button class="btn btn-ghost btn-large" onclick="app.declineInvite(${g.id})">Decline</button></div>`;
         } else if (isHost && g.status === 'open') {
-            const isDeliverySet = g.customer_name && g.phone && g.delivery_address;
+            const isDeliverySet = g.customer_name && g.phone && g.delivery_street && g.delivery_brgy && g.delivery_city;
             const isFixedMismatch = g.split_method === 'fixed_contribution' && !hasUnfixed && totalFixed !== total;
             const isOverTotal = g.split_method === 'fixed_contribution' && totalFixed > total;
             const canConfirm = allPaid && shortfall <= 0 && g.items.length > 0 && isDeliverySet && approvedMembers.length >= 2 && !isOverTotal && !isFixedMismatch;
@@ -4942,16 +4969,16 @@ toggleAdvancedMenuFilters(btn) {
         }
 
         const editable = isHost && g.status === 'open' && !isReadOnly;
-        let currentAddr = { city: '', brgy: '', street: '' };
+        let currentAddr = { 
+            city: g.delivery_city || '', 
+            brgy: g.delivery_brgy || '', 
+            street: g.delivery_street || '' 
+        };
         let hasSavedAddr = false;
         
         // 1. Check if group cart already has a saved address
-        if (g.delivery_address) {
-            try { 
-                if (g.delivery_address.trim().startsWith('{')) currentAddr = JSON.parse(g.delivery_address);
-                else currentAddr.street = g.delivery_address; 
-                if (currentAddr.city || currentAddr.brgy || currentAddr.street) hasSavedAddr = true;
-            } catch(e) {}
+        if (g.delivery_city || g.delivery_brgy || g.delivery_street) {
+            hasSavedAddr = true;
         }
         
         const defaultRecipientName = g.customer_name || (hostMember ? hostMember.name : '');
@@ -4959,14 +4986,12 @@ toggleAdvancedMenuFilters(btn) {
         const defaultRecipientPhone = g.phone || (defaultMemberObj ? defaultMemberObj.phone : '');
 
         // 2. If no saved address, fallback to the recipient's saved profile address
-        if (!hasSavedAddr && defaultMemberObj && defaultMemberObj.address) {
-            try {
-                if (defaultMemberObj.address.trim().startsWith('{')) {
-                    currentAddr = JSON.parse(defaultMemberObj.address);
-                } else {
-                    currentAddr.street = defaultMemberObj.address;
-                }
-            } catch(e) {}
+        if (!hasSavedAddr && defaultMemberObj) {
+            currentAddr = {
+                city: defaultMemberObj.city || '',
+                brgy: defaultMemberObj.brgy || '',
+                street: defaultMemberObj.street || ''
+            };
         }
 
         // 3. Remove phone number from dropdown
@@ -5166,16 +5191,11 @@ toggleAdvancedMenuFilters(btn) {
             }
 
             // Auto-fill Address
-            let addr = { street: '', brgy: '', city: '' };
-            if (member.address) {
-                try {
-                    if (member.address.trim().startsWith('{')) {
-                        addr = JSON.parse(member.address);
-                    } else {
-                        addr.street = member.address;
-                    }
-                } catch(e) {}
-            }
+            let addr = { 
+                street: member.street || '', 
+                brgy: member.brgy || '', 
+                city: member.city || '' 
+            };
 
             const citySelect = document.getElementById('bg-city');
             const brgySelect = document.getElementById('bg-brgy');
@@ -5491,7 +5511,7 @@ toggleAdvancedMenuFilters(btn) {
                 </div>
                 ${gcashPaid.length ? `<div style="padding:14px; background:rgba(47,140,255,0.1); border-left:4px solid #2f8cff; border-radius:10px; margin-bottom:20px;"><b style="color:#2f8cff;">📱 GCash Payments Locked</b><p style="font-size:12px; margin-top:4px; color:var(--ink); font-weight:600;">${gcashPaid.length} member(s) already paid via GCash — this cart cannot be cancelled.</p></div>` : ''}
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:20px;">
-                    <div class="co-card"><h3>📍 Delivery</h3><p style="font-size:13px; font-weight:600; line-height:1.7;"><b>Recipient:</b> ${this.esc(g.customer_name || '—')}<br><b>Phone:</b> ${this.esc(g.phone || '—')}<br><b>Address:</b> ${this.esc(this.formatAddress(g.delivery_address) || '—')}<br><b>Payment:</b> ${g.payment ? g.payment.toUpperCase() : 'N/A'}<br><b>Delivery Fee:</b> ${this.money(deliveryFee)}</p></div>
+                    <div class="co-card"><h3>📍 Delivery</h3><p style="font-size:13px; font-weight:600; line-height:1.7;"><b>Recipient:</b> ${this.esc(g.customer_name || '—')}<br><b>Phone:</b> ${this.esc(g.phone || '—')}<br><b>Address:</b> ${this.esc(this.formatAddress(null, g.delivery_street, g.delivery_brgy, g.delivery_city) || '—')}<br><b>Payment:</b> ${g.payment ? g.payment.toUpperCase() : 'N/A'}<br><b>Delivery Fee:</b> ${this.money(deliveryFee)}</p></div>
                     <div class="co-card"><h3>💰 Totals</h3><p style="font-size:13px; font-weight:600; line-height:1.7;"><b>Subtotal:</b> ${this.money(subtotal)}<br><b>Total:</b> <span style="color:var(--brand); font-size:18px; font-family:'Baloo 2';">${this.money(total)}</span><br><b>Split Method:</b> ${(g.split_method || 'equal').replace(/_/g, ' ')}<br><b>Order ID:</b> ${g.order_id || '—'}</p></div>
                 </div>
                 <div class="co-card" style="margin-bottom:20px;">
