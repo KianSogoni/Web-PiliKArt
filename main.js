@@ -1293,6 +1293,15 @@ const app = {
     },
 
     go(view) {
+        if (this.user && this.user.role === 'admin') {
+            const restrictedViews = ['home', 'orders', 'bayanihan', 'contact', 'cart', 'checkout', 'success', 'bayanihan-detail'];
+            if (restrictedViews.includes(view)) {
+                this.showToast('Admins are restricted to the Dashboard.');
+                this.go('admin');
+                return;
+            }
+        }
+
         const protectedViews = ['bayanihan', 'bayanihan-detail', 'account', 'orders'];
         if (!this.user && protectedViews.includes(view)) {
             this.showToast('Mag-sign in muna para ma-access ito, suki!');
@@ -1570,25 +1579,62 @@ const app = {
         const ordersIcon = document.getElementById('nav-orders-icon');
         const adminMyOrdersLink = document.getElementById('nav-admin-my-orders');
 
+        // 🟢 Hide Header Cart Button for Admins
+        const headerCartBtn = document.querySelector('.nav-btn[onclick="app.toggleCart()"]');
+        if (headerCartBtn) {
+            headerCartBtn.style.display = (this.user && this.user.role === 'admin') ? 'none' : 'inline-flex';
+        }
+
+        // 🟢 Hide Footer Contact Us Block for Admins
+        const footerContactBlock = document.getElementById('footer-contact-block');
+        if (footerContactBlock) {
+            footerContactBlock.style.display = (this.user && this.user.role === 'admin') ? 'none' : 'block';
+        }
+
+        // 🟢 Target Nav Drawer Links to hide for Admins
+        const menuLink = document.querySelector('.nav-drawer-links a[data-view="home"]');
+        const bayanihanLink = document.querySelector('.nav-drawer-links a[data-view="bayanihan"]');
+        const contactLink = document.querySelector('.nav-drawer-links a[data-view="contact"]');
+
         if (this.user) {
             btnLabel.textContent = 'Logout';
             accountSub.textContent = this.user.name;
+
             if (this.user.role === 'admin') {
+                // Hide customer-only links
+                if (menuLink) menuLink.style.display = 'none';
+                if (bayanihanLink) bayanihanLink.style.display = 'none';
+                if (contactLink) contactLink.style.display = 'none';
+
+                // Relabel the main link to Admin Dashboard
                 ordersTitle.textContent = 'Admin Dashboard';
                 ordersSub.textContent = 'Manage Store';
                 ordersLink.setAttribute('onclick', "app.navTo('admin')");
-                ordersLink.setAttribute('data-view', 'admin'); // 🟢 Set to admin
+                ordersLink.setAttribute('data-view', 'admin');
                 ordersIcon.innerHTML = '<path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>';
-                if (adminMyOrdersLink) adminMyOrdersLink.classList.remove('hidden');
+                
+                if (adminMyOrdersLink) adminMyOrdersLink.classList.add('hidden');
             } else {
+                // Show links for customers
+                if (menuLink) menuLink.style.display = 'flex';
+                if (bayanihanLink) bayanihanLink.style.display = 'flex';
+                if (contactLink) contactLink.style.display = 'flex';
+
+                // Standard My Orders link
                 ordersTitle.textContent = 'My Orders';
                 ordersSub.textContent = 'Kasaysayan ng Order';
                 ordersLink.setAttribute('onclick', "app.navTo('orders')");
-                ordersLink.setAttribute('data-view', 'orders'); // 🟢 Set to orders
+                ordersLink.setAttribute('data-view', 'orders');
                 ordersIcon.innerHTML = '<path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/>';
+                
                 if (adminMyOrdersLink) adminMyOrdersLink.classList.add('hidden');
             }
-        } else { if (adminMyOrdersLink) adminMyOrdersLink.classList.add('hidden'); }
+        } else { 
+            // Guest Mode: Show all links, hide admin-only elements
+            if (adminMyOrdersLink) adminMyOrdersLink.classList.add('hidden'); 
+            document.querySelectorAll('.nav-drawer-links a').forEach(l => l.style.display = 'flex');
+        }
+        
         this.updateFooterLinks();
     },
 
@@ -1607,13 +1653,17 @@ const app = {
         const ul = document.getElementById('footer-dynamic-links');
         if (!ul) return;
 
-        let links = `<li><a href="#" onclick="app.scrollToMenu(); return false;">Menu</a></li>`;
+        let links = '';
+        const isAdmin = this.user && this.user.role === 'admin';
+
+        if (!isAdmin) {
+            links += `<li><a href="#" onclick="app.scrollToMenu(); return false;">Menu</a></li>`;
+        }
 
         if (this.user) {
-            if (this.user.role === 'admin') {
+            if (isAdmin) {
                 links += `
                     <li><a href="#" onclick="app.go('admin'); return false;">Admin Dashboard</a></li>
-                    <li><a href="#" onclick="app.go('orders'); return false;">My Orders</a></li>
                 `;
             } else {
                 links += `<li><a href="#" onclick="app.go('orders'); return false;">My Orders</a></li>`;
@@ -2227,13 +2277,14 @@ renderMenu() {
                     <div style="display: flex; gap: 8px; align-items: center;">
                         ${out 
                             ? `<button class="btn btn-brand add-btn" disabled style="height: 44px; padding: 0 16px; border-radius: 99px;">Ubos na</button>`
-                            : `
-                            <!-- Add to Cart (SVG + Text) -->
-                            <button class="btn btn-brand add-btn" onclick="app.addToCart(${p.id}, this)" style="height: 44px; padding: 0 20px; border-radius: 99px; display: flex; align-items: center; gap: 6px; flex-shrink: 0; transition: transform 0.2s;" title="Add to Cart">
-                                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
-                                Add
-                            </button>
-                            `
+                            : (this.user && this.user.role === 'admin')
+                                ? `<button class="btn btn-ghost add-btn" onclick="app.go('admin'); app.switchAdminTab('stock', document.querySelector('#view-admin .admin-tab-btn:nth-child(2)'));" style="height: 44px; padding: 0 20px; border-radius: 99px; display: flex; align-items: center; gap: 6px; flex-shrink: 0;">Edit in Admin</button>`
+                                : `
+                                <button class="btn btn-brand add-btn" onclick="app.addToCart(${p.id}, this)" style="height: 44px; padding: 0 20px; border-radius: 99px; display: flex; align-items: center; gap: 6px; flex-shrink: 0; transition: transform 0.2s;" title="Add to Cart">
+                                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
+                                    Add
+                                </button>
+                                `
                         }
                     </div>
                 </div>
@@ -2299,10 +2350,14 @@ renderMenu() {
     pendingQty: 1,
 
     addToCart(id, btn) {
+        if (this.user && this.user.role === 'admin') {
+            return this.showToast('Admins cannot add items to the cart.');
+        }
+        
         if (!this.user) {
             this.showToast('Sign in muna, suki — para ma-save namin ang cart mo.');
             this.openAuthModal('signin');
-            return; // Stop the function here so the modal doesn't open
+            return; 
         }
 
         const p = this.products.find(x => x.id === id);
@@ -3149,6 +3204,11 @@ renderMenu() {
     toggleProtection(checked) { this.protectionEnabled = checked; this.renderCheckoutSummary(); },
 
     async attemptCheckout() {
+        // 🟢 BLOCK ADMIN
+        if (this.user && this.user.role === 'admin') {
+            return this.showToast('Admins cannot checkout.');
+        }
+
         if (!this.user) {
             this.toggleCart(true);
             this.showToast('Mag-sign in muna para makapag-checkout, suki!');
@@ -3718,6 +3778,7 @@ renderMenu() {
             this.openAuthModal('signin'); 
             return; 
         }
+        
         document.getElementById('acc-name').value = this.user.name || '';
         document.getElementById('acc-email').value = this.user.email || '';
         document.getElementById('acc-phone').value = this.user.phone || '';
@@ -3735,9 +3796,16 @@ renderMenu() {
         this.updateAccBrgyDropdown(addrObj.brgy || '');
         document.getElementById('acc-street').value = addrObj.street || '';
 
+        // 🟢 HIDE RECENT ORDERS FOR ADMINS
+        const recentOrdersCard = document.getElementById('account-recent-orders-card');
+        if (recentOrdersCard) {
+            recentOrdersCard.style.display = (this.user.role === 'admin') ? 'none' : 'block';
+        }
+
         const logsEl = document.getElementById('account-order-logs');
-        if (!this.orders.length) { logsEl.innerHTML = '<p style="color:var(--muted); font-size:13px; text-align:center; padding:10px;">Wala ka pang order, suki.</p>'; } 
-        else {
+        if (!this.orders.length) { 
+            logsEl.innerHTML = '<p style="color:var(--muted); font-size:13px; text-align:center; padding:10px;">Wala ka pang order, suki.</p>'; 
+        } else {
             logsEl.innerHTML = this.orders.slice(0, 3).map(o => `<div class="acc-order-row"><div><b>Order #${o.id}</b><div style="font-size:11px; color:var(--muted);">${o.items.length} item(s)</div></div><div style="text-align:right;"><div style="font-weight:800; color:var(--brand); font-size:14px;">${this.money(o.total)}</div><div style="font-size:10px; font-weight:800; text-transform:uppercase; color:${o.status === 'Pending' ? '#f0a93b' : '#85b56d'};">${o.status}</div></div></div>`).join('');
         }
     },

@@ -1348,7 +1348,7 @@
         </div> <!-- 🟢 Closes account-grid -->
 
         <!-- 🟢 Order Logs -->
-        <div class="card account-card" style="margin-top: 30px; margin-bottom: 30px;">
+        <div id="account-recent-orders-card" class="card account-card" style="margin-top: 30px; margin-bottom: 30px;">
             <h3>Recent Orders</h3>
             <div id="account-order-logs" class="account-orders-list"></div>
             <div style="text-align: center; margin-top: 16px;">
@@ -1682,13 +1682,15 @@
             </p>
             <br>
             <!-- Contact Us Clickable Link -->
-            <a href="#" onclick="app.go('contact'); return false;" class="footer-title footer-glow-link">
-                Contact Us!
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-left: 6px;"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
-            </a>
-            <p class="footer-text" style="margin-bottom: 0;">
-                PiliKart grows with you. Your feedback and suggestions help us shape a better, warmer experience for everyone. <br> May concern o idea ka? Let's talk!
-            </p>
+            <div id="footer-contact-block">
+                <a href="#" onclick="app.go('contact'); return false;" class="footer-title footer-glow-link">
+                    Contact Us!
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-left: 6px;"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                </a>
+                <p class="footer-text" style="margin-bottom: 0;">
+                    PiliKart grows with you. Your feedback and suggestions help us shape a better, warmer experience for everyone. <br> May concern o idea ka? Let's talk!
+                </p>
+            </div>
         </div>
         <div class="footer-col">
             <h3 class="footer-title">

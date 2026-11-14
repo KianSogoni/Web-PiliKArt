@@ -1978,10 +1978,24 @@ select.auth-input option {
    MOBILE RESPONSIVENESS FIXES — PiliKart
    ============================================================ */
 
-/* Prevent accidental horizontal overflow on mobile */
-html { overflow-x: hidden; }
-body { overflow-x: visible; }
-main { overflow-x: hidden; }
+html {
+    overflow-x: hidden;
+    overflow-y: auto; /* 🟢 Changed from scroll to auto */
+    max-width: 100vw;
+}
+
+body {
+    overflow-x: hidden;
+    overflow-y: hidden; /* 🟢 Completely disable body scrolling to stop the second scrollbar */
+    height: auto;
+    max-width: 100vw;
+}
+
+main {
+    overflow-x: hidden;
+    overflow-y: visible;
+    max-width: 100vw;
+}
 
 /* Better tap targets */
 @media (max-width: 900px) {
